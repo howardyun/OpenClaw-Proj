@@ -1,0 +1,50 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from ..models import AnalysisResult, RunSummary, dataclass_to_dict
+
+
+def export_json_files(output_dir: Path, results: list[AnalysisResult], summary: RunSummary) -> None:
+    _write_json(output_dir / "skills.json", [_skill_record(result) for result in results])
+    _write_json(output_dir / "classifications.json", [_classification_record(result) for result in results])
+    _write_json(output_dir / "discrepancies.json", [_discrepancy_record(result) for result in results])
+    _write_json(output_dir / "run_manifest.json", dataclass_to_dict(summary))
+
+    cases_dir = output_dir / "cases"
+    cases_dir.mkdir(parents=True, exist_ok=True)
+    for result in results:
+        _write_json(cases_dir / f"{result.skill_id}.json", dataclass_to_dict(result))
+
+
+def _write_json(path: Path, payload: object) -> None:
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _skill_record(result: AnalysisResult) -> dict[str, object]:
+    return {
+        "skill_id": result.skill_id,
+        "root_path": result.root_path,
+        "structure_profile": dataclass_to_dict(result.structure_profile),
+        "errors": result.errors,
+    }
+
+
+def _classification_record(result: AnalysisResult) -> dict[str, object]:
+    return {
+        "skill_id": result.skill_id,
+        "declaration_classifications": [dataclass_to_dict(item) for item in result.declaration_classifications],
+        "implementation_classifications": [dataclass_to_dict(item) for item in result.implementation_classifications],
+        "risk_mappings": result.risk_mappings,
+        "errors": result.errors,
+    }
+
+
+def _discrepancy_record(result: AnalysisResult) -> dict[str, object]:
+    return {
+        "skill_id": result.skill_id,
+        "skill_level_discrepancy": result.skill_level_discrepancy,
+        "category_discrepancies": [dataclass_to_dict(item) for item in result.category_discrepancies],
+        "errors": result.errors,
+    }

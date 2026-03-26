@@ -29,3 +29,9 @@ build/
 .DS_Store
 Thumbs.db
 .ace-tool/
+
+
+*.db
+skills/
+outputs/
+tests/

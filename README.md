@@ -17,6 +17,11 @@ OpenClaw 是一个围绕技能生态数据采集与安全分析的 Python 项目
 
 ```text
 .
+├── analyzer/
+│   ├── security matrix.md
+│   └── skills_security_matrix/
+├── docs/
+│   └── analyzer/
 ├── main.py
 ├── pyproject.toml
 └── crawling/
@@ -233,6 +238,31 @@ python get_from_api.py --db 04_03_2026.db --start-page 1 --max-pages 100
 2. 运行对应的 `download_skills.py`，把唯一 GitHub 仓库下载到本地。
 3. 如果数据库中已有 `repo_marketplace_links`，运行 `enrich_github_metadata_v2.py` 补充仓库元数据。
 4. 根据研究目标，选择 HTML 抓取版或 API 版安全采集脚本，将审计结果写入 SQLite。
+
+## Skills Security Matrix Analyzer
+
+仓库现在提供一个离线 CLI，用来直接分析本地 skill 语料目录中的声明层与实现层能力漂移。
+
+运行示例：
+
+```bash
+python main.py \
+  --skills-dir skills \
+  --output-dir outputs/skills_security_matrix \
+  --format json,csv \
+  --case-study-skill 1password-hardened-1.0.0
+```
+
+核心行为：
+
+- 解析 [`analyzer/security matrix.md`](/home/szk/code/OpenClaw-Proj/analyzer/security%20matrix.md) 为标准化分类表
+- 发现本地 skill 目录并生成结构画像
+- 仅从 `SKILL.md` 及其显式引用材料提取声明层证据
+- 从代码、脚本、配置中提取实现层证据
+- 计算声明/实现漂移，并把分类结果映射到矩阵中的 `主要风险` 与 `控制要求`
+- 一次运行同时产出 JSON、CSV 与按 skill 切分的 case-study 文件
+
+更详细的输入、输出和证据语义说明见 [`docs/analyzer/skills-security-matrix-analyzer.md`](/home/szk/code/OpenClaw-Proj/docs/analyzer/skills-security-matrix-analyzer.md)。
 
 ## Notes
 
