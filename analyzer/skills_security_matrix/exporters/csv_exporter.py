@@ -39,9 +39,31 @@ def export_csv_files(output_dir: Path, results: list[AnalysisResult]) -> None:
         _classification_rows(results),
     )
     _write_csv(
+        output_dir / "rule_candidates.csv",
+        [
+            "skill_id",
+            "candidate_id",
+            "layer",
+            "category_id",
+            "category_name",
+            "candidate_status",
+            "rule_confidence",
+            "confidence_score",
+            "support_count",
+            "conflict_count",
+            "trigger_reason",
+        ],
+        _candidate_rows(results),
+    )
+    _write_csv(
         output_dir / "discrepancies.csv",
         ["skill_id", "skill_level_discrepancy", "category_id", "category_name", "status", "declaration_present", "implementation_present"],
         _discrepancy_rows(results),
+    )
+    _write_csv(
+        output_dir / "review_audit.csv",
+        ["skill_id", "category_id", "layer", "review_status", "provider", "model", "reason", "schema_version"],
+        _review_audit_rows(results),
     )
 
 
@@ -96,6 +118,47 @@ def _discrepancy_rows(results: list[AnalysisResult]) -> list[dict[str, object]]:
                     "status": item.status,
                     "declaration_present": item.declaration_present,
                     "implementation_present": item.implementation_present,
+                }
+            )
+    return rows
+
+
+def _candidate_rows(results: list[AnalysisResult]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for result in results:
+        for candidate in result.rule_candidates:
+            rows.append(
+                {
+                    "skill_id": result.skill_id,
+                    "candidate_id": candidate.candidate_id,
+                    "layer": candidate.layer,
+                    "category_id": candidate.category_id,
+                    "category_name": candidate.category_name,
+                    "candidate_status": candidate.candidate_status,
+                    "rule_confidence": candidate.rule_confidence,
+                    "confidence_score": candidate.confidence_score,
+                    "support_count": len(candidate.supporting_evidence),
+                    "conflict_count": len(candidate.conflicting_evidence),
+                    "trigger_reason": candidate.trigger_reason,
+                }
+            )
+    return rows
+
+
+def _review_audit_rows(results: list[AnalysisResult]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for result in results:
+        for record in result.review_audit_records:
+            rows.append(
+                {
+                    "skill_id": result.skill_id,
+                    "category_id": record.category_id,
+                    "layer": record.layer,
+                    "review_status": record.review_status,
+                    "provider": record.provider or "",
+                    "model": record.model or "",
+                    "reason": record.reason or "",
+                    "schema_version": record.schema_version or "",
                 }
             )
     return rows

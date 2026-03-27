@@ -8,7 +8,7 @@ from ..skill_structure import extract_frontmatter_and_body, parse_frontmatter
 
 
 REFERENCE_PATTERN = re.compile(
-    r"`(?P<code>(?:references|docs|assets|templates)/[^`]+)`|\[(?P<label>[^\]]+)\]\((?P<link>[^)]+)\)"
+    r"`(?P<code>[^`]+)`|\[(?P<label>[^\]]+)\]\((?P<link>[^)]+)\)"
 )
 
 
@@ -31,6 +31,7 @@ def extract_declaration_evidence(skill: SkillArtifact) -> list[EvidenceItem]:
                 text=f"{key}: {value}",
                 source_path=skill_md.relative_to(skill.root_path).as_posix(),
                 source_kind="skill_md_frontmatter",
+                source_role="primary_declaration",
                 support_reference_mode="direct",
             )
         )
@@ -39,6 +40,7 @@ def extract_declaration_evidence(skill: SkillArtifact) -> list[EvidenceItem]:
             text=body,
             source_path=skill_md.relative_to(skill.root_path).as_posix(),
             source_kind="skill_md_body",
+            source_role="primary_declaration",
             support_reference_mode="direct",
         )
     )
@@ -53,6 +55,7 @@ def extract_declaration_evidence(skill: SkillArtifact) -> list[EvidenceItem]:
                 text=support_text,
                 source_path=support_file.relative_to(skill_root_resolved).as_posix(),
                 source_kind="support_file",
+                source_role="referenced_supporting_material",
                 support_reference_mode="referenced_by_skill_md",
             )
         )
@@ -63,23 +66,38 @@ def _extract_referenced_support_files(skill_root: Path, body: str) -> list[Path]
     resolved_root = skill_root.resolve()
     files: set[Path] = set()
     for match in REFERENCE_PATTERN.finditer(body):
-        reference = match.group("code") or match.group("link") or ""
-        if reference.startswith(("http://", "https://", "#")):
+        reference = (match.group("code") or match.group("link") or "").strip()
+        if not _is_supported_relative_reference(reference):
             continue
-        candidate = (resolved_root / reference).resolve()
         try:
+            candidate = (resolved_root / reference).resolve()
             candidate.relative_to(resolved_root)
-        except ValueError:
+            if candidate.is_file():
+                files.add(candidate)
+        except (OSError, ValueError):
             continue
-        if candidate.is_file():
-            files.add(candidate)
     return sorted(files)
+
+
+def _is_supported_relative_reference(reference: str) -> bool:
+    if not reference:
+        return False
+    if "\n" in reference or "\r" in reference:
+        return False
+    if len(reference) > 240:
+        return False
+    if reference.startswith(("http://", "https://", "#", "/")):
+        return False
+    if reference.endswith("/"):
+        return False
+    return "/" in reference or "." in Path(reference).name
 
 
 def _scan_text_for_declaration(
     text: str,
     source_path: str,
     source_kind: str,
+    source_role: str,
     support_reference_mode: str,
 ) -> list[EvidenceItem]:
     lines = text.splitlines() or [text]
@@ -105,6 +123,7 @@ def _scan_text_for_declaration(
                     confidence=confidence,
                     rule_id=rule_id,
                     source_kind=source_kind,
+                    source_role=source_role,
                     support_reference_mode=support_reference_mode,
                 )
             )

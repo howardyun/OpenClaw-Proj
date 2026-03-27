@@ -98,6 +98,8 @@ def extract_implementation_evidence(skill: SkillArtifact) -> list[EvidenceItem]:
     for file_path in skill.source_files:
         if file_path.name == "SKILL.md":
             continue
+        if file_path.name == "README.md":
+            continue
         text = _safe_read_text(file_path)
         if text is None:
             continue
@@ -122,6 +124,8 @@ def extract_implementation_evidence(skill: SkillArtifact) -> list[EvidenceItem]:
                         line_end=line_number,
                         confidence=confidence,
                         rule_id=rule_id,
+                        source_kind="source_file",
+                        source_role="implementation_artifact",
                     )
                 )
     return evidence

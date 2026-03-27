@@ -241,7 +241,7 @@ python get_from_api.py --db 04_03_2026.db --start-page 1 --max-pages 100
 
 ## Skills Security Matrix Analyzer
 
-仓库现在提供一个离线 CLI，用来直接分析本地 skill 语料目录中的声明层与实现层能力漂移。
+仓库现在提供一个研究导向的 CLI，用来直接分析本地 skill 语料目录中的声明层与实现层能力漂移。默认模式仍然是纯离线规则分析，同时也支持显式开启、按类别触发的可选 review 流程。
 
 运行示例：
 
@@ -253,14 +253,68 @@ python main.py \
   --case-study-skill 1password-hardened-1.0.0
 ```
 
+增强模式示例：
+
+```bash
+python main.py \
+  --skills-dir skills \
+  --output-dir outputs/skills_security_matrix \
+  --format json,csv \
+  --llm-review-mode review \
+  --llm-provider mock \
+  --llm-low-confidence-threshold 0.6 \
+  --emit-review-audit \
+  --goldset-path tests/fixtures/skills_security_matrix/goldset.json
+```
+
 核心行为：
 
 - 解析 [`analyzer/security matrix.md`](/home/szk/code/OpenClaw-Proj/analyzer/security%20matrix.md) 为标准化分类表
 - 发现本地 skill 目录并生成结构画像
 - 仅从 `SKILL.md` 及其显式引用材料提取声明层证据
 - 从代码、脚本、配置中提取实现层证据
-- 计算声明/实现漂移，并把分类结果映射到矩阵中的 `主要风险` 与 `控制要求`
-- 一次运行同时产出 JSON、CSV 与按 skill 切分的 case-study 文件
+- 先生成可追溯的 `rule candidates`，再产出最终 `final decisions`
+- 在显式启用时，只对低置信度、高风险且证据稀疏、或存在冲突信号的类别做 category-level review
+- 计算声明/实现漂移，并把最终分类结果映射到矩阵中的 `主要风险` 与 `控制要求`
+- 一次运行同时产出 JSON、CSV、review audit、validation 结果与按 skill 切分的 case-study 文件
+
+常用参数：
+
+- `--skills-dir`：待分析的本地 skill 目录
+- `--output-dir`：输出根目录，实际运行会创建 `run-<timestamp>` 子目录
+- `--format`：`json`、`csv` 或两者组合
+- `--case-study-skill`：在运行摘要中标记重点 case study skill
+- `--llm-review-mode`：`off`、`review`、`review+fallback`
+- `--llm-provider`：当前内置 `mock`、`litellm`、`openai`
+- `--llm-low-confidence-threshold`：低置信度 review 阈值
+- `--llm-high-risk-sparse-threshold`：高风险且证据稀疏时的 review 阈值
+- `--llm-fallback-max-categories`：允许 fallback adjudication 的最大类别数
+- `--llm-fail-open` / `--llm-fail-closed`：provider 失败时保留离线决策或收紧为拒绝结果
+- `--emit-review-audit`：输出 review audit
+- `--goldset-path`：加载 gold set JSON 并输出验证结果
+
+主要输出：
+
+- `skills.json` / `skills.csv`：skill 结构画像与基础元数据
+- `rule_candidates.json` / `rule_candidates.csv`：离线规则候选、证据和初始置信度
+- `classifications.json` / `classifications.csv`：最终声明层、实现层决策
+- `discrepancies.json` / `discrepancies.csv`：声明/实现漂移与分类状态
+- `risk_mappings.json`：矩阵风险和控制项映射
+- `review_audit.json` / `review_audit.csv`：review 轨迹、provider 元数据和失败信息
+- `validation.json`：当提供 `--goldset-path` 时输出 gold set 对比结果
+- `cases/<skill-id>.json`：适合 case study 的单 skill 全量视图
+
+review 模式说明：
+
+- `off`：只运行离线候选构建与最终化，不做任何外部模型调用
+- `review`：只 review 命中策略触发条件的类别，review 结果只能是 `accepted`、`downgraded` 或 `rejected_by_llm`
+- `review+fallback`：在 `review` 的基础上，允许对配额内未决类别给出 `fallback_adjudicated`
+
+gold set 验证说明：
+
+- gold set 文件是一个 JSON 数组，每项至少包含 `skill_id`、`layer`、`category_id`
+- 如需校验最终状态，也可以额外提供 `decision_status`
+- 运行后会在终端摘要和 `validation.json` 中给出命中率、缺失项和状态不匹配统计
 
 更详细的输入、输出和证据语义说明见 [`docs/analyzer/skills-security-matrix-analyzer.md`](/home/szk/code/OpenClaw-Proj/docs/analyzer/skills-security-matrix-analyzer.md)。
 

@@ -1,5 +1,5 @@
 ---
-date: 2026-03-25
+date: 2026-03-26
 topic: skills-security-matrix-analyzer
 ---
 
@@ -23,6 +23,12 @@ topic: skills-security-matrix-analyzer
 - R8. 分析器必须支持批量处理多个 skill，并输出适合后续统计分析的数据结果。
 - R9. 分析器必须支持对单个 skill 导出案例级分析结果，以便论文中的 qualitative case study 使用。
 - R10. 分析结果必须尽量可复查，支持研究者回溯每个结论所基于的证据来源。
+- R11. 默认分类流程必须保持纯离线规则模式，确保在不依赖外部模型调用的情况下完成可复现分析。
+- R12. 分析器必须支持通过显式 CLI 开关启用“规则召回 + LLM 复核 + 少量 LLM 补判”的增强模式，而不是将 LLM 作为默认主流程。
+- R13. LLM 复核必须以 category 为最小判定粒度触发，且默认只在规则命中存在冲突、歧义或低置信时介入，而不是对整层或整 skill 做全量复核。
+- R14. 在 LLM 增强模式中，LLM 的首要职责必须是降低误报；它可以否决或降级规则命中的 category，但不能在没有对应规则候选或显式触发条件的情况下自由新增分类。
+- R15. 少量 LLM 补判必须保持受控，只能作为模糊区兜底机制，而不能演化为覆盖全部样本的隐性主流程。
+- R16. 当 LLM 否决规则命中的 category 时，输出结果必须保留该候选并显式标记为 `rejected_by_llm` 或等价状态，以支持后续误报分析与人工复查。
 
 ## Success Criteria
 
@@ -30,6 +36,7 @@ topic: skills-security-matrix-analyzer
 - 结果能够支持论文中的统计分析，例如不同能力类别分布、偏差比例、风险分布、控制要求覆盖情况。
 - 结果能够支持论文中的案例分析，研究者可以快速查看某个 skill 被归类的原因和关键证据。
 - 对同一 skill 的分析过程具备基本一致性和可复查性，不依赖人工记忆才能解释结果。
+- 在显式开启 LLM 增强模式后，误报率应较默认纯规则基线有可观下降，同时仍保持可解释证据链与可复核决策边界。
 
 ## Scope Boundaries
 
@@ -38,6 +45,7 @@ topic: skills-security-matrix-analyzer
 - 不要求第一版自动给出准入/封禁/放行等治理决策。
 - 不要求第一版覆盖运行时动态执行或沙箱内真实行为观测；实现层可先基于静态仓库分析。
 - 不要求第一版解决所有分类歧义；允许保留“不确定”或“需人工复核”的研究状态。
+- 不要求第一版把 LLM 用作自由分类器；即使在增强模式下，也不允许它脱离规则候选进行开放式整包判定。
 
 ## Key Decisions
 
@@ -48,12 +56,17 @@ topic: skills-security-matrix-analyzer
 - 支持多标签归类：skill 的能力和风险通常跨多个类别，单标签会损失研究信息。
 - 声明层证据范围限定为 `SKILL.md`、其 YAML frontmatter 以及 skill 自带的 `references/` 等显式说明材料：避免把实现细节反向混入声明层判断。
 - 第一版同时输出结构化表格数据和 JSON 结果：同时满足论文统计分析和案例级复查需求。
+- 默认流程保持纯离线规则：保证无外部依赖时也能稳定运行，并保留研究基线。
+- LLM 作为显式开启的 CLI 增强模式接入，而不是替换默认流程：这样更适合对照实验，也更利于成本控制。
+- LLM 按 category 级别介入，而不是整层或整 skill 全量介入：把成本、波动和提示词上下文限制在模糊区。
+- LLM 在增强模式中只允许否决或降级规则候选，不允许自由改判：确保它是保守复核器，而不是不透明的主分类器。
+- 被 LLM 否决的规则候选仍需保留在输出中，并带上显式状态标签：这样误报分析与人工复查不会丢失证据链。
 
 ## Dependencies / Assumptions
 
 - `analyzer/security matrix.md` 将作为当前分类框架的权威来源。
 - skills 文件夹内通常包含足够的说明性材料与实现材料，足以支撑声明层和实现层分析。
-- 后续规划阶段需要决定证据抽取、分类规则、输出格式和评估方法。
+- 后续规划阶段需要决定证据抽取、规则召回阈值、LLM 复核输入输出 schema、CLI 开关语义、输出格式和评估方法。
 
 ## Outstanding Questions
 
@@ -63,8 +76,12 @@ topic: skills-security-matrix-analyzer
 
 ### Deferred to Planning
 
-- [Affects R3][Technical] 实现层分类应采用规则系统、启发式分析、LLM 辅助判定，还是组合式流程？
 - [Affects R5][Needs research] 证据提取和引用粒度应如何设计，才能兼顾可解释性与批处理效率？
+- [Affects R12][Technical] CLI 开关、模型配置和失败回退应如何设计，才能在不破坏默认离线模式的前提下启用 LLM 增强？
+- [Affects R13][Technical] 规则召回阶段应如何表示“候选 category + 支持/冲突证据 + 规则置信度”，以便 LLM 在 category 粒度稳定复核？
+- [Affects R13][Technical] “冲突、歧义或低置信”的触发条件应如何量化，才能既控制 LLM 成本又有效降低误报？
+- [Affects R14][Technical] LLM 否决或降级规则候选后，最终输出中的置信度、状态标签与证据保留策略应如何设计？
+- [Affects R15][Needs research] 少量 LLM 补判的上限、抽样策略或触发配额应如何设计，才能防止增强模式退化为 LLM-first？
 - [Affects R6][Needs research] 偏差标签是否需要更细粒度 taxonomy，例如“未声明高风险能力”“描述模糊导致低估”“实现残留能力”等？
 - [Affects R7][Technical] 风险映射是直接继承 `security matrix` 的风险和控制要求，还是允许按证据强度做裁剪与加权？
 - [Affects R8][Technical] 批处理结果的规范化 schema 应如何设计，便于统计分析和案例检索同时使用？

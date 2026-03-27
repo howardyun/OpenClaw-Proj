@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -50,7 +51,27 @@ class EvidenceItem:
     confidence: str
     rule_id: str
     source_kind: str | None = None
+    source_role: str | None = None
     support_reference_mode: str | None = None
+    excerpt_hash: str = ""
+    evidence_fingerprint: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.excerpt_hash:
+            self.excerpt_hash = _stable_hash(self.matched_text)
+        if not self.evidence_fingerprint:
+            payload = "|".join(
+                [
+                    self.layer,
+                    self.category_id,
+                    self.source_path,
+                    str(self.line_start or ""),
+                    str(self.line_end or ""),
+                    self.rule_id,
+                    self.matched_text,
+                ]
+            )
+            self.evidence_fingerprint = _stable_hash(payload)
 
 
 @dataclass(slots=True)
@@ -59,6 +80,46 @@ class CategoryClassification:
     category_name: str
     evidence: list[EvidenceItem] = field(default_factory=list)
     confidence: str = "unknown"
+    confidence_score: float = 0.0
+    decision_status: str = "accepted"
+
+
+@dataclass(slots=True)
+class RuleCandidate:
+    candidate_id: str
+    category_id: str
+    category_name: str
+    layer: str
+    candidate_status: str
+    supporting_evidence: list[EvidenceItem] = field(default_factory=list)
+    conflicting_evidence: list[EvidenceItem] = field(default_factory=list)
+    rule_confidence: str = "unknown"
+    confidence_score: float = 0.0
+    trigger_reason: str = ""
+
+
+@dataclass(slots=True)
+class FinalCategoryDecision:
+    category_id: str
+    category_name: str
+    layer: str
+    decision_status: str
+    supporting_evidence: list[EvidenceItem] = field(default_factory=list)
+    conflicting_evidence: list[EvidenceItem] = field(default_factory=list)
+    confidence: str = "unknown"
+    confidence_score: float = 0.0
+    source_candidate_ids: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class ReviewAuditRecord:
+    category_id: str
+    layer: str
+    review_status: str
+    provider: str | None = None
+    model: str | None = None
+    reason: str | None = None
+    schema_version: str | None = None
 
 
 @dataclass(slots=True)
@@ -77,11 +138,14 @@ class AnalysisResult:
     skill_id: str
     root_path: str
     structure_profile: SkillStructureProfile
+    rule_candidates: list[RuleCandidate] = field(default_factory=list)
+    final_decisions: list[FinalCategoryDecision] = field(default_factory=list)
     declaration_classifications: list[CategoryClassification] = field(default_factory=list)
     implementation_classifications: list[CategoryClassification] = field(default_factory=list)
     skill_level_discrepancy: str = "insufficient_implementation_evidence"
     category_discrepancies: list[CategoryDiscrepancy] = field(default_factory=list)
     risk_mappings: list[dict[str, Any]] = field(default_factory=list)
+    review_audit_records: list[ReviewAuditRecord] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
 
@@ -94,6 +158,16 @@ class RunConfig:
     case_study_skill: str | None
     include_hidden: bool
     fail_on_unknown_matrix: bool
+    llm_review_mode: str = "off"
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    llm_low_confidence_threshold: float = 0.45
+    llm_high_risk_sparse_threshold: int = 1
+    llm_fallback_max_categories: int = 0
+    llm_timeout_seconds: int = 30
+    llm_failure_policy: str = "fail_open"
+    emit_review_audit: bool = False
+    goldset_path: str | None = None
 
 
 @dataclass(slots=True)
@@ -105,6 +179,7 @@ class RunSummary:
     errored_skills: int
     config: RunConfig
     skill_errors: list[dict[str, str]] = field(default_factory=list)
+    validation_summary: dict[str, Any] | None = None
 
 
 def dataclass_to_dict(value: Any) -> Any:
@@ -113,3 +188,7 @@ def dataclass_to_dict(value: Any) -> Any:
     if isinstance(value, Path):
         return str(value)
     return value
+
+
+def _stable_hash(value: str) -> str:
+    return hashlib.sha1(value.encode("utf-8")).hexdigest()
