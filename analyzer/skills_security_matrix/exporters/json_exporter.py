@@ -20,11 +20,15 @@ def export_json_files(output_dir: Path, results: list[AnalysisResult], summary: 
     cases_dir = output_dir / "cases"
     cases_dir.mkdir(parents=True, exist_ok=True)
     for result in results:
-        _write_json(cases_dir / f"{result.skill_id}.json", dataclass_to_dict(result))
+        _write_json(cases_dir / f"{_safe_filename(result.skill_id)}.json", dataclass_to_dict(result))
 
 
 def _write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _safe_filename(value: str) -> str:
+    return value.replace("/", "__")
 
 
 def _skill_record(result: AnalysisResult) -> dict[str, object]:

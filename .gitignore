@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyc
 
 # Virtual environments
 venv/
@@ -36,3 +37,4 @@ skills/
 outputs/
 tests/
 .env
+.codex
