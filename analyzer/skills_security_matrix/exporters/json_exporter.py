@@ -7,12 +7,12 @@ from ..models import AnalysisResult, RunSummary, dataclass_to_dict
 
 
 def export_json_files(output_dir: Path, results: list[AnalysisResult], summary: RunSummary) -> None:
-    _write_json(output_dir / "skills.json", [_skill_record(result) for result in results])
-    _write_json(output_dir / "rule_candidates.json", [_candidate_record(result) for result in results])
-    _write_json(output_dir / "classifications.json", [_classification_record(result) for result in results])
-    _write_json(output_dir / "discrepancies.json", [_discrepancy_record(result) for result in results])
-    _write_json(output_dir / "risk_mappings.json", [_risk_mapping_record(result) for result in results])
-    _write_json(output_dir / "review_audit.json", [_review_audit_record(result) for result in results])
+    _write_json(output_dir / "skills.json", [skill_record(result) for result in results])
+    _write_json(output_dir / "rule_candidates.json", [candidate_record(result) for result in results])
+    _write_json(output_dir / "classifications.json", [classification_record(result) for result in results])
+    _write_json(output_dir / "discrepancies.json", [discrepancy_record(result) for result in results])
+    _write_json(output_dir / "risk_mappings.json", [risk_mapping_record(result) for result in results])
+    _write_json(output_dir / "review_audit.json", [review_audit_record(result) for result in results])
     _write_json(output_dir / "run_manifest.json", dataclass_to_dict(summary))
     if summary.validation_summary is not None:
         _write_json(output_dir / "validation.json", summary.validation_summary)
@@ -31,7 +31,7 @@ def _safe_filename(value: str) -> str:
     return value.replace("/", "__")
 
 
-def _skill_record(result: AnalysisResult) -> dict[str, object]:
+def skill_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
         "root_path": result.root_path,
@@ -40,7 +40,7 @@ def _skill_record(result: AnalysisResult) -> dict[str, object]:
     }
 
 
-def _classification_record(result: AnalysisResult) -> dict[str, object]:
+def classification_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
         "final_decisions": [dataclass_to_dict(item) for item in result.final_decisions],
@@ -51,7 +51,7 @@ def _classification_record(result: AnalysisResult) -> dict[str, object]:
     }
 
 
-def _candidate_record(result: AnalysisResult) -> dict[str, object]:
+def candidate_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
         "rule_candidates": [dataclass_to_dict(item) for item in result.rule_candidates],
@@ -59,7 +59,7 @@ def _candidate_record(result: AnalysisResult) -> dict[str, object]:
     }
 
 
-def _discrepancy_record(result: AnalysisResult) -> dict[str, object]:
+def discrepancy_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
         "skill_level_discrepancy": result.skill_level_discrepancy,
@@ -68,7 +68,7 @@ def _discrepancy_record(result: AnalysisResult) -> dict[str, object]:
     }
 
 
-def _risk_mapping_record(result: AnalysisResult) -> dict[str, object]:
+def risk_mapping_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
         "risk_mappings": result.risk_mappings,
@@ -76,7 +76,7 @@ def _risk_mapping_record(result: AnalysisResult) -> dict[str, object]:
     }
 
 
-def _review_audit_record(result: AnalysisResult) -> dict[str, object]:
+def review_audit_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
         "review_audit_records": [dataclass_to_dict(item) for item in result.review_audit_records],

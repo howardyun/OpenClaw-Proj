@@ -133,7 +133,7 @@ def _scan_text_for_declaration(
 def _safe_read_text(path: Path) -> str | None:
     try:
         return path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
+    except (OSError, UnicodeDecodeError):
         return None
 
 

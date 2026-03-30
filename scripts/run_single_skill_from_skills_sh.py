@@ -1,12 +1,25 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import json
+import multiprocessing
+import os
+import re
 import sqlite3
 import subprocess
 import sys
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from threading import Event, Lock
+
+try:
+    from tqdm.auto import tqdm
+except ImportError:  # pragma: no cover - optional UX dependency
+    tqdm = None
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -14,15 +27,33 @@ if str(REPO_ROOT) not in sys.path:
 
 from analyzer.env import load_environment
 from analyzer.skills_security_matrix.cli import _analyze_skill, _build_provider_registry
-from analyzer.skills_security_matrix.exporters.csv_exporter import export_csv_files
-from analyzer.skills_security_matrix.exporters.json_exporter import export_json_files
+from analyzer.skills_security_matrix.exporters.csv_exporter import (
+    CLASSIFICATIONS_FIELDNAMES,
+    DISCREPANCIES_FIELDNAMES,
+    REVIEW_AUDIT_FIELDNAMES,
+    RULE_CANDIDATES_FIELDNAMES,
+    SKILLS_FIELDNAMES,
+    candidate_rows_for_result,
+    classification_rows_for_result,
+    discrepancy_rows_for_result,
+    review_audit_rows_for_result,
+    skill_rows,
+)
+from analyzer.skills_security_matrix.exporters.json_exporter import (
+    candidate_record,
+    classification_record,
+    discrepancy_record,
+    review_audit_record,
+    risk_mapping_record,
+    skill_record,
+)
 from analyzer.skills_security_matrix.matrix_loader import parse_matrix_file
-from analyzer.skills_security_matrix.models import RunConfig, RunSummary
+from analyzer.skills_security_matrix.models import AnalysisResult, RunConfig, RunSummary, dataclass_to_dict
 from analyzer.skills_security_matrix.skill_discovery import discover_skills
 from crawling.skills.skills_sh.download_skills import extract_github_repo
 
 
-IGNORED_DIR_NAMES = {".claude", ".agents", ".cursor", ".codex", ".opencode", ".git"}
+IGNORED_DIR_NAMES = {".git"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +69,134 @@ class ResolvedSkill:
     repo: str
     repo_root: Path
     slug: str
+
+
+@dataclass(frozen=True, slots=True)
+class RepoSkillIndex:
+    repo_root: Path
+    include_hidden: bool
+    repo_has_skill_md: bool
+    candidate_dirs: tuple[Path, ...]
+    candidate_dir_set: frozenset[Path]
+    candidate_dirs_by_name: dict[str, tuple[Path, ...]]
+    candidate_dirs_by_normalized_name: dict[str, tuple[Path, ...]]
+
+
+class RepoSkillIndexCache:
+    def __init__(self) -> None:
+        self._cache: dict[tuple[str, bool], RepoSkillIndex] = {}
+        self._events: dict[tuple[str, bool], Event] = {}
+        self._lock = Lock()
+
+    def get(self, repo_root: Path, include_hidden: bool = False) -> RepoSkillIndex:
+        key = (str(repo_root.resolve()), include_hidden)
+        with self._lock:
+            cached = self._cache.get(key)
+            if cached is not None:
+                return cached
+
+            event = self._events.get(key)
+            should_build = event is None
+            if should_build:
+                event = Event()
+                self._events[key] = event
+
+        if should_build:
+            try:
+                index = build_repo_skill_index(repo_root, include_hidden=include_hidden)
+            except Exception:
+                with self._lock:
+                    event = self._events.pop(key, None)
+                    if event is not None:
+                        event.set()
+                raise
+
+            with self._lock:
+                self._cache[key] = index
+                event = self._events.pop(key, None)
+                if event is not None:
+                    event.set()
+            return index
+
+        assert event is not None
+        event.wait()
+        with self._lock:
+            cached = self._cache.get(key)
+        if cached is None:
+            return self.get(repo_root, include_hidden=include_hidden)
+        return cached
+
+
+class BatchResultWriter:
+    def __init__(self, run_dir: Path, requested_formats: list[str]) -> None:
+        self.run_dir = run_dir
+        self.requested_formats = set(requested_formats)
+        self.cases_dir = run_dir / "cases"
+        self._jsonl_handles: dict[str, object] = {}
+        self._csv_handles: list[object] = []
+        self._csv_writers: dict[str, csv.DictWriter] = {}
+
+        if "json" in self.requested_formats:
+            self.cases_dir.mkdir(parents=True, exist_ok=True)
+            for stem in (
+                "skills",
+                "rule_candidates",
+                "classifications",
+                "discrepancies",
+                "risk_mappings",
+                "review_audit",
+            ):
+                path = run_dir / f"{stem}.jsonl"
+                self._jsonl_handles[stem] = path.open("w", encoding="utf-8")
+
+        if "csv" in self.requested_formats:
+            self._register_csv_writer("skills", SKILLS_FIELDNAMES)
+            self._register_csv_writer("classifications", CLASSIFICATIONS_FIELDNAMES)
+            self._register_csv_writer("rule_candidates", RULE_CANDIDATES_FIELDNAMES)
+            self._register_csv_writer("discrepancies", DISCREPANCIES_FIELDNAMES)
+            self._register_csv_writer("review_audit", REVIEW_AUDIT_FIELDNAMES)
+
+    def _register_csv_writer(self, stem: str, fieldnames: list[str]) -> None:
+        handle = (self.run_dir / f"{stem}.csv").open("w", encoding="utf-8", newline="")
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        handle.flush()
+        self._csv_handles.append(handle)
+        self._csv_writers[stem] = writer
+
+    def write_result(self, result: AnalysisResult) -> None:
+        if "json" in self.requested_formats:
+            self._append_jsonl("skills", skill_record(result))
+            self._append_jsonl("rule_candidates", candidate_record(result))
+            self._append_jsonl("classifications", classification_record(result))
+            self._append_jsonl("discrepancies", discrepancy_record(result))
+            self._append_jsonl("risk_mappings", risk_mapping_record(result))
+            self._append_jsonl("review_audit", review_audit_record(result))
+            (self.cases_dir / f"{_safe_filename(result.skill_id)}.json").write_text(
+                json.dumps(dataclass_to_dict(result), ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+        if "csv" in self.requested_formats:
+            self._csv_writers["skills"].writerows(skill_rows(result))
+            self._csv_writers["classifications"].writerows(classification_rows_for_result(result))
+            self._csv_writers["rule_candidates"].writerows(candidate_rows_for_result(result))
+            self._csv_writers["discrepancies"].writerows(discrepancy_rows_for_result(result))
+            self._csv_writers["review_audit"].writerows(review_audit_rows_for_result(result))
+            for handle in self._csv_handles:
+                handle.flush()
+
+    def _append_jsonl(self, stem: str, payload: dict[str, object]) -> None:
+        handle = self._jsonl_handles[stem]
+        handle.write(json.dumps(payload, ensure_ascii=False))
+        handle.write("\n")
+        handle.flush()
+
+    def close(self) -> None:
+        for handle in self._jsonl_handles.values():
+            handle.close()
+        for handle in self._csv_handles:
+            handle.close()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -56,6 +215,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--format", default="json,csv")
     parser.add_argument("--case-study-skill", default=None)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=min(32, (os.cpu_count() or 1) + 4),
+        help="Number of concurrent workers used for batch analysis.",
+    )
     parser.add_argument("--include-hidden", action="store_true")
     parser.add_argument("--matrix-path", default="analyzer/security matrix.md")
     parser.add_argument("--fail-on-unknown-matrix", action="store_true")
@@ -66,6 +231,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--llm-high-risk-sparse-threshold", type=int, default=1)
     parser.add_argument("--llm-fallback-max-categories", type=int, default=0)
     parser.add_argument("--llm-timeout-seconds", type=int, default=30)
+    parser.add_argument(
+        "--skill-timeout-seconds",
+        type=int,
+        default=600,
+        help="Per-skill timeout used only in batch mode.",
+    )
     parser.add_argument("--llm-fail-open", action="store_true")
     parser.add_argument("--llm-fail-closed", action="store_true")
     parser.add_argument("--emit-review-audit", action="store_true")
@@ -133,7 +304,12 @@ class ResolutionError(RuntimeError):
         self.candidates = candidates or []
 
 
-def resolve_skill(record: SkillRecord, repos_root: Path, include_hidden: bool = False) -> ResolvedSkill:
+def resolve_skill(
+    record: SkillRecord,
+    repos_root: Path,
+    include_hidden: bool = False,
+    repo_index_cache: RepoSkillIndexCache | None = None,
+) -> ResolvedSkill:
     repo = extract_github_repo(record.source, record.source_url)
     if repo is None:
         raise ResolutionError(
@@ -158,10 +334,16 @@ def resolve_skill(record: SkillRecord, repos_root: Path, include_hidden: bool = 
             source_url=record.source_url,
         )
 
-    slug = record.skill_id.rsplit("/", 1)[-1]
-    candidates = find_skill_candidates(repo_root, slug, include_hidden=include_hidden)
+    slug_variants = build_skill_slug_variants(record, repo)
+    repo_index = (
+        repo_index_cache.get(repo_root, include_hidden=include_hidden)
+        if repo_index_cache is not None
+        else build_repo_skill_index(repo_root, include_hidden=include_hidden)
+    )
+    candidates = find_skill_candidates(repo_index, slug_variants)
+    slug = slug_variants[0]
 
-    if not candidates and _repo_level_skill_matches(record, repo, repo_root):
+    if not candidates and _repo_level_skill_matches(record, repo, repo_root, repo_has_skill_md=repo_index.repo_has_skill_md):
         candidates = [repo_root]
 
     if not candidates:
@@ -176,48 +358,116 @@ def resolve_skill(record: SkillRecord, repos_root: Path, include_hidden: bool = 
         )
 
     ranked = rank_skill_candidates(candidates, repo_root, slug)
-    top_rank = candidate_rank(ranked[0], repo_root, slug)
-    tied = [path for path in ranked if candidate_rank(path, repo_root, slug) == top_rank]
-    if len(tied) > 1:
-        raise ResolutionError(
-            "ambiguous_skill_path",
-            f"Multiple equally-ranked skill paths found for {record.skill_id}",
-            skill_id=record.skill_id,
-            repo=repo,
-            repo_root=repo_root,
-            source=record.source,
-            source_url=record.source_url,
-            candidates=tied,
-        )
-
     return ResolvedSkill(skill_dir=ranked[0], repo=repo, repo_root=repo_root, slug=slug)
 
 
-def find_skill_candidates(repo_root: Path, slug: str, include_hidden: bool = False) -> list[Path]:
+def slugify_skill_name(value: str) -> str:
+    return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", value.lower())).strip("-")
+
+
+def normalize_skill_dir_name(value: str) -> str:
+    return re.sub(r"[-_]+", "-", re.sub(r"\s+", "-", value.strip().lower())).strip("-")
+
+
+def build_skill_slug_variants(record: SkillRecord, repo: str) -> list[str]:
+    raw_tail = record.skill_id.rsplit("/", 1)[-1].strip()
+    source_parts = [slugify_skill_name(part) for part in repo.split("/") if part]
+    variants: list[str] = []
+
+    def add_variant(value: str, *, slugify: bool = True) -> None:
+        normalized = slugify_skill_name(value) if slugify else value.strip()
+        if normalized and normalized not in variants:
+            variants.append(normalized)
+
+    add_variant(raw_tail)
+
+    if " " in raw_tail:
+        add_variant(raw_tail.replace(" ", "-"), slugify=False)
+        add_variant(raw_tail.replace(" ", "_"), slugify=False)
+        add_variant(raw_tail.lower().replace(" ", "-"), slugify=False)
+        add_variant(raw_tail.lower().replace(" ", "_"), slugify=False)
+
+    for prefix in source_parts:
+        if variants and variants[0].startswith(f"{prefix}-"):
+            add_variant(variants[0][len(prefix) + 1 :])
+
+    if len(source_parts) >= 2 and variants:
+        combined_prefix = "-".join(source_parts)
+        if variants[0].startswith(f"{combined_prefix}-"):
+            add_variant(variants[0][len(combined_prefix) + 1 :])
+
+    return variants
+
+
+def build_repo_skill_index(repo_root: Path, include_hidden: bool = False) -> RepoSkillIndex:
+    repo_root = repo_root.resolve()
+    repo_has_skill_md = (repo_root / "SKILL.md").is_file()
+    candidate_dirs: list[Path] = []
+    candidate_dir_set: set[Path] = set()
+    candidate_dirs_by_name: dict[str, list[Path]] = defaultdict(list)
+    candidate_dirs_by_normalized_name: dict[str, list[Path]] = defaultdict(list)
+
+    for current_root, dir_names, file_names in os.walk(repo_root, topdown=True):
+        if not include_hidden:
+            dir_names[:] = [name for name in dir_names if name not in IGNORED_DIR_NAMES]
+
+        if "SKILL.md" not in file_names:
+            continue
+
+        skill_dir = Path(current_root)
+        if skill_dir == repo_root:
+            continue
+
+        relative_path = skill_dir.relative_to(repo_root)
+        if not include_hidden and path_has_ignored_part(relative_path):
+            continue
+        if skill_dir in candidate_dir_set:
+            continue
+
+        candidate_dirs.append(skill_dir)
+        candidate_dir_set.add(skill_dir)
+        candidate_dirs_by_name[skill_dir.name].append(skill_dir)
+        candidate_dirs_by_normalized_name[normalize_skill_dir_name(skill_dir.name)].append(skill_dir)
+
+    return RepoSkillIndex(
+        repo_root=repo_root,
+        include_hidden=include_hidden,
+        repo_has_skill_md=repo_has_skill_md,
+        candidate_dirs=tuple(candidate_dirs),
+        candidate_dir_set=frozenset(candidate_dir_set),
+        candidate_dirs_by_name={name: tuple(paths) for name, paths in candidate_dirs_by_name.items()},
+        candidate_dirs_by_normalized_name={
+            name: tuple(paths) for name, paths in candidate_dirs_by_normalized_name.items()
+        },
+    )
+
+
+def find_skill_candidates(repo_index: RepoSkillIndex, slugs: list[str]) -> list[Path]:
     candidates: list[Path] = []
+    seen: set[Path] = set()
 
-    for candidate in [
-        repo_root / "skills" / slug,
-        repo_root / slug,
-    ]:
-        if (candidate / "SKILL.md").is_file():
+    def add_candidate(candidate: Path) -> None:
+        if candidate in repo_index.candidate_dir_set and candidate not in seen:
             candidates.append(candidate)
+            seen.add(candidate)
 
-    glob_patterns = [f"**/skills/{slug}/SKILL.md", f"**/{slug}/SKILL.md"]
-    for pattern in glob_patterns:
-        for skill_md in repo_root.glob(pattern):
-            skill_dir = skill_md.parent
-            if skill_dir in candidates:
-                continue
-            if not include_hidden and path_has_ignored_part(skill_dir.relative_to(repo_root)):
-                continue
-            candidates.append(skill_dir)
+    for slug in slugs:
+        add_candidate(repo_index.repo_root / "skills" / slug)
+        add_candidate(repo_index.repo_root / slug)
+        for candidate in repo_index.candidate_dirs_by_name.get(slug, ()):
+            add_candidate(candidate)
+        for candidate in repo_index.candidate_dirs_by_normalized_name.get(normalize_skill_dir_name(slug), ()):
+            add_candidate(candidate)
 
     return candidates
 
 
 def path_has_ignored_part(relative_path: Path) -> bool:
     return any(part in IGNORED_DIR_NAMES for part in relative_path.parts)
+
+
+def _safe_filename(value: str) -> str:
+    return value.replace("/", "__")
 
 
 def candidate_rank(path: Path, repo_root: Path, slug: str) -> tuple[int, int, int]:
@@ -231,8 +481,16 @@ def rank_skill_candidates(candidates: list[Path], repo_root: Path, slug: str) ->
     return sorted(candidates, key=lambda path: (candidate_rank(path, repo_root, slug), str(path)))
 
 
-def _repo_level_skill_matches(record: SkillRecord, repo: str, repo_root: Path) -> bool:
-    return record.skill_id.lower() == repo.lower() and (repo_root / "SKILL.md").is_file()
+def _repo_level_skill_matches(
+    record: SkillRecord,
+    repo: str,
+    repo_root: Path,
+    *,
+    repo_has_skill_md: bool | None = None,
+) -> bool:
+    if repo_has_skill_md is None:
+        repo_has_skill_md = (repo_root / "SKILL.md").is_file()
+    return record.skill_id.lower() == repo.lower() and repo_has_skill_md
 
 
 def build_main_command(args: argparse.Namespace, resolved: ResolvedSkill) -> list[str]:
@@ -281,47 +539,229 @@ def build_main_command(args: argparse.Namespace, resolved: ResolvedSkill) -> lis
     return command
 
 
+def _error_payload(
+    record: SkillRecord,
+    *,
+    error_type: str,
+    error: str,
+    repo: str | None = None,
+    repo_root: Path | None = None,
+) -> dict[str, str]:
+    resolved_repo = repo if repo is not None else extract_github_repo(record.source, record.source_url)
+    return {
+        "skill_id": record.skill_id,
+        "error_type": error_type,
+        "error": error,
+        "repo": resolved_repo or "",
+        "repo_root": str(repo_root) if repo_root else "",
+    }
+
+
+def _repo_root_for_record(record: SkillRecord, repos_root: Path) -> Path | None:
+    repo = extract_github_repo(record.source, record.source_url)
+    if repo is None:
+        return None
+    return repos_root / repo.replace("/", "__")
+
+
+def _analyze_record_impl(
+    record: SkillRecord,
+    repos_root: Path,
+    matrix_by_id,
+    args: argparse.Namespace,
+    provider_registry,
+    failure_policy: str,
+    repo_index_cache: RepoSkillIndexCache,
+):
+    resolved = resolve_skill(
+        record,
+        repos_root,
+        include_hidden=args.include_hidden,
+        repo_index_cache=repo_index_cache,
+    )
+    artifact = discover_skills(resolved.skill_dir, include_hidden=args.include_hidden, limit=1)[0]
+    artifact.skill_id = record.skill_id
+    return _analyze_skill(artifact, matrix_by_id, args, provider_registry, failure_policy)
+
+
+def _analyze_record_child(
+    conn,
+    record: SkillRecord,
+    repos_root: Path,
+    matrix_by_id,
+    args: argparse.Namespace,
+    failure_policy: str,
+) -> None:
+    try:
+        load_environment()
+        provider_registry = _build_provider_registry()
+        result = _analyze_record_impl(
+            record,
+            repos_root,
+            matrix_by_id,
+            args,
+            provider_registry,
+            failure_policy,
+            RepoSkillIndexCache(),
+        )
+        conn.send(("result", result))
+    except ResolutionError as exc:
+        conn.send(
+            (
+                "error",
+                _error_payload(
+                    record,
+                    error_type=exc.error_type,
+                    error=str(exc),
+                    repo=exc.repo,
+                    repo_root=exc.repo_root,
+                ),
+            )
+        )
+    except Exception as exc:  # pragma: no cover - defensive batch isolation
+        conn.send(("error", _error_payload(record, error_type="analysis_error", error=str(exc))))
+    finally:
+        conn.close()
+
+
+def analyze_record(
+    record: SkillRecord,
+    repos_root: Path,
+    matrix_by_id,
+    args: argparse.Namespace,
+    failure_policy: str,
+) -> tuple[str, AnalysisResult | dict[str, str]]:
+    context = multiprocessing.get_context("spawn")
+    recv_conn, send_conn = context.Pipe(duplex=False)
+    process = context.Process(
+        target=_analyze_record_child,
+        args=(
+            send_conn,
+            record,
+            repos_root,
+            matrix_by_id,
+            args,
+            failure_policy,
+        ),
+    )
+    process.start()
+    send_conn.close()
+
+    try:
+        deadline = args.skill_timeout_seconds
+        while deadline > 0:
+            if recv_conn.poll(min(0.5, deadline)):
+                outcome = recv_conn.recv()
+                process.join(timeout=1)
+                return outcome
+            if not process.is_alive():
+                process.join(timeout=1)
+                return (
+                    "error",
+                    _error_payload(
+                        record,
+                        error_type="analysis_error",
+                        error=f"analysis subprocess exited unexpectedly with code {process.exitcode}",
+                        repo_root=_repo_root_for_record(record, repos_root),
+                    ),
+                )
+            deadline -= 0.5
+
+        process.terminate()
+        process.join(timeout=5)
+        if process.is_alive():
+            process.kill()
+            process.join(timeout=5)
+        return (
+            "error",
+            _error_payload(
+                record,
+                error_type="skill_timeout",
+                error=f"skill exceeded {args.skill_timeout_seconds} seconds",
+                repo_root=_repo_root_for_record(record, repos_root),
+            ),
+        )
+    finally:
+        recv_conn.close()
+        if process.is_alive():
+            process.kill()
+            process.join(timeout=1)
+
+
 def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> int:
+    if args.workers < 1:
+        print("[error] --workers must be >= 1", file=sys.stderr)
+        return 2
+    if args.skill_timeout_seconds < 1:
+        print("[error] --skill-timeout-seconds must be >= 1", file=sys.stderr)
+        return 2
+
     load_environment()
     requested_formats = [value.strip() for value in args.format.split(",") if value.strip()]
     matrix_categories = parse_matrix_file(Path(args.matrix_path))
     matrix_by_id = {category.category_id: category for category in matrix_categories}
-    provider_registry = _build_provider_registry()
     failure_policy = "fail_closed" if args.llm_fail_closed else "fail_open"
     repos_root = Path(args.repos_root)
-
     run_id = f"run-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     run_dir = Path(args.output_dir) / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
+    writer = BatchResultWriter(run_dir, requested_formats)
 
-    results = []
     skill_errors: list[dict[str, str]] = []
-    for record in records:
-        try:
-            resolved = resolve_skill(record, repos_root, include_hidden=args.include_hidden)
-            artifact = discover_skills(resolved.skill_dir, include_hidden=args.include_hidden, limit=1)[0]
-            artifact.skill_id = record.skill_id
-            result = _analyze_skill(artifact, matrix_by_id, args, provider_registry, failure_policy)
-        except ResolutionError as exc:
-            skill_errors.append(
-                {
-                    "skill_id": record.skill_id,
-                    "error_type": exc.error_type,
-                    "error": str(exc),
-                    "repo": exc.repo or "",
-                    "repo_root": str(exc.repo_root) if exc.repo_root else "",
-                }
-            )
-            continue
-        except Exception as exc:  # pragma: no cover - defensive batch isolation
-            skill_errors.append({"skill_id": record.skill_id, "error_type": "analysis_error", "error": str(exc)})
-            continue
-        results.append(result)
+    written_results = 0
+    pending_outcomes: dict[int, tuple[str, AnalysisResult | dict[str, str]]] = {}
+    next_index_to_write = 0
+    progress = None
+    if tqdm is not None:
+        progress = tqdm(total=len(records), desc="Analyzing skills", unit="skill")
+
+    try:
+        with ThreadPoolExecutor(max_workers=args.workers) as executor:
+            future_map = {
+                executor.submit(
+                    analyze_record,
+                    record,
+                    repos_root,
+                    matrix_by_id,
+                    args,
+                    failure_policy,
+                ): (index, record)
+                for index, record in enumerate(records)
+            }
+
+            for future in as_completed(future_map):
+                index, record = future_map[future]
+                try:
+                    pending_outcomes[index] = future.result()
+                except Exception as exc:  # pragma: no cover - defensive batch isolation
+                    pending_outcomes[index] = (
+                        "error",
+                        {"skill_id": record.skill_id, "error_type": "analysis_error", "error": str(exc)},
+                    )
+
+                while next_index_to_write in pending_outcomes:
+                    outcome_type, payload = pending_outcomes.pop(next_index_to_write)
+                    if outcome_type == "result":
+                        writer.write_result(payload)
+                        written_results += 1
+                    else:
+                        skill_errors.append(payload)
+                    next_index_to_write += 1
+
+                if progress is not None:
+                    progress.update(1)
+                    progress.set_postfix_str(
+                        f"ok={written_results} err={len(skill_errors)} buffered={len(pending_outcomes)}"
+                    )
+    finally:
+        if progress is not None:
+            progress.close()
+        writer.close()
 
     summary = RunSummary(
         run_id=run_id,
         output_dir=str(run_dir),
-        analyzed_skills=len(results),
+        analyzed_skills=written_results,
         skipped_skills=len(skill_errors),
         errored_skills=len(skill_errors),
         config=RunConfig(
@@ -339,6 +779,7 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
             llm_high_risk_sparse_threshold=args.llm_high_risk_sparse_threshold,
             llm_fallback_max_categories=args.llm_fallback_max_categories,
             llm_timeout_seconds=args.llm_timeout_seconds,
+            skill_timeout_seconds=args.skill_timeout_seconds,
             llm_failure_policy=failure_policy,
             emit_review_audit=args.emit_review_audit,
             goldset_path=args.goldset_path,
@@ -346,10 +787,10 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
         skill_errors=skill_errors,
     )
 
-    if "json" in requested_formats:
-        export_json_files(run_dir, results, summary)
-    if "csv" in requested_formats:
-        export_csv_files(run_dir, results)
+    (run_dir / "run_manifest.json").write_text(
+        json.dumps(dataclass_to_dict(summary), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
     print(f"Run complete: {summary.run_id}")
     print(f"Output directory: {summary.output_dir}")
@@ -366,8 +807,8 @@ def main(argv: list[str] | None = None) -> int:
         records = load_skill_records(Path(args.db), limit=args.limit)
         return run_batch_analysis(args, records)
 
-    record = load_skill_record(Path(args.db), args.skill_id)
     try:
+        record = load_skill_record(Path(args.db), args.skill_id)
         resolved = resolve_skill(record, Path(args.repos_root), include_hidden=args.include_hidden)
     except ResolutionError as exc:
         print_resolution_error(exc)

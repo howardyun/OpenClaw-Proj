@@ -165,6 +165,7 @@ class RunConfig:
     llm_high_risk_sparse_threshold: int = 1
     llm_fallback_max_categories: int = 0
     llm_timeout_seconds: int = 30
+    skill_timeout_seconds: int = 600
     llm_failure_policy: str = "fail_open"
     emit_review_audit: bool = False
     goldset_path: str | None = None
