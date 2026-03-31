@@ -59,8 +59,8 @@ IGNORED_DIR_NAMES = {".git"}
 @dataclass(frozen=True, slots=True)
 class SkillRecord:
     skill_id: str
-    source: str
-    source_url: str
+    source: str | None
+    source_url: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -203,9 +203,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Resolve skills.sh skill paths from the DB and run the analyzer."
     )
-    parser.add_argument("--db", default="crawling/skills/skills_sh/skills.db", help="Path to skills.sh SQLite DB.")
+    parser.add_argument(
+        "--db",
+        default=None,
+        help="Optional path to the skills.sh SQLite DB. Required only when resolving skills via DB metadata.",
+    )
     parser.add_argument("--repos-root", default="skills/skill_sh_test", help="Root directory of downloaded repos.")
-    parser.add_argument("--skill-id", default=None, help="Optional target skills.sh skill id, e.g. aahl/skills/mcp-vods.")
+    parser.add_argument(
+        "--skill-id",
+        default=None,
+        help=(
+            "Optional target identifier. With --db, this is a skills.sh skill_id "
+            "(e.g. aahl/skills/mcp-vods). Without --db, this is a local skill slug matched "
+            "against directories under --repos-root."
+        ),
+    )
     parser.add_argument(
         "--python-bin",
         default=sys.executable,
@@ -281,6 +293,114 @@ def load_skill_records(db_path: Path, limit: int | None = None) -> list[SkillRec
     return [SkillRecord(skill_id=row["skill_id"], source=row["source"], source_url=row["source_url"]) for row in rows]
 
 
+def _iter_local_skill_dirs(repos_root: Path, include_hidden: bool = False) -> list[Path]:
+    repos_root = repos_root.resolve()
+    skill_dirs: list[Path] = []
+    seen: set[Path] = set()
+
+    for current_root, dir_names, file_names in os.walk(repos_root, topdown=True):
+        if not include_hidden:
+            dir_names[:] = [name for name in dir_names if name not in IGNORED_DIR_NAMES and not name.startswith(".")]
+        else:
+            dir_names[:] = [name for name in dir_names if name not in IGNORED_DIR_NAMES]
+
+        if "SKILL.md" not in file_names:
+            continue
+
+        skill_dir = Path(current_root).resolve()
+        if skill_dir in seen:
+            continue
+        skill_dirs.append(skill_dir)
+        seen.add(skill_dir)
+
+    return sorted(skill_dirs)
+
+
+def _local_skill_id(skill_dir: Path, repos_root: Path) -> str:
+    return skill_dir.resolve().relative_to(repos_root.resolve()).as_posix()
+
+
+def _infer_local_repo_root(skill_dir: Path, repos_root: Path) -> Path:
+    skill_dir = skill_dir.resolve()
+    repos_root = repos_root.resolve()
+    repo_root = skill_dir
+    while repo_root.parent != repos_root and repo_root != repos_root:
+        repo_root = repo_root.parent
+    return repo_root
+
+
+def scan_local_skill_records(repos_root: Path, include_hidden: bool = False) -> list[SkillRecord]:
+    return [
+        SkillRecord(
+            skill_id=_local_skill_id(skill_dir, repos_root),
+            source=None,
+            source_url=None,
+        )
+        for skill_dir in _iter_local_skill_dirs(repos_root, include_hidden=include_hidden)
+    ]
+
+
+def resolve_local_skill_by_slug(skill_slug: str, repos_root: Path, include_hidden: bool = False) -> ResolvedSkill:
+    normalized_slug = normalize_skill_dir_name(skill_slug)
+    candidates = [
+        skill_dir
+        for skill_dir in _iter_local_skill_dirs(repos_root, include_hidden=include_hidden)
+        if normalize_skill_dir_name(skill_dir.name) == normalized_slug
+    ]
+
+    if not candidates:
+        raise ResolutionError(
+            "skill_not_found",
+            f"Could not resolve local skill path for slug: {skill_slug}",
+            skill_id=skill_slug,
+            repo=None,
+            repo_root=repos_root,
+            source=None,
+            source_url=None,
+        )
+
+    if len(candidates) > 1:
+        raise ResolutionError(
+            "skill_ambiguous",
+            f"Multiple local skill directories matched slug: {skill_slug}",
+            skill_id=skill_slug,
+            repo=None,
+            repo_root=repos_root,
+            source=None,
+            source_url=None,
+            candidates=candidates,
+        )
+
+    skill_dir = candidates[0]
+    return ResolvedSkill(
+        skill_dir=skill_dir,
+        repo="",
+        repo_root=_infer_local_repo_root(skill_dir, repos_root),
+        slug=normalized_slug,
+    )
+
+
+def resolve_local_skill(record: SkillRecord, repos_root: Path, include_hidden: bool = False) -> ResolvedSkill:
+    skill_dir = (repos_root / record.skill_id).resolve()
+    if not (skill_dir / "SKILL.md").is_file():
+        raise ResolutionError(
+            "skill_not_found",
+            f"Could not resolve local skill path for {record.skill_id}",
+            skill_id=record.skill_id,
+            repo=None,
+            repo_root=repos_root,
+            source=None,
+            source_url=None,
+        )
+
+    return ResolvedSkill(
+        skill_dir=skill_dir,
+        repo="",
+        repo_root=_infer_local_repo_root(skill_dir, repos_root),
+        slug=normalize_skill_dir_name(skill_dir.name),
+    )
+
+
 class ResolutionError(RuntimeError):
     def __init__(
         self,
@@ -322,7 +442,7 @@ def resolve_skill(
             source_url=record.source_url,
         )
 
-    repo_root = repos_root / repo.replace("/", "__")
+    repo_root = (repos_root / repo.replace("/", "__")).resolve()
     if not repo_root.is_dir():
         raise ResolutionError(
             "repo_not_found",
@@ -547,7 +667,9 @@ def _error_payload(
     repo: str | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, str]:
-    resolved_repo = repo if repo is not None else extract_github_repo(record.source, record.source_url)
+    resolved_repo = repo
+    if resolved_repo is None and record.source and record.source_url:
+        resolved_repo = extract_github_repo(record.source, record.source_url)
     return {
         "skill_id": record.skill_id,
         "error_type": error_type,
@@ -558,10 +680,12 @@ def _error_payload(
 
 
 def _repo_root_for_record(record: SkillRecord, repos_root: Path) -> Path | None:
-    repo = extract_github_repo(record.source, record.source_url)
-    if repo is None:
-        return None
-    return repos_root / repo.replace("/", "__")
+    if record.source and record.source_url:
+        repo = extract_github_repo(record.source, record.source_url)
+        if repo is not None:
+            return repos_root / repo.replace("/", "__")
+    skill_dir = repos_root / record.skill_id
+    return _infer_local_repo_root(skill_dir, repos_root) if skill_dir.exists() else None
 
 
 def _analyze_record_impl(
@@ -573,12 +697,15 @@ def _analyze_record_impl(
     failure_policy: str,
     repo_index_cache: RepoSkillIndexCache,
 ):
-    resolved = resolve_skill(
-        record,
-        repos_root,
-        include_hidden=args.include_hidden,
-        repo_index_cache=repo_index_cache,
-    )
+    if args.db:
+        resolved = resolve_skill(
+            record,
+            repos_root,
+            include_hidden=args.include_hidden,
+            repo_index_cache=repo_index_cache,
+        )
+    else:
+        resolved = resolve_local_skill(record, repos_root, include_hidden=args.include_hidden)
     artifact = discover_skills(resolved.skill_dir, include_hidden=args.include_hidden, limit=1)[0]
     artifact.skill_id = record.skill_id
     return _analyze_skill(artifact, matrix_by_id, args, provider_registry, failure_policy)
@@ -803,13 +930,23 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    repos_root = Path(args.repos_root)
+
     if args.skill_id is None:
-        records = load_skill_records(Path(args.db), limit=args.limit)
+        if args.db:
+            records = load_skill_records(Path(args.db), limit=args.limit)
+        else:
+            records = scan_local_skill_records(repos_root, include_hidden=args.include_hidden)
+            if args.limit is not None:
+                records = records[: args.limit]
         return run_batch_analysis(args, records)
 
     try:
-        record = load_skill_record(Path(args.db), args.skill_id)
-        resolved = resolve_skill(record, Path(args.repos_root), include_hidden=args.include_hidden)
+        if args.db:
+            record = load_skill_record(Path(args.db), args.skill_id)
+            resolved = resolve_skill(record, repos_root, include_hidden=args.include_hidden)
+        else:
+            resolved = resolve_local_skill_by_slug(args.skill_id, repos_root, include_hidden=args.include_hidden)
     except ResolutionError as exc:
         print_resolution_error(exc)
         return 1

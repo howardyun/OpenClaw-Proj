@@ -304,6 +304,32 @@ python main.py \
 - `validation.json`：当提供 `--goldset-path` 时输出 gold set 对比结果
 - `cases/<skill-id>.json`：适合 case study 的单 skill 全量视图
 
+辅助脚本 [`scripts/run_single_skill_from_skills_sh.py`](/home/szk/code/OpenClaw-Proj/scripts/run_single_skill_from_skills_sh.py) 支持两种模式：
+
+- DB 模式：传 `--db`，按 skills.sh 数据库中的 `skill_id` 解析本地仓库与 skill 路径
+- 本地扫描模式：不传 `--db`，直接扫描 `--repos-root` 下所有包含 `SKILL.md` 的目录
+
+示例：
+
+```bash
+python scripts/run_single_skill_from_skills_sh.py \
+  --db crawling/skills/skills_sh/skills.db \
+  --repos-root skills/skill_sh_test \
+  --skill-id aahl/skills/mcp-vods
+```
+
+```bash
+python scripts/run_single_skill_from_skills_sh.py \
+  --repos-root skills/skill_sh_test \
+  --skill-id mcp-vods
+```
+
+```bash
+python scripts/run_single_skill_from_skills_sh.py \
+  --repos-root skills/skill_sh_test \
+  --output-dir outputs/skills_security_matrix
+```
+
 review 模式说明：
 
 - `off`：只运行离线候选构建与最终化，不做任何外部模型调用
