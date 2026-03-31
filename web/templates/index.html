@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}触发单技能扫描{% endblock %}
+
+{% block content %}
+  <section class="panel hero">
+    <h1>触发单技能扫描</h1>
+    <p>输入一个 `skills.sh` 的 `skill_id`，例如 `aahl/skills/mcp-vods`。</p>
+    {% if error %}
+      <div class="alert alert-error">
+        <strong>扫描失败</strong>
+        <pre>{{ error }}</pre>
+      </div>
+    {% endif %}
+    <form class="scan-form" method="post" action="{{ url_for('scan') }}">
+      <label for="skill_id">skill_id</label>
+      <input id="skill_id" name="skill_id" type="text" required value="{{ skill_id }}" placeholder="owner/repo/skill-name">
+      <button type="submit">开始扫描</button>
+    </form>
+  </section>
+{% endblock %}

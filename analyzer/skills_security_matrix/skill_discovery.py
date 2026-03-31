@@ -84,7 +84,7 @@ def _build_artifact(path: Path, *, include_hidden: bool = False) -> SkillArtifac
 
     return SkillArtifact(
         skill_id=path.name,
-        root_path=path,
+        root_path=root,
         structure=detect_structure(path),
         file_paths=sorted(file_paths),
         source_files=sorted(source_files),
