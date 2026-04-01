@@ -18,6 +18,46 @@ class MatrixCategory:
 
 
 @dataclass(slots=True)
+class AtomicCapability:
+    atomic_id: str
+    atomic_name: str
+    minimal_condition: str
+    primary_risks: list[str]
+    necessary_controls: list[str]
+
+
+@dataclass(slots=True)
+class ControlSemantic:
+    control_id: str
+    control_name: str
+    minimal_condition: str
+    applicable_atomic_ids: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class CapabilityMapping:
+    atomic_id: str
+    category_id: str
+
+
+@dataclass(slots=True)
+class MismatchDefinition:
+    mismatch_id: str
+    mismatch_name: str
+    definition: str
+    trigger_condition: str
+
+
+@dataclass(slots=True)
+class MatrixDefinition:
+    categories: list[MatrixCategory] = field(default_factory=list)
+    atomic_capabilities: list[AtomicCapability] = field(default_factory=list)
+    control_semantics: list[ControlSemantic] = field(default_factory=list)
+    capability_mappings: list[CapabilityMapping] = field(default_factory=list)
+    mismatch_definitions: list[MismatchDefinition] = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class SkillStructureProfile:
     has_skill_md: bool
     has_frontmatter: bool
@@ -53,6 +93,10 @@ class EvidenceItem:
     source_kind: str | None = None
     source_role: str | None = None
     support_reference_mode: str | None = None
+    subject_type: str = "atomic_capability"
+    matched_pattern: str | None = None
+    evidence_strength: str = "medium"
+    excluded_by_rule: str | None = None
     excerpt_hash: str = ""
     evidence_fingerprint: str = ""
 
@@ -82,6 +126,31 @@ class CategoryClassification:
     confidence: str = "unknown"
     confidence_score: float = 0.0
     decision_status: str = "accepted"
+
+
+@dataclass(slots=True)
+class AtomicEvidenceDecision:
+    atomic_id: str
+    atomic_name: str
+    layer: str
+    decision_status: str
+    supporting_evidence: list[EvidenceItem] = field(default_factory=list)
+    conflicting_evidence: list[EvidenceItem] = field(default_factory=list)
+    confidence: str = "unknown"
+    confidence_score: float = 0.0
+    mapped_category_ids: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class ControlDecision:
+    control_id: str
+    control_name: str
+    layer: str
+    decision_status: str
+    evidence: list[EvidenceItem] = field(default_factory=list)
+    confidence: str = "unknown"
+    confidence_score: float = 0.0
+    applicable_atomic_ids: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -131,6 +200,11 @@ class CategoryDiscrepancy:
     implementation_present: bool
     risks: list[str]
     controls: list[str]
+    mismatch_ids: list[str] = field(default_factory=list)
+    declaration_atomic_ids: list[str] = field(default_factory=list)
+    implementation_atomic_ids: list[str] = field(default_factory=list)
+    declaration_control_ids: list[str] = field(default_factory=list)
+    implementation_control_ids: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -138,6 +212,10 @@ class AnalysisResult:
     skill_id: str
     root_path: str
     structure_profile: SkillStructureProfile
+    declaration_atomic_decisions: list[AtomicEvidenceDecision] = field(default_factory=list)
+    implementation_atomic_decisions: list[AtomicEvidenceDecision] = field(default_factory=list)
+    declaration_control_decisions: list[ControlDecision] = field(default_factory=list)
+    implementation_control_decisions: list[ControlDecision] = field(default_factory=list)
     rule_candidates: list[RuleCandidate] = field(default_factory=list)
     final_decisions: list[FinalCategoryDecision] = field(default_factory=list)
     declaration_classifications: list[CategoryClassification] = field(default_factory=list)

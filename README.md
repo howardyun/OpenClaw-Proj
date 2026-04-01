@@ -269,13 +269,14 @@ python main.py \
 
 核心行为：
 
-- 解析 [`analyzer/security matrix.md`](/home/szk/code/OpenClaw-Proj/analyzer/security%20matrix.md) 为标准化分类表
+- 解析 [`analyzer/security matrix.md`](/home/szk/code/OpenClaw-Proj/analyzer/security%20matrix.md) 中的多段矩阵：`Category Matrix`、`Atomic Capabilities`、`Control Semantics`、`Capability Mappings`、`Mismatch Definitions`
 - 发现本地 skill 目录并生成结构画像
 - 仅从 `SKILL.md` 及其显式引用材料提取声明层证据
-- 从代码、脚本、配置中提取实现层证据
-- 先生成可追溯的 `rule candidates`，再产出最终 `final decisions`
-- 在显式启用时，只对低置信度、高风险且证据稀疏、或存在冲突信号的类别做 category-level review
-- 计算声明/实现漂移，并把最终分类结果映射到矩阵中的 `主要风险` 与 `控制要求`
+- 从代码、脚本、配置中提取实现层证据，并区分原子能力证据与控制语义证据
+- 先按原子能力做最小成立条件判定，再按固定映射上卷到 12 个兼容的大类输出
+- 对 `context`、代码块里的 `bash`、纯文本 `token`、孤立 `sleep()` 等弱信号应用排除规则，避免误报高风险能力
+- 在显式启用时，只对上卷后的 category-level candidates 做 review
+- 计算 mismatch 类型，并把最终分类结果映射到矩阵中的 `主要风险`、`控制要求`、命中原子能力与缺失控制
 - 一次运行同时产出 JSON、CSV、review audit、validation 结果与按 skill 切分的 case-study 文件
 
 常用参数：
@@ -296,8 +297,10 @@ python main.py \
 主要输出：
 
 - `skills.json` / `skills.csv`：skill 结构画像与基础元数据
+- `atomic_decisions.csv`：原子能力判定结果
+- `control_decisions.csv`：控制语义判定结果
 - `rule_candidates.json` / `rule_candidates.csv`：离线规则候选、证据和初始置信度
-- `classifications.json` / `classifications.csv`：最终声明层、实现层决策
+- `classifications.json` / `classifications.csv`：最终声明层、实现层决策，同时保留原子层与控制层兼容输出
 - `discrepancies.json` / `discrepancies.csv`：声明/实现漂移与分类状态
 - `risk_mappings.json`：矩阵风险和控制项映射
 - `review_audit.json` / `review_audit.csv`：review 轨迹、provider 元数据和失败信息

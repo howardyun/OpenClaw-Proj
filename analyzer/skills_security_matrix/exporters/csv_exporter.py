@@ -39,6 +39,25 @@ RULE_CANDIDATES_FIELDNAMES = [
     "conflict_count",
     "trigger_reason",
 ]
+ATOMIC_DECISIONS_FIELDNAMES = [
+    "skill_id",
+    "layer",
+    "atomic_id",
+    "atomic_name",
+    "decision_status",
+    "confidence",
+    "confidence_score",
+    "mapped_category_ids",
+]
+CONTROL_DECISIONS_FIELDNAMES = [
+    "skill_id",
+    "layer",
+    "control_id",
+    "control_name",
+    "decision_status",
+    "confidence",
+    "confidence_score",
+]
 DISCREPANCIES_FIELDNAMES = [
     "skill_id",
     "skill_level_discrepancy",
@@ -77,9 +96,24 @@ def export_csv_files(output_dir: Path, results: list[AnalysisResult]) -> None:
         candidate_rows(results),
     )
     _write_csv(
+        output_dir / "atomic_decisions.csv",
+        ATOMIC_DECISIONS_FIELDNAMES,
+        atomic_decision_rows(results),
+    )
+    _write_csv(
+        output_dir / "control_decisions.csv",
+        CONTROL_DECISIONS_FIELDNAMES,
+        control_decision_rows(results),
+    )
+    _write_csv(
         output_dir / "discrepancies.csv",
         DISCREPANCIES_FIELDNAMES,
         discrepancy_rows(results),
+    )
+    _write_csv(
+        output_dir / "implementation_only_high_risk.csv",
+        DISCREPANCIES_FIELDNAMES,
+        discrepancy_rows(implementation_only_high_risk_results(results)),
     )
     _write_csv(
         output_dir / "review_audit.csv",
@@ -131,6 +165,10 @@ def classification_rows_for_result(result: AnalysisResult) -> list[dict[str, obj
                     }
                 )
     return rows
+
+
+def implementation_only_high_risk_results(results: list[AnalysisResult]) -> list[AnalysisResult]:
+    return [result for result in results if result.skill_level_discrepancy == "implementation_only_high_risk"]
 
 
 def discrepancy_rows(results: list[AnalysisResult]) -> list[dict[str, object]]:
@@ -221,6 +259,51 @@ def review_audit_rows_for_result(result: AnalysisResult) -> list[dict[str, objec
                 "schema_version": record.schema_version or "",
             }
         )
+    return rows
+
+
+def atomic_decision_rows(results: list[AnalysisResult]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for result in results:
+        for layer, decisions in (
+            ("declaration", result.declaration_atomic_decisions),
+            ("implementation", result.implementation_atomic_decisions),
+        ):
+            for decision in decisions:
+                rows.append(
+                    {
+                        "skill_id": result.skill_id,
+                        "layer": layer,
+                        "atomic_id": decision.atomic_id,
+                        "atomic_name": decision.atomic_name,
+                        "decision_status": decision.decision_status,
+                        "confidence": decision.confidence,
+                        "confidence_score": decision.confidence_score,
+                        "mapped_category_ids": ",".join(decision.mapped_category_ids),
+                    }
+                )
+    return rows
+
+
+def control_decision_rows(results: list[AnalysisResult]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for result in results:
+        for layer, decisions in (
+            ("declaration", result.declaration_control_decisions),
+            ("implementation", result.implementation_control_decisions),
+        ):
+            for decision in decisions:
+                rows.append(
+                    {
+                        "skill_id": result.skill_id,
+                        "layer": layer,
+                        "control_id": decision.control_id,
+                        "control_name": decision.control_name,
+                        "decision_status": decision.decision_status,
+                        "confidence": decision.confidence,
+                        "confidence_score": decision.confidence_score,
+                    }
+                )
     return rows
 
 

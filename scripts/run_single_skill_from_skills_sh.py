@@ -47,7 +47,7 @@ from analyzer.skills_security_matrix.exporters.json_exporter import (
     risk_mapping_record,
     skill_record,
 )
-from analyzer.skills_security_matrix.matrix_loader import parse_matrix_file
+from analyzer.skills_security_matrix.matrix_loader import load_matrix_definition, parse_matrix_file
 from analyzer.skills_security_matrix.models import AnalysisResult, RunConfig, RunSummary, dataclass_to_dict
 from analyzer.skills_security_matrix.skill_discovery import discover_skills
 from crawling.skills.skills_sh.download_skills import extract_github_repo
@@ -708,7 +708,8 @@ def _analyze_record_impl(
         resolved = resolve_local_skill(record, repos_root, include_hidden=args.include_hidden)
     artifact = discover_skills(resolved.skill_dir, include_hidden=args.include_hidden, limit=1)[0]
     artifact.skill_id = record.skill_id
-    return _analyze_skill(artifact, matrix_by_id, args, provider_registry, failure_policy)
+    matrix_definition = load_matrix_definition(Path(args.matrix_path))
+    return _analyze_skill(artifact, matrix_definition, matrix_by_id, args, provider_registry, failure_policy)
 
 
 def _analyze_record_child(
@@ -758,7 +759,10 @@ def analyze_record(
     args: argparse.Namespace,
     failure_policy: str,
 ) -> tuple[str, AnalysisResult | dict[str, str]]:
-    context = multiprocessing.get_context("spawn")
+    safe_args = _to_namespace(args)
+    skill_timeout_seconds = getattr(args, "skill_timeout_seconds", 600)
+    start_method = "fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn"
+    context = multiprocessing.get_context(start_method)
     recv_conn, send_conn = context.Pipe(duplex=False)
     process = context.Process(
         target=_analyze_record_child,
@@ -767,7 +771,7 @@ def analyze_record(
             record,
             repos_root,
             matrix_by_id,
-            args,
+            safe_args,
             failure_policy,
         ),
     )
@@ -775,7 +779,7 @@ def analyze_record(
     send_conn.close()
 
     try:
-        deadline = args.skill_timeout_seconds
+        deadline = skill_timeout_seconds
         while deadline > 0:
             if recv_conn.poll(min(0.5, deadline)):
                 outcome = recv_conn.recv()
@@ -804,7 +808,7 @@ def analyze_record(
             _error_payload(
                 record,
                 error_type="skill_timeout",
-                error=f"skill exceeded {args.skill_timeout_seconds} seconds",
+                error=f"skill exceeded {skill_timeout_seconds} seconds",
                 repo_root=_repo_root_for_record(record, repos_root),
             ),
         )
@@ -815,11 +819,17 @@ def analyze_record(
             process.join(timeout=1)
 
 
+def _to_namespace(args: argparse.Namespace) -> argparse.Namespace:
+    values = {key: getattr(args, key) for key in dir(args) if not key.startswith("_") and not callable(getattr(args, key))}
+    return argparse.Namespace(**values)
+
+
 def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> int:
     if args.workers < 1:
         print("[error] --workers must be >= 1", file=sys.stderr)
         return 2
-    if args.skill_timeout_seconds < 1:
+    skill_timeout_seconds = getattr(args, "skill_timeout_seconds", 600)
+    if skill_timeout_seconds < 1:
         print("[error] --skill-timeout-seconds must be >= 1", file=sys.stderr)
         return 2
 
@@ -906,7 +916,7 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
             llm_high_risk_sparse_threshold=args.llm_high_risk_sparse_threshold,
             llm_fallback_max_categories=args.llm_fallback_max_categories,
             llm_timeout_seconds=args.llm_timeout_seconds,
-            skill_timeout_seconds=args.skill_timeout_seconds,
+            skill_timeout_seconds=skill_timeout_seconds,
             llm_failure_policy=failure_policy,
             emit_review_audit=args.emit_review_audit,
             goldset_path=args.goldset_path,

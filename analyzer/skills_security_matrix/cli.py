@@ -11,7 +11,7 @@ from .evidence.declaration import extract_declaration_evidence
 from .evidence.implementation import extract_implementation_evidence
 from .exporters.csv_exporter import export_csv_files
 from .exporters.json_exporter import export_json_files
-from .matrix_loader import parse_matrix_file
+from .matrix_loader import load_matrix_definition
 from .models import AnalysisResult, RunConfig, RunSummary
 from .review.llm_provider import ProviderRegistry
 from .review.llm_reviewer import review_candidates
@@ -20,7 +20,13 @@ from .review.providers.mock_provider import MockReviewProvider
 from .review.providers.openai_provider import OpenAIReviewProvider
 from .review.review_policy import ReviewPolicyConfig, build_review_requests
 from .risk_mapping import build_risk_mappings
-from .rules.candidate_builder import build_rule_candidates, decisions_to_classifications, finalize_rule_candidates
+from .rules.candidate_builder import (
+    build_atomic_decisions,
+    build_control_decisions,
+    build_rule_candidates,
+    decisions_to_classifications,
+    finalize_rule_candidates,
+)
 from .skill_discovery import discover_skills
 from .validation.goldset import load_goldset, validate_against_goldset
 
@@ -84,8 +90,8 @@ def build_parser() -> argparse.ArgumentParser:
 def run_analysis(args: argparse.Namespace) -> RunSummary:
     load_environment()
     requested_formats = [value.strip() for value in args.format.split(",") if value.strip()]
-    matrix_categories = parse_matrix_file(Path(args.matrix_path))
-    matrix_by_id = {category.category_id: category for category in matrix_categories}
+    matrix_definition = load_matrix_definition(Path(args.matrix_path))
+    matrix_by_id = {category.category_id: category for category in matrix_definition.categories}
     provider_registry = _build_provider_registry()
     failure_policy = "fail_closed" if getattr(args, "llm_fail_closed", False) else "fail_open"
 
@@ -98,7 +104,7 @@ def run_analysis(args: argparse.Namespace) -> RunSummary:
     skill_errors: list[dict[str, str]] = []
     for skill in skills:
         try:
-            result = _analyze_skill(skill, matrix_by_id, args, provider_registry, failure_policy)
+            result = _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_registry, failure_policy)
         except Exception as exc:  # pragma: no cover - defensive batch isolation
             skill_errors.append({"skill_id": skill.skill_id, "error": str(exc)})
             result = AnalysisResult(
@@ -148,11 +154,23 @@ def run_analysis(args: argparse.Namespace) -> RunSummary:
     return summary
 
 
-def _analyze_skill(skill, matrix_by_id, args, provider_registry: ProviderRegistry, failure_policy: str):
+def _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_registry: ProviderRegistry, failure_policy: str):
     declaration_evidence = extract_declaration_evidence(skill)
     implementation_evidence = extract_implementation_evidence(skill)
-    declaration_candidates = build_rule_candidates(declaration_evidence, layer="declaration")
-    implementation_candidates = build_rule_candidates(implementation_evidence, layer="implementation")
+    declaration_atomic_decisions = build_atomic_decisions(
+        declaration_evidence,
+        layer="declaration",
+        capability_mappings=matrix_definition.capability_mappings,
+    )
+    implementation_atomic_decisions = build_atomic_decisions(
+        implementation_evidence,
+        layer="implementation",
+        capability_mappings=matrix_definition.capability_mappings,
+    )
+    declaration_control_decisions = build_control_decisions(declaration_evidence, layer="declaration")
+    implementation_control_decisions = build_control_decisions(implementation_evidence, layer="implementation")
+    declaration_candidates = build_rule_candidates(declaration_atomic_decisions, layer="declaration", matrix_by_id=matrix_by_id)
+    implementation_candidates = build_rule_candidates(implementation_atomic_decisions, layer="implementation", matrix_by_id=matrix_by_id)
     rule_candidates = declaration_candidates + implementation_candidates
     final_decisions = finalize_rule_candidates(rule_candidates)
     review_requests = build_review_requests(
@@ -184,13 +202,21 @@ def _analyze_skill(skill, matrix_by_id, args, provider_registry: ProviderRegistr
         skill_id=skill.skill_id,
         root_path=str(skill.root_path),
         structure_profile=skill.structure,
+        declaration_atomic_decisions=declaration_atomic_decisions,
+        implementation_atomic_decisions=implementation_atomic_decisions,
+        declaration_control_decisions=declaration_control_decisions,
+        implementation_control_decisions=implementation_control_decisions,
         rule_candidates=rule_candidates,
         final_decisions=final_decisions,
         declaration_classifications=declaration_classifications,
         implementation_classifications=implementation_classifications,
         review_audit_records=review_audit_records if args.emit_review_audit or args.llm_review_mode != "off" else [],
     )
-    result.skill_level_discrepancy, result.category_discrepancies = compute_discrepancies(result, matrix_by_id)
+    result.skill_level_discrepancy, result.category_discrepancies = compute_discrepancies(
+        result,
+        matrix_by_id,
+        matrix_definition.capability_mappings,
+    )
     result.risk_mappings = build_risk_mappings(result, matrix_by_id)
     return result
 
