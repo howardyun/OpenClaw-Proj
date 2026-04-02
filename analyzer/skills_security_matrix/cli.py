@@ -216,6 +216,7 @@ def _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_regist
         result,
         matrix_by_id,
         matrix_definition.capability_mappings,
+        matrix_definition.control_semantics,
     )
     result.risk_mappings = build_risk_mappings(result, matrix_by_id)
     return result

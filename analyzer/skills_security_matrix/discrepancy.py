@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from .models import AnalysisResult, CapabilityMapping, CategoryDiscrepancy, MatrixCategory
+from .models import AnalysisResult, CapabilityMapping, CategoryDiscrepancy, ControlSemantic, MatrixCategory
 
 
 WRITE_OR_BATCH_ATOMICS = {"G4", "G5", "O2", "O3", "O4", "O5", "A6", "I2", "I3"}
@@ -15,14 +15,28 @@ def compute_discrepancies(
     result: AnalysisResult,
     matrix_by_id: dict[str, MatrixCategory],
     capability_mappings: list[CapabilityMapping],
+    control_semantics: list[ControlSemantic],
 ) -> tuple[str, list[CategoryDiscrepancy]]:
     mapping_index = _build_mapping_index(capability_mappings)
     declaration_by_category = _group_atomic_decisions(result.declaration_atomic_decisions, mapping_index)
     implementation_by_category = _group_atomic_decisions(result.implementation_atomic_decisions, mapping_index)
-    declaration_controls = {item.control_id for item in result.declaration_control_decisions if item.decision_status == "accepted"}
-    implementation_controls = {item.control_id for item in result.implementation_control_decisions if item.decision_status == "accepted"}
+    control_category_index = _build_control_category_index(control_semantics, mapping_index)
+    declaration_controls_by_category = _group_control_decisions(
+        result.declaration_control_decisions,
+        control_category_index,
+    )
+    implementation_controls_by_category = _group_control_decisions(
+        result.implementation_control_decisions,
+        control_category_index,
+    )
 
-    all_ids = sorted(set(matrix_by_id) | set(declaration_by_category) | set(implementation_by_category))
+    all_ids = sorted(
+        set(matrix_by_id)
+        | set(declaration_by_category)
+        | set(implementation_by_category)
+        | set(declaration_controls_by_category)
+        | set(implementation_controls_by_category)
+    )
     category_discrepancies: list[CategoryDiscrepancy] = []
     mismatch_totals: list[str] = []
     for category_id in all_ids:
@@ -31,10 +45,10 @@ def compute_discrepancies(
             continue
         declaration_atomic_ids = sorted(declaration_by_category.get(category_id, set()))
         implementation_atomic_ids = sorted(implementation_by_category.get(category_id, set()))
-        declaration_present = bool(declaration_atomic_ids)
-        implementation_present = bool(implementation_atomic_ids)
-        declaration_control_ids = sorted(declaration_controls) if declaration_present else []
-        implementation_control_ids = sorted(implementation_controls) if implementation_present else []
+        declaration_control_ids = sorted(declaration_controls_by_category.get(category_id, set()))
+        implementation_control_ids = sorted(implementation_controls_by_category.get(category_id, set()))
+        declaration_present = bool(declaration_atomic_ids or declaration_control_ids)
+        implementation_present = bool(implementation_atomic_ids or implementation_control_ids)
         mismatch_ids = _collect_mismatch_ids(
             declaration_atomic_ids,
             implementation_atomic_ids,
@@ -89,6 +103,28 @@ def _build_mapping_index(capability_mappings: list[CapabilityMapping]) -> dict[s
     return index
 
 
+def _build_control_category_index(
+    control_semantics: list[ControlSemantic],
+    mapping_index: dict[str, set[str]],
+) -> dict[str, set[str]]:
+    index: dict[str, set[str]] = defaultdict(set)
+    for control in control_semantics:
+        for atomic_id in control.applicable_atomic_ids:
+            for category_id in mapping_index.get(atomic_id, set()):
+                index[control.control_id].add(category_id)
+    return index
+
+
+def _group_control_decisions(decisions, control_category_index: dict[str, set[str]]) -> dict[str, set[str]]:
+    grouped: dict[str, set[str]] = defaultdict(set)
+    for decision in decisions:
+        if decision.decision_status != "accepted":
+            continue
+        for category_id in sorted(control_category_index.get(decision.control_id, set())):
+            grouped[category_id].add(decision.control_id)
+    return grouped
+
+
 def _collect_mismatch_ids(
     declaration_atomic_ids: list[str],
     implementation_atomic_ids: list[str],
@@ -129,6 +165,12 @@ def _legacy_status_for_mismatches(
     if "M2" in mismatch_set:
         return "declared_less_than_implemented"
     if "M3" in mismatch_set:
+        return "declared_more_than_implemented"
+    if "M4" in mismatch_set:
+        if declaration_present and not implementation_present:
+            return "declared_more_than_implemented"
+        if implementation_present and not declaration_present:
+            return "declared_less_than_implemented"
         return "declared_more_than_implemented"
     if "M7" in mismatch_set:
         return "insufficient_implementation_evidence"
