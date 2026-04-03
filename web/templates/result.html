@@ -26,6 +26,9 @@
         <span class="meta-chip">Repository: {{ repo_url }}</span>
         <span class="meta-chip">Skill Name: {{ skill_name }}</span>
       </div>
+      <div class="report-actions">
+        <a class="back-link" href="/">Start another scan</a>
+      </div>
     </div>
     <div class="stats">
       <article class="stat">
@@ -290,7 +293,6 @@
   {% endif %}
 </section>
 
-<a class="back-link" href="/">Start another scan</a>
 {% endif %}
 {% if not error_type %}
 <script>

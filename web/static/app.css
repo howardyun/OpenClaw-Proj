@@ -139,6 +139,18 @@ h3 {
   font-size: 15px;
 }
 
+.hero-description {
+  max-width: none;
+  margin-bottom: 0;
+}
+
+.hero-instruction {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 .hero-meta {
   display: flex;
   flex-wrap: wrap;
@@ -432,6 +444,25 @@ summary:focus-visible {
   display: grid;
   align-content: start;
   gap: 18px;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.report-copy .meta-chip {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.report-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .report-title {
@@ -893,10 +924,13 @@ details.category summary::-webkit-details-marker {
 .back-link {
   display: inline-flex;
   align-items: center;
-  margin-top: 6px;
+  min-height: 44px;
+  padding: 4px 0;
   color: var(--accent);
   text-decoration: none;
   font-weight: 600;
+  font-size: 18px;
+  line-height: 1.35;
 }
 
 .back-link:hover {
