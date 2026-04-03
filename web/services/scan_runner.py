@@ -21,6 +21,7 @@ class ScanRunResult:
     command: list[str]
     stdout: str
     stderr: str
+    cleanup_dir: Path | None = None
 
 
 def run_single_skill_scan(
@@ -32,15 +33,24 @@ def run_single_skill_scan(
     skill_key: str,
     python_bin: str | None = None,
     matrix_path: str = "analyzer/security matrix.md",
+    persist_result: bool = True,
 ) -> ScanRunResult:
-    runs_workspace.mkdir(parents=True, exist_ok=True)
     safe_repo = _safe_segment(repo_key)
     safe_skill = _safe_segment(skill_key)
-    final_dir = runs_workspace / safe_repo / safe_skill
-    final_case_path = final_dir / f"{safe_skill}.json"
+    if persist_result:
+        runs_workspace.mkdir(parents=True, exist_ok=True)
+        output_root = tempfile.TemporaryDirectory(prefix="scan-", dir=str(runs_workspace))
+        final_dir = runs_workspace / safe_repo / safe_skill
+        final_case_path = final_dir / f"{safe_skill}.json"
+        temp_dir_root: Path | None = None
+    else:
+        output_root = None
+        final_dir = Path(tempfile.mkdtemp(prefix="openclaw-scan-"))
+        final_case_path = final_dir / f"{safe_skill}.json"
+        temp_dir_root = final_dir
 
-    with tempfile.TemporaryDirectory(prefix="scan-", dir=str(runs_workspace)) as temp_root:
-        temp_output_root = Path(temp_root)
+    try:
+        temp_output_root = Path(output_root.name) if output_root is not None else final_dir
         command = [
             python_bin or sys.executable,
             "main.py",
@@ -68,7 +78,14 @@ def run_single_skill_scan(
 
         run_dir = _resolve_latest_run_dir(temp_output_root)
         source_case_path = _resolve_case_json_path(run_dir, skill_dir.name)
-        _persist_case_only(source_case_path, final_case_path)
+        if persist_result:
+            _persist_case_only(source_case_path, final_case_path)
+        else:
+            final_dir = run_dir
+            final_case_path = source_case_path
+    finally:
+        if output_root is not None:
+            output_root.cleanup()
 
     return ScanRunResult(
         run_id=f"{safe_repo}/{safe_skill}",
@@ -77,6 +94,7 @@ def run_single_skill_scan(
         command=command,
         stdout=completed.stdout,
         stderr=completed.stderr,
+        cleanup_dir=temp_dir_root,
     )
 
 
@@ -119,3 +137,8 @@ def _persist_case_only(source_case_path: Path, final_case_path: Path) -> None:
         else:
             shutil.rmtree(child)
     shutil.copy2(source_case_path, final_case_path)
+
+
+def cleanup_scan_result(scan_result: ScanRunResult) -> None:
+    if scan_result.cleanup_dir and scan_result.cleanup_dir.exists():
+        shutil.rmtree(scan_result.cleanup_dir, ignore_errors=True)

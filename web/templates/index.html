@@ -7,7 +7,7 @@
       <div class="search-header-top">
         <div>
           <h2>Which skill repo would you like to verify?</h2>
-          <p class="subtle">输入仓库地址或上传 zip 包，并填写 skill 名称后立即扫描</p>
+          <p class="subtle">输入仓库地址或上传 zip 包后立即扫描；若仓库内有多个 skill，再进入选择</p>
         </div>
         <div class="scan-mode-switch" role="tablist" aria-label="扫描方式切换">
           <button type="button" class="scan-mode-button is-active" data-scan-mode-trigger="github" aria-selected="true">Repository URL</button>
@@ -45,7 +45,7 @@
           </div>
         </div>
       </div>
-      <div class="search-stack">
+      <div class="search-stack" data-scan-skill-field>
         <label for="skill_name">Skill</label>
         <input id="skill_name" name="skill_name" type="text" value="{{ form_data.skill_name }}" placeholder="find-skills" />
         <p class="field-note">可选填写。为空时，系统会先列出仓库中发现的 skill 供你选择。</p>
@@ -54,7 +54,7 @@
         <button type="submit">Scan Repository</button>
       </div>
     </form>
-    <p class="subtle">右上角可切换扫描方式</p>
+    <p class="subtle">右上角可切换扫描方式，上传zip仅支持单个skill</p>
   </div>
 
   {% if error_title %}
@@ -106,6 +106,8 @@
     const panels = Array.from(form.querySelectorAll("[data-scan-mode-panel]"));
     const repoInput = form.querySelector("#repo_url");
     const zipInput = form.querySelector("#repo_zip");
+    const skillField = form.querySelector("[data-scan-skill-field]");
+    const skillInput = form.querySelector("#skill_name");
 
     const setMode = (mode) => {
       triggers.forEach((button) => {
@@ -126,6 +128,13 @@
       if (zipInput) {
         zipInput.disabled = isGithub;
         if (isGithub) zipInput.value = "";
+      }
+      if (skillField) {
+        skillField.classList.toggle("is-hidden", !isGithub);
+      }
+      if (skillInput) {
+        skillInput.disabled = !isGithub;
+        if (!isGithub) skillInput.value = "";
       }
     };
 

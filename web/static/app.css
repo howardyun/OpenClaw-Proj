@@ -225,6 +225,7 @@ h3 {
 
 .hero-search-form-toggle {
   grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.75fr) auto;
+  align-items: start;
 }
 
 .search-stack {
@@ -240,8 +241,16 @@ h3 {
   display: block;
 }
 
+.search-mode-panel[data-scan-mode-panel="upload"].is-active {
+  grid-column: 1 / span 2;
+}
+
 .search-stack-upload {
   min-width: 0;
+}
+
+.search-stack.is-hidden {
+  display: none;
 }
 
 .search-stack label {
@@ -360,7 +369,7 @@ h3 {
 .cta-row {
   display: flex;
   justify-content: flex-end;
-  align-self: start;
+  align-self: end;
   padding-top: 38px;
 }
 

@@ -6,13 +6,13 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
 
 from .services.repo_fetcher import RepositoryError, clone_or_refresh_repo, parse_github_repo
 from .services.result_loader import load_case_summary
-from .services.scan_runner import ScanError, run_single_skill_scan
+from .services.scan_runner import ScanError, cleanup_scan_result, run_single_skill_scan
 from .services.skill_locator import discover_skill_candidates, find_skill_matches, read_skill_name
-from .services.uploaded_repo import UploadError, ingest_uploaded_zip, resolve_uploaded_repo
+from .services.uploaded_repo import UploadError, cleanup_uploaded_repo, ingest_uploaded_zip, restore_uploaded_repo
 
 
 def create_app(config: dict | None = None) -> Flask:
@@ -27,7 +27,6 @@ def create_app(config: dict | None = None) -> Flask:
         PROJECT_ROOT=project_root,
         REPOS_WORKSPACE=project_root / "web" / "workspaces" / "repos",
         RUNS_WORKSPACE=project_root / "web" / "workspaces" / "runs",
-        UPLOADS_WORKSPACE=project_root / "web" / "workspaces" / "uploads",
         PYTHON_BIN=sys.executable,
     )
     if config:
@@ -124,7 +123,7 @@ def create_app(config: dict | None = None) -> Flask:
 
         if has_repo_zip:
             try:
-                uploaded_repo = ingest_uploaded_zip(repo_zip, Path(app.config["UPLOADS_WORKSPACE"]))
+                uploaded_repo = ingest_uploaded_zip(repo_zip)
             except UploadError as exc:
                 return _render_index_error(
                     form_data,
@@ -136,8 +135,8 @@ def create_app(config: dict | None = None) -> Flask:
             repo_path = uploaded_repo.repo_path
             source_type = "upload"
             source_label = f"ZIP 上传: {uploaded_repo.display_name}"
-            upload_key = uploaded_repo.upload_key
         else:
+            _clear_upload_session()
             try:
                 repo_ref = parse_github_repo(repo_url)
             except RepositoryError as exc:
@@ -158,10 +157,10 @@ def create_app(config: dict | None = None) -> Flask:
                     recent_scans=_load_recent_scans(Path(app.config["RUNS_WORKSPACE"])),
                 ), 502
 
-            upload_key = ""
-
         candidates = discover_skill_candidates(repo_path)
         if not candidates:
+            if has_repo_zip:
+                cleanup_uploaded_repo(uploaded_repo.temp_root)
             return _render_result_error(
                 repo_url=source_label,
                 skill_name=skill_name,
@@ -169,13 +168,33 @@ def create_app(config: dict | None = None) -> Flask:
                 error_message="No SKILL.md was found in this repository.",
             )
 
+        if source_type == "upload":
+            if len(candidates) != 1:
+                cleanup_uploaded_repo(uploaded_repo.temp_root)
+                return _render_result_error(
+                    repo_url=source_label,
+                    skill_name="",
+                    error_type="invalid_repo_zip",
+                    error_message="ZIP 上传仅支持单个 skill。当前压缩包中发现了多个 skill，请只保留一个 SKILL.md 后重新上传。",
+                ), 400
+
+            response = _run_and_render_result(
+                repo_url=source_label,
+                skill_name=candidates[0].name,
+                repo_path=repo_path,
+                relative_path=candidates[0].relative_path,
+                persist_result=False,
+            )
+            cleanup_uploaded_repo(uploaded_repo.temp_root)
+            _clear_upload_session()
+            return response
+
         if not skill_name:
             return render_template(
                 "choose_skill.html",
                 repo_url=repo_url,
                 source_label=source_label,
                 source_type=source_type,
-                upload_key=upload_key,
                 skill_name=skill_name,
                 message="Skill name was empty. Please choose one discovered skill.",
                 candidates=candidates,
@@ -193,18 +212,19 @@ def create_app(config: dict | None = None) -> Flask:
                 repo_url=repo_url,
                 source_label=source_label,
                 source_type=source_type,
-                upload_key=upload_key,
                 skill_name=skill_name,
                 message=message,
                 candidates=candidates,
             )
 
-        return _run_and_render_result(
+        response = _run_and_render_result(
             repo_url=source_label,
             skill_name=skill_name,
             repo_path=repo_path,
             relative_path=matches[0].relative_path,
+            persist_result=source_type != "upload",
         )
+        return response
 
     @app.post("/scan/select-skill")
     def select_skill():
@@ -212,7 +232,6 @@ def create_app(config: dict | None = None) -> Flask:
         skill_name = (request.form.get("skill_name") or "").strip()
         source_label = (request.form.get("source_label") or repo_url).strip()
         source_type = (request.form.get("source_type") or "github").strip()
-        upload_key = (request.form.get("upload_key") or "").strip()
         relative_path = (request.form.get("relative_path") or "").strip()
         form_data = {"repo_url": repo_url, "skill_name": skill_name}
 
@@ -226,11 +245,17 @@ def create_app(config: dict | None = None) -> Flask:
 
         try:
             if source_type == "upload":
-                repo_path = resolve_uploaded_repo(Path(app.config["UPLOADS_WORKSPACE"]), upload_key)
+                upload_session = _require_upload_session()
+                uploaded_repo = restore_uploaded_repo(
+                    upload_session["temp_root"],
+                    upload_session["display_name"],
+                )
+                repo_path = uploaded_repo.repo_path
             else:
                 repo_ref = parse_github_repo(repo_url)
                 repo_path = clone_or_refresh_repo(repo_ref, Path(app.config["REPOS_WORKSPACE"]))
         except UploadError as exc:
+            _clear_upload_session()
             return _render_index_error(
                 form_data,
                 "repo_upload_missing",
@@ -264,15 +289,20 @@ def create_app(config: dict | None = None) -> Flask:
                 recent_scans=_load_recent_scans(Path(app.config["RUNS_WORKSPACE"])),
             ), 400
 
-        return _run_and_render_result(
+        response = _run_and_render_result(
             repo_url=source_label,
             skill_name=skill_name or read_skill_name(selected_skill_dir),
             repo_path=repo_path,
             relative_path=relative_path,
+            persist_result=source_type != "upload",
         )
+        if source_type == "upload":
+            _clear_upload_session()
+        return response
 
-    def _run_and_render_result(*, repo_url: str, skill_name: str, repo_path: Path, relative_path: str):
+    def _run_and_render_result(*, repo_url: str, skill_name: str, repo_path: Path, relative_path: str, persist_result: bool):
         skill_dir = (repo_path / relative_path).resolve()
+        run_result = None
         try:
             run_result = run_single_skill_scan(
                 project_root=Path(app.config["PROJECT_ROOT"]),
@@ -281,6 +311,7 @@ def create_app(config: dict | None = None) -> Flask:
                 repo_key=repo_path.name,
                 skill_key=skill_dir.name,
                 python_bin=str(app.config["PYTHON_BIN"]),
+                persist_result=persist_result,
             )
             summary = load_case_summary(run_result.case_json_path)
         except ScanError as exc:
@@ -297,6 +328,9 @@ def create_app(config: dict | None = None) -> Flask:
                 error_type="case_output_missing",
                 error_message=str(exc),
             ), 500
+        finally:
+            if run_result and not persist_result:
+                cleanup_scan_result(run_result)
 
         return render_template(
             "result.html",
@@ -306,10 +340,11 @@ def create_app(config: dict | None = None) -> Flask:
             relative_path=relative_path,
             summary=summary,
             scan_meta={
-                "run_id": run_result.run_id,
+                "run_id": run_result.run_id if persist_result else "transient-upload-scan",
                 "run_dir": str(run_result.run_dir),
                 "case_json_path": str(run_result.case_json_path),
                 "command": " ".join(run_result.command),
+                "is_transient": not persist_result,
             },
             error_type=None,
             error_message=None,
@@ -331,6 +366,33 @@ def _render_index_error(
         error_title=error_type,
         error_message=error_message,
     )
+
+
+def _store_upload_session(*, temp_root: Path, display_name: str) -> None:
+    existing = session.get("upload_scan")
+    if isinstance(existing, dict):
+        existing_root = existing.get("temp_root")
+        if isinstance(existing_root, str):
+            cleanup_uploaded_repo(Path(existing_root))
+    session["upload_scan"] = {
+        "temp_root": str(temp_root),
+        "display_name": display_name,
+    }
+
+
+def _require_upload_session() -> dict[str, str]:
+    upload_session = session.get("upload_scan")
+    if not isinstance(upload_session, dict):
+        raise UploadError("上传的 ZIP 记录不存在或已失效，请重新上传。")
+    return upload_session
+
+
+def _clear_upload_session() -> None:
+    upload_session = session.pop("upload_scan", None)
+    if isinstance(upload_session, dict):
+        temp_root = upload_session.get("temp_root")
+        if isinstance(temp_root, str):
+            cleanup_uploaded_repo(Path(temp_root))
 
 
 def _load_recent_scans(runs_workspace: Path, limit: int = 20) -> list[dict[str, str | int]]:
