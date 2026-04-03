@@ -11,7 +11,8 @@ from flask import Flask, render_template, request
 from .services.repo_fetcher import RepositoryError, clone_or_refresh_repo, parse_github_repo
 from .services.result_loader import load_case_summary
 from .services.scan_runner import ScanError, run_single_skill_scan
-from .services.skill_locator import discover_skill_candidates, find_skill_matches
+from .services.skill_locator import discover_skill_candidates, find_skill_matches, read_skill_name
+from .services.uploaded_repo import UploadError, ingest_uploaded_zip, resolve_uploaded_repo
 
 
 def create_app(config: dict | None = None) -> Flask:
@@ -26,6 +27,7 @@ def create_app(config: dict | None = None) -> Flask:
         PROJECT_ROOT=project_root,
         REPOS_WORKSPACE=project_root / "web" / "workspaces" / "repos",
         RUNS_WORKSPACE=project_root / "web" / "workspaces" / "runs",
+        UPLOADS_WORKSPACE=project_root / "web" / "workspaces" / "uploads",
         PYTHON_BIN=sys.executable,
     )
     if config:
@@ -104,32 +106,64 @@ def create_app(config: dict | None = None) -> Flask:
     def scan():
         repo_url = (request.form.get("repo_url") or "").strip()
         skill_name = (request.form.get("skill_name") or "").strip()
+        repo_zip = request.files.get("repo_zip")
         form_data = {"repo_url": repo_url, "skill_name": skill_name}
 
-        try:
-            repo_ref = parse_github_repo(repo_url)
-        except RepositoryError as exc:
+        has_repo_url = bool(repo_url)
+        has_repo_zip = bool(repo_zip and repo_zip.filename and repo_zip.filename.strip())
+        if has_repo_url == has_repo_zip:
             return _render_index_error(
                 form_data,
-                "invalid_repo_url",
-                str(exc),
+                "invalid_scan_source",
+                "请二选一：填写 GitHub 仓库地址，或上传一个 ZIP 压缩包。",
                 recent_scans=_load_recent_scans(Path(app.config["RUNS_WORKSPACE"])),
             ), 400
 
-        try:
-            repo_path = clone_or_refresh_repo(repo_ref, Path(app.config["REPOS_WORKSPACE"]))
-        except RepositoryError as exc:
-            return _render_index_error(
-                form_data,
-                "repo_download_failed",
-                str(exc),
-                recent_scans=_load_recent_scans(Path(app.config["RUNS_WORKSPACE"])),
-            ), 502
+        source_type = "github"
+        source_label = repo_url
+
+        if has_repo_zip:
+            try:
+                uploaded_repo = ingest_uploaded_zip(repo_zip, Path(app.config["UPLOADS_WORKSPACE"]))
+            except UploadError as exc:
+                return _render_index_error(
+                    form_data,
+                    "invalid_repo_zip",
+                    str(exc),
+                    recent_scans=_load_recent_scans(Path(app.config["RUNS_WORKSPACE"])),
+                ), 400
+
+            repo_path = uploaded_repo.repo_path
+            source_type = "upload"
+            source_label = f"ZIP 上传: {uploaded_repo.display_name}"
+            upload_key = uploaded_repo.upload_key
+        else:
+            try:
+                repo_ref = parse_github_repo(repo_url)
+            except RepositoryError as exc:
+                return _render_index_error(
+                    form_data,
+                    "invalid_repo_url",
+                    str(exc),
+                    recent_scans=_load_recent_scans(Path(app.config["RUNS_WORKSPACE"])),
+                ), 400
+
+            try:
+                repo_path = clone_or_refresh_repo(repo_ref, Path(app.config["REPOS_WORKSPACE"]))
+            except RepositoryError as exc:
+                return _render_index_error(
+                    form_data,
+                    "repo_download_failed",
+                    str(exc),
+                    recent_scans=_load_recent_scans(Path(app.config["RUNS_WORKSPACE"])),
+                ), 502
+
+            upload_key = ""
 
         candidates = discover_skill_candidates(repo_path)
         if not candidates:
             return _render_result_error(
-                repo_url=repo_url,
+                repo_url=source_label,
                 skill_name=skill_name,
                 error_type="no_skills_found",
                 error_message="No SKILL.md was found in this repository.",
@@ -139,6 +173,9 @@ def create_app(config: dict | None = None) -> Flask:
             return render_template(
                 "choose_skill.html",
                 repo_url=repo_url,
+                source_label=source_label,
+                source_type=source_type,
+                upload_key=upload_key,
                 skill_name=skill_name,
                 message="Skill name was empty. Please choose one discovered skill.",
                 candidates=candidates,
@@ -154,17 +191,28 @@ def create_app(config: dict | None = None) -> Flask:
             return render_template(
                 "choose_skill.html",
                 repo_url=repo_url,
+                source_label=source_label,
+                source_type=source_type,
+                upload_key=upload_key,
                 skill_name=skill_name,
                 message=message,
                 candidates=candidates,
             )
 
-        return _run_and_render_result(repo_url=repo_url, skill_name=skill_name, repo_path=repo_path, relative_path=matches[0].relative_path)
+        return _run_and_render_result(
+            repo_url=source_label,
+            skill_name=skill_name,
+            repo_path=repo_path,
+            relative_path=matches[0].relative_path,
+        )
 
     @app.post("/scan/select-skill")
     def select_skill():
         repo_url = (request.form.get("repo_url") or "").strip()
         skill_name = (request.form.get("skill_name") or "").strip()
+        source_label = (request.form.get("source_label") or repo_url).strip()
+        source_type = (request.form.get("source_type") or "github").strip()
+        upload_key = (request.form.get("upload_key") or "").strip()
         relative_path = (request.form.get("relative_path") or "").strip()
         form_data = {"repo_url": repo_url, "skill_name": skill_name}
 
@@ -177,8 +225,18 @@ def create_app(config: dict | None = None) -> Flask:
             ), 400
 
         try:
-            repo_ref = parse_github_repo(repo_url)
-            repo_path = clone_or_refresh_repo(repo_ref, Path(app.config["REPOS_WORKSPACE"]))
+            if source_type == "upload":
+                repo_path = resolve_uploaded_repo(Path(app.config["UPLOADS_WORKSPACE"]), upload_key)
+            else:
+                repo_ref = parse_github_repo(repo_url)
+                repo_path = clone_or_refresh_repo(repo_ref, Path(app.config["REPOS_WORKSPACE"]))
+        except UploadError as exc:
+            return _render_index_error(
+                form_data,
+                "repo_upload_missing",
+                str(exc),
+                recent_scans=_load_recent_scans(Path(app.config["RUNS_WORKSPACE"])),
+            ), 400
         except RepositoryError as exc:
             return _render_index_error(
                 form_data,
@@ -207,8 +265,8 @@ def create_app(config: dict | None = None) -> Flask:
             ), 400
 
         return _run_and_render_result(
-            repo_url=repo_url,
-            skill_name=skill_name or selected_skill_dir.name,
+            repo_url=source_label,
+            skill_name=skill_name or read_skill_name(selected_skill_dir),
             repo_path=repo_path,
             relative_path=relative_path,
         )

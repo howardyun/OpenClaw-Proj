@@ -4,22 +4,57 @@
 <section class="panel panel-main">
   <div class="search-hub">
     <div class="search-header">
-      <h2>Which skill repo would you like to verify?</h2>
-      <p class="subtle">输入仓库地址和 skill 名称，立即扫描</p>
+      <div class="search-header-top">
+        <div>
+          <h2>Which skill repo would you like to verify?</h2>
+          <p class="subtle">输入仓库地址或上传 zip 包，并填写 skill 名称后立即扫描</p>
+        </div>
+        <div class="scan-mode-switch" role="tablist" aria-label="扫描方式切换">
+          <button type="button" class="scan-mode-button is-active" data-scan-mode-trigger="github" aria-selected="true">Repository URL</button>
+          <button type="button" class="scan-mode-button" data-scan-mode-trigger="upload" aria-selected="false">ZIP Upload</button>
+        </div>
+      </div>
     </div>
-    <form method="post" action="/scan" class="hero-search-form">
-      <div class="search-stack">
-        <label for="repo_url">Repository</label>
-        <input id="repo_url" name="repo_url" type="text" value="{{ form_data.repo_url }}" placeholder="https://github.com/owner/repo" required />
+    <form
+      method="post"
+      action="/scan"
+      enctype="multipart/form-data"
+      class="hero-search-form hero-search-form-toggle"
+      data-scan-form
+      data-initial-mode="{% if error_title == 'invalid_repo_zip' or error_title == 'repo_upload_missing' %}upload{% else %}github{% endif %}"
+    >
+      <div class="search-mode-panel is-active" data-scan-mode-panel="github">
+        <div class="search-stack">
+          <label for="repo_url">Repository</label>
+          <input id="repo_url" name="repo_url" type="text" value="{{ form_data.repo_url }}" placeholder="https://github.com/owner/repo" />
+          <p class="field-note">适合公开 GitHub 仓库，系统会自动拉取并检测。</p>
+        </div>
+      </div>
+      <div class="search-mode-panel" data-scan-mode-panel="upload">
+        <div class="search-stack search-stack-upload">
+          <label for="repo_zip">ZIP Upload</label>
+          <div class="upload-field">
+            <div class="upload-copy">
+              <span class="upload-badge">ZIP</span>
+              <div>
+                <p class="upload-title">拖入仓库压缩包，或点击选择文件</p>
+                <p class="upload-meta">支持 `.zip` 格式，压缩包中需要包含 `SKILL.md`</p>
+              </div>
+            </div>
+            <input id="repo_zip" name="repo_zip" type="file" accept=".zip,application/zip" disabled />
+          </div>
+        </div>
       </div>
       <div class="search-stack">
         <label for="skill_name">Skill</label>
         <input id="skill_name" name="skill_name" type="text" value="{{ form_data.skill_name }}" placeholder="find-skills" />
+        <p class="field-note">可选填写。为空时，系统会先列出仓库中发现的 skill 供你选择。</p>
       </div>
       <div class="cta-row">
         <button type="submit">Scan Repository</button>
       </div>
     </form>
+    <p class="subtle">右上角可切换扫描方式</p>
   </div>
 
   {% if error_title %}
@@ -62,4 +97,43 @@
   </div>
   {% endif %}
 </section>
+<script>
+  (() => {
+    const form = document.querySelector("[data-scan-form]");
+    if (!form) return;
+
+    const triggers = Array.from(document.querySelectorAll("[data-scan-mode-trigger]"));
+    const panels = Array.from(form.querySelectorAll("[data-scan-mode-panel]"));
+    const repoInput = form.querySelector("#repo_url");
+    const zipInput = form.querySelector("#repo_zip");
+
+    const setMode = (mode) => {
+      triggers.forEach((button) => {
+        const active = button.dataset.scanModeTrigger === mode;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-selected", active ? "true" : "false");
+      });
+
+      panels.forEach((panel) => {
+        panel.classList.toggle("is-active", panel.dataset.scanModePanel === mode);
+      });
+
+      const isGithub = mode === "github";
+      if (repoInput) {
+        repoInput.disabled = !isGithub;
+        if (!isGithub) repoInput.value = "";
+      }
+      if (zipInput) {
+        zipInput.disabled = isGithub;
+        if (isGithub) zipInput.value = "";
+      }
+    };
+
+    triggers.forEach((button) => {
+      button.addEventListener("click", () => setMode(button.dataset.scanModeTrigger));
+    });
+
+    setMode(form.dataset.initialMode || "github");
+  })();
+</script>
 {% endblock %}

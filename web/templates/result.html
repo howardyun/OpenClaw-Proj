@@ -5,7 +5,7 @@
 <section class="panel">
   <h2>Scan Result</h2>
   <div class="meta-stack">
-    <p class="mono">Repository URL: {{ repo_url }}</p>
+    <p class="mono">Source: {{ repo_url }}</p>
     {% if skill_name %}
     <p class="mono">Skill name: {{ skill_name }}</p>
     {% endif %}
@@ -23,7 +23,7 @@
     <div class="report-copy">
       <h2 class="report-title">{{ summary.skill_id }}</h2>
       <div class="meta">
-        <span class="meta-chip">Repository: {{ repo_url }}</span>
+        <span class="meta-chip">Source: {{ repo_url }}</span>
         <span class="meta-chip">Skill Name: {{ skill_name }}</span>
       </div>
       <div class="report-actions">

@@ -7,6 +7,8 @@ from pathlib import Path
 
 
 IGNORED_DIR_NAMES = {".git"}
+FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
+NAME_LINE_RE = re.compile(r"^name\s*:\s*(.+?)\s*$", re.IGNORECASE)
 
 
 def normalize_skill_name(value: str) -> str:
@@ -18,6 +20,30 @@ class SkillCandidate:
     name: str
     relative_path: str
     slug: str
+
+
+def read_skill_name(skill_dir: Path) -> str:
+    skill_file = skill_dir / "SKILL.md"
+    try:
+        content = skill_file.read_text(encoding="utf-8")
+    except OSError:
+        return skill_dir.name
+
+    match = FRONTMATTER_RE.match(content)
+    if not match:
+        return skill_dir.name
+
+    for raw_line in match.group(1).splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        name_match = NAME_LINE_RE.match(line)
+        if not name_match:
+            continue
+        value = name_match.group(1).strip().strip("'\"")
+        return value or skill_dir.name
+
+    return skill_dir.name
 
 
 def discover_skill_candidates(repo_root: Path, include_hidden: bool = False) -> list[SkillCandidate]:
@@ -40,11 +66,12 @@ def discover_skill_candidates(repo_root: Path, include_hidden: bool = False) -> 
         seen_paths.add(skill_dir)
 
         relative_path = skill_dir.relative_to(repo_root).as_posix()
+        skill_name = read_skill_name(skill_dir)
         candidates.append(
             SkillCandidate(
-                name=skill_dir.name,
+                name=skill_name,
                 relative_path=relative_path,
-                slug=normalize_skill_name(skill_dir.name),
+                slug=normalize_skill_name(skill_name),
             )
         )
 
@@ -56,4 +83,3 @@ def find_skill_matches(skill_name: str, candidates: list[SkillCandidate]) -> lis
     if not target:
         return []
     return [candidate for candidate in candidates if candidate.slug == target]
-
