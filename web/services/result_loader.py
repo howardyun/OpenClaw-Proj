@@ -30,10 +30,10 @@ STATUS_META = {
 
 FILTER_BUCKET_META = {
     "implementation_only_high_risk": "risk",
-    "declared_more_than_implemented": "warning",
+    "declared_more_than_implemented": "safe",
     "declared_and_implemented_aligned": "safe",
-    "insufficient_declaration_evidence": "warning",
-    "insufficient_implementation_evidence": "warning",
+    "insufficient_declaration_evidence": "safe",
+    "insufficient_implementation_evidence": "safe",
 }
 
 RISK_LABELS = {
@@ -57,7 +57,7 @@ def load_case_summary(case_json_path: Path) -> dict[str, Any]:
     detail_index = _build_detail_index(payload)
     categories = [_normalize_category(item, detail_index) for item in payload.get("category_discrepancies", [])]
     category_status_counts = Counter(item.get("status", "unknown") for item in categories)
-    category_filter_counts = Counter(item.get("filter_bucket", "warning") for item in categories)
+    category_filter_counts = Counter(item.get("filter_bucket", "safe") for item in categories)
     skill_status = payload.get("skill_level_discrepancy", "unknown")
     skill_meta = STATUS_META.get(skill_status, {"label": skill_status, "tone": "muted"})
 
@@ -71,7 +71,7 @@ def load_case_summary(case_json_path: Path) -> dict[str, Any]:
         "category_status_counts": dict(category_status_counts),
         "category_filter_counts": {
             "risk": int(category_filter_counts.get("risk", 0)),
-            "warning": int(category_filter_counts.get("warning", 0)),
+            "warning": 0,
             "safe": int(category_filter_counts.get("safe", 0)),
         },
         "category_discrepancies": categories,
@@ -84,7 +84,7 @@ def _normalize_category(raw: dict[str, Any], detail_index: dict[str, dict[str, l
     status = raw.get("status", "unknown")
     meta = STATUS_META.get(status, {"label": status, "tone": "muted"})
     category_id = raw.get("category_id", "")
-    filter_bucket = FILTER_BUCKET_META.get(status, "warning")
+    filter_bucket = FILTER_BUCKET_META.get(status, "safe")
     declaration_details = _merge_detail_lists(
         raw.get("declaration_details", []),
         detail_index.get(category_id, {}).get("declaration", []),

@@ -553,6 +553,15 @@ summary:focus-visible {
   transform: translateY(-1px);
 }
 
+.filter-tab:disabled {
+  cursor: default;
+  opacity: 0.52;
+}
+
+.filter-tab:disabled:hover {
+  transform: none;
+}
+
 .filter-tab.is-active {
   opacity: 1;
   transform: translateY(-2px);
