@@ -39,6 +39,21 @@ TONE_CLASS = {
     "muted": "tone-muted",
 }
 
+RISK_LABELS = {
+    "S": "S 身份伪造",
+    "Spoofing": "S 身份伪造",
+    "T": "T 篡改",
+    "Tampering": "T 篡改",
+    "R": "R 抵赖",
+    "Repudiation": "R 抵赖",
+    "I": "I 信息泄露",
+    "Information Disclosure": "I 信息泄露",
+    "D": "D 拒绝服务",
+    "Denial of Service": "D 拒绝服务",
+    "E": "E 权限提升",
+    "Elevation of Privilege": "E 权限提升",
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -218,7 +233,7 @@ def normalize_category_discrepancy(raw: dict[str, Any]) -> dict[str, Any]:
         "status_tone": status_tone(status),
         "declaration_present": bool(raw.get("declaration_present")),
         "implementation_present": bool(raw.get("implementation_present")),
-        "risks": raw.get("risks", []),
+        "risks": [translate_risk(item) for item in raw.get("risks", [])],
         "controls": raw.get("controls", []),
         "mismatch_ids": raw.get("mismatch_ids", []),
         "declaration_atomic_ids": raw.get("declaration_atomic_ids", []),
@@ -232,6 +247,12 @@ def normalize_category_discrepancy(raw: dict[str, Any]) -> dict[str, Any]:
 
 def index_decisions(items: list[dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
     return {item[key]: item for item in items if item.get(key)}
+
+
+def translate_risk(risk: Any) -> Any:
+    if isinstance(risk, str):
+        return RISK_LABELS.get(risk, risk)
+    return risk
 
 
 def collect_side_details(
@@ -1047,7 +1068,6 @@ def render_html(bundle: dict[str, Any], report_title: str, input_path: Path) -> 
                   <span>申明层: ${{category.declaration_present ? "是" : "否"}}</span>
                   <span>实现层: ${{category.implementation_present ? "是" : "否"}}</span>
                   <span>风险: ${{escapeHtml((category.risks || []).join(" / ") || "无")}}</span>
-                  <span>Mismatch: ${{escapeHtml((category.mismatch_ids || []).join(", ") || "无")}}</span>
                 </div>
               </div>
             </div>

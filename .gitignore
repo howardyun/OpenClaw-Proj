@@ -38,3 +38,6 @@ outputs/
 tests/
 .env
 .codex
+web/workspaces
+.playwright-cli/
+.pytest_cache/
