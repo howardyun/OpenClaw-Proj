@@ -33,7 +33,7 @@ Thumbs.db
 
 
 *.db
-skills/
+skills_test/
 outputs/
 tests/
 .env
@@ -41,3 +41,4 @@ tests/
 web/workspaces
 .playwright-cli/
 .pytest_cache/
+*.csv

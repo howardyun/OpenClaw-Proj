@@ -201,9 +201,8 @@ def collect_skills_by_search_shards() -> tuple[dict[str, dict], list[str]]:
     return skills_map, saturated_queries
 
 
-def main() -> None:
-    conn = init_db(DB_FILE)
-
+def refresh_skills_db(db_file: str = DB_FILE) -> dict[str, int | None | list[str]]:
+    conn = init_db(db_file)
     print("fetching sitemap...")
     sitemap_xml = fetch_text(SITEMAP_URL)
     sitemap_paths = parse_sitemap_skill_paths(sitemap_xml)
@@ -251,9 +250,23 @@ def main() -> None:
     conn.commit()
     conn.close()
 
-    if total_skills:
-        ratio = upserted / total_skills * 100
-        print(f"coverage: {upserted}/{total_skills} ({ratio:.2f}%)")
+    return {
+        "upserted_skills": upserted,
+        "sitemap_count": len(sitemap_ids),
+        "search_unique_count": len(skills_map),
+        "coverage_total": total_skills,
+        "saturated_queries": saturated_queries,
+    }
+
+
+def main() -> None:
+    stats = refresh_skills_db(DB_FILE)
+
+    coverage_total = stats["coverage_total"]
+    upserted = stats["upserted_skills"]
+    if coverage_total:
+        ratio = upserted / coverage_total * 100
+        print(f"coverage: {upserted}/{coverage_total} ({ratio:.2f}%)")
     print(f"done, total inserted/updated: {upserted}")
 
 

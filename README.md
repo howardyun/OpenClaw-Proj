@@ -94,6 +94,26 @@ cd crawling/skills/skills_sh
 python download_skills.py --db skills.db --out downloaded_skills --jobs 8
 ```
 
+#### `crawling/skills/skills_sh/sync_incremental_skills.py`
+
+先刷新 `skills.db`，再比较刷新前后的唯一 GitHub 仓库集合，只下载本次新增出现的仓库。这个脚本适合做日常增量同步，不会对已下载仓库执行 `git pull`。
+
+主要参数：
+
+- `--db`：SQLite 数据库路径，默认 `skills.db`
+- `--out`：仓库下载目录，默认 `downloaded_skills`
+- `--jobs`：并发克隆数，默认 `8`
+- `--limit-new-repos`：仅下载前 N 个新增仓库，不影响 DB 刷新
+- `--print-only`：只刷新数据库并打印新增仓库，不执行克隆
+- `--keep-going`：即使少量仓库下载失败，也继续处理并在最后汇总
+
+运行示例：
+
+```bash
+cd crawling/skills/skills_sh
+python sync_incremental_skills.py --db skills.db --out downloaded_skills --jobs 8
+```
+
 #### `crawling/skills/skills_sh/enrich_github_metadata_v2.py`
 
 读取 SQLite 中 `repo_marketplace_links.repository` 的 `owner/repo` 列表，通过 GitHub API 补充仓库元数据，并写入 `github_repo_metadata_v2`。

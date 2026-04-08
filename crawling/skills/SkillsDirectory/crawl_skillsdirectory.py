@@ -1,5 +1,6 @@
 import argparse
 import concurrent.futures
+import re
 import sqlite3
 import threading
 import time
@@ -9,11 +10,45 @@ from typing import Any
 import requests
 
 API_URL = "https://www.skillsdirectory.com/api/skills"
-SKILL_PAGE_URL = "https://www.skillsdirectory.com/skills/{slug}"
-DEFAULT_DB = "skills_directory.db"
+SKILLS_SH_URL = "https://skills.sh/{skill_id}"
+DEFAULT_DB = "skills.db"
 DEFAULT_WORKERS = 24
 REQUEST_TIMEOUT = 45
 RETRIES = 3
+
+GITHUB_URL_RE = re.compile(
+    r"(?:https?://|git@)github\.com[:/](?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+?)(?:\.git)?(?:/|$)",
+    re.IGNORECASE,
+)
+OWNER_REPO_RE = re.compile(r"^(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+)$")
+
+
+def normalize_repo(owner: str, repo: str) -> str:
+    return f"{owner.lower()}/{repo.lower()}"
+
+
+def extract_repo(*candidates: str | None) -> str | None:
+    for text in candidates:
+        value = (text or "").strip()
+        if not value:
+            continue
+
+        match = GITHUB_URL_RE.search(value)
+        if match:
+            return normalize_repo(match.group("owner"), match.group("repo"))
+
+        match = OWNER_REPO_RE.match(value)
+        if match:
+            return normalize_repo(match.group("owner"), match.group("repo"))
+
+    return None
+
+
+def normalize_name(name: str) -> str:
+    normalized_name = name.strip().strip("/")
+    if not normalized_name:
+        raise ValueError("empty name")
+    return normalized_name
 
 
 def init_db(conn: sqlite3.Connection) -> None:
@@ -55,21 +90,20 @@ def map_skill(raw: dict[str, Any], now_iso: str) -> dict[str, Any] | None:
     if not slug:
         return None
 
-    source = (raw.get("githubRepoFullName") or "").strip()
-    if not source:
-        source = (raw.get("sourceUrl") or "").strip()
-    if not source:
-        source = "unknown"
+    repo = extract_repo(raw.get("githubRepoFullName"), raw.get("sourceUrl"))
+    if not repo:
+        return None
 
-    name = (raw.get("name") or slug).strip()
+    name = normalize_name((raw.get("name") or slug).strip())
     installs = int(raw.get("githubStars") or 0)
+    skill_id = f"{repo}/{name}"
 
     return {
-        "source": source,
-        "skill_id": slug,
+        "source": repo,
+        "skill_id": skill_id,
         "name": name,
         "installs": installs,
-        "source_url": SKILL_PAGE_URL.format(slug=slug),
+        "source_url": SKILLS_SH_URL.format(skill_id=skill_id),
         "updated_at": now_iso,
     }
 
@@ -100,7 +134,9 @@ def upsert_many(conn: sqlite3.Connection, rows: list[dict[str, Any]]) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Scrape skillsdirectory.com skills into SQLite")
+    parser = argparse.ArgumentParser(
+        description="Scrape skillsdirectory.com skills into SQLite using the skills.sh-compatible schema"
+    )
     parser.add_argument("--db", default=DEFAULT_DB, help=f"SQLite file (default: {DEFAULT_DB})")
     parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS, help="Concurrent page workers")
     args = parser.parse_args()
@@ -126,17 +162,28 @@ def main() -> None:
     all_rows: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
     lock = threading.Lock()
+    skipped = 0
 
     def ingest_page_data(data: dict[str, Any]) -> None:
+        nonlocal skipped
         local_rows: list[tuple[tuple[str, str], dict[str, Any]]] = []
+        local_skipped = 0
         for raw in data.get("skills", []):
-            item = map_skill(raw, now_iso)
+            try:
+                item = map_skill(raw, now_iso)
+            except Exception as exc:  # noqa: BLE001
+                local_skipped += 1
+                slug = raw.get("slug")
+                print(f"skip invalid skill slug={slug!r}: {exc}")
+                continue
             if not item:
+                local_skipped += 1
                 continue
             key = (item["source"], item["skill_id"])
             local_rows.append((key, item))
 
         with lock:
+            skipped += local_skipped
             for key, item in local_rows:
                 if key in seen:
                     continue
@@ -166,12 +213,13 @@ def main() -> None:
     conn.commit()
 
     inserted_now = conn.execute(
-        "SELECT COUNT(*) FROM skills WHERE source_url LIKE 'https://www.skillsdirectory.com/skills/%'"
+        "SELECT COUNT(*) FROM skills WHERE source_url LIKE 'https://skills.sh/%'"
     ).fetchone()[0]
 
     conn.close()
 
     print(f"upserted rows this run: {len(all_rows)}")
+    print(f"skipped rows this run: {skipped}")
     print(f"rows currently in DB from skillsdirectory.com: {inserted_now}")
 
 
