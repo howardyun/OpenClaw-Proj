@@ -4,6 +4,7 @@ import csv
 import re
 from pathlib import Path
 
+from .matrix_definition_builtin import get_builtin_matrix_definition
 from .models import (
     AtomicCapability,
     CapabilityMapping,
@@ -34,19 +35,8 @@ def parse_matrix_file(matrix_path: Path) -> list[MatrixCategory]:
     return load_matrix_definition(matrix_path).categories
 
 
-def load_matrix_definition(matrix_path: Path) -> MatrixDefinition:
-    text = matrix_path.read_text(encoding="utf-8")
-    section_rows = _parse_sections(text, matrix_path)
-    definition = MatrixDefinition(
-        categories=_parse_category_section(section_rows.get("Category Matrix", []), matrix_path),
-        atomic_capabilities=_parse_atomic_section(section_rows.get("Atomic Capabilities", []), matrix_path),
-        control_semantics=_parse_control_section(section_rows.get("Control Semantics", []), matrix_path),
-        capability_mappings=_parse_mapping_section(section_rows.get("Capability Mappings", []), matrix_path),
-        mismatch_definitions=_parse_mismatch_section(section_rows.get("Mismatch Definitions", []), matrix_path),
-    )
-    if not definition.categories:
-        raise ValueError(f"Category Matrix section is empty: {matrix_path}")
-    return definition
+def load_matrix_definition(matrix_path: Path | None = None) -> MatrixDefinition:
+    return get_builtin_matrix_definition()
 
 
 def _parse_sections(text: str, matrix_path: Path) -> dict[str, list[list[str]]]:

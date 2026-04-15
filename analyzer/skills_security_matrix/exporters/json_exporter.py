@@ -44,6 +44,7 @@ def skill_record(result: AnalysisResult) -> dict[str, object]:
         "skill_id": result.skill_id,
         "root_path": result.root_path,
         "structure_profile": dataclass_to_dict(result.structure_profile),
+        "skill_has_risk": result.skill_has_risk,
         "errors": result.errors,
     }
 
@@ -51,6 +52,7 @@ def skill_record(result: AnalysisResult) -> dict[str, object]:
 def classification_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
+        "skill_has_risk": result.skill_has_risk,
         "declaration_atomic_decisions": [dataclass_to_dict(item) for item in result.declaration_atomic_decisions],
         "implementation_atomic_decisions": [dataclass_to_dict(item) for item in result.implementation_atomic_decisions],
         "declaration_control_decisions": [dataclass_to_dict(item) for item in result.declaration_control_decisions],
@@ -66,6 +68,7 @@ def classification_record(result: AnalysisResult) -> dict[str, object]:
 def candidate_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
+        "skill_has_risk": result.skill_has_risk,
         "rule_candidates": [dataclass_to_dict(item) for item in result.rule_candidates],
         "errors": result.errors,
     }
@@ -74,6 +77,7 @@ def candidate_record(result: AnalysisResult) -> dict[str, object]:
 def discrepancy_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
+        "skill_has_risk": result.skill_has_risk,
         "skill_level_discrepancy": result.skill_level_discrepancy,
         "category_discrepancies": [dataclass_to_dict(item) for item in result.category_discrepancies],
         "errors": result.errors,
@@ -83,6 +87,7 @@ def discrepancy_record(result: AnalysisResult) -> dict[str, object]:
 def risk_mapping_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
+        "skill_has_risk": result.skill_has_risk,
         "risk_mappings": result.risk_mappings,
         "errors": result.errors,
     }
@@ -91,6 +96,7 @@ def risk_mapping_record(result: AnalysisResult) -> dict[str, object]:
 def review_audit_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
+        "skill_has_risk": result.skill_has_risk,
         "review_audit_records": [dataclass_to_dict(item) for item in result.review_audit_records],
         "errors": result.errors,
     }

@@ -5,9 +5,14 @@ from collections import defaultdict
 from .models import AnalysisResult, CapabilityMapping, CategoryDiscrepancy, ControlSemantic, MatrixCategory
 
 
-WRITE_OR_BATCH_ATOMICS = {"G4", "G5", "O2", "O3", "O4", "O5", "A6", "I2", "I3"}
-SCOPE_DRIFT_ATOMICS = {"O3", "G5", "I2", "I3"}
-AUTONOMY_DRIFT_ATOMICS = {"A3", "A4", "A5", "A6", "A7", "O5"}
+WRITE_OR_BATCH_ATOMICS = {
+    "U2", "U3", "C1", "C2", "C3", "C4", "C5",
+    "G4", "G5", "O2", "O3", "O4", "O5",
+    "K1", "K2", "K3", "K4", "K5", "K6",
+    "A6", "I2", "I3", "I6", "I7",
+}
+SCOPE_DRIFT_ATOMICS = {"O3", "G5", "I2", "I3", "I7", "C4", "C5"}
+AUTONOMY_DRIFT_ATOMICS = {"A3", "A4", "A5", "A6", "A7", "O5", "C2", "C4", "C5", "K4"}
 MANUAL_GUARD_ATOMICS = {"A2", "G2", "O1"}
 
 

@@ -220,6 +220,7 @@ class AnalysisResult:
     final_decisions: list[FinalCategoryDecision] = field(default_factory=list)
     declaration_classifications: list[CategoryClassification] = field(default_factory=list)
     implementation_classifications: list[CategoryClassification] = field(default_factory=list)
+    skill_has_risk: str = "no"
     skill_level_discrepancy: str = "insufficient_implementation_evidence"
     category_discrepancies: list[CategoryDiscrepancy] = field(default_factory=list)
     risk_mappings: list[dict[str, Any]] = field(default_factory=list)

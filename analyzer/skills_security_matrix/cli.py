@@ -19,7 +19,7 @@ from .review.providers.litellm_provider import LiteLLMReviewProvider
 from .review.providers.mock_provider import MockReviewProvider
 from .review.providers.openai_provider import OpenAIReviewProvider
 from .review.review_policy import ReviewPolicyConfig, build_review_requests
-from .risk_mapping import build_risk_mappings
+from .risk_mapping import build_risk_mappings, determine_skill_has_risk
 from .rules.candidate_builder import (
     build_atomic_decisions,
     build_control_decisions,
@@ -29,9 +29,6 @@ from .rules.candidate_builder import (
 )
 from .skill_discovery import discover_skills
 from .validation.goldset import load_goldset, validate_against_goldset
-
-
-DEFAULT_MATRIX_PATH = Path("analyzer/security matrix.md")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -47,11 +44,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--case-study-skill", default=None, help="Skill id to highlight in the run summary.")
     parser.add_argument("--fail-on-unknown-matrix", action="store_true", help="Fail if the matrix contains unknown categories.")
     parser.add_argument("--include-hidden", action="store_true", help="Include hidden skill directories.")
-    parser.add_argument(
-        "--matrix-path",
-        default=str(DEFAULT_MATRIX_PATH),
-        help="Path to the markdown matrix table file.",
-    )
     parser.add_argument(
         "--llm-review-mode",
         default="off",
@@ -90,7 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
 def run_analysis(args: argparse.Namespace) -> RunSummary:
     load_environment()
     requested_formats = [value.strip() for value in args.format.split(",") if value.strip()]
-    matrix_definition = load_matrix_definition(Path(args.matrix_path))
+    matrix_definition = load_matrix_definition()
     matrix_by_id = {category.category_id: category for category in matrix_definition.categories}
     provider_registry = _build_provider_registry()
     failure_policy = "fail_closed" if getattr(args, "llm_fail_closed", False) else "fail_open"
@@ -218,6 +210,7 @@ def _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_regist
         matrix_definition.capability_mappings,
         matrix_definition.control_semantics,
     )
+    result.skill_has_risk = determine_skill_has_risk(result)
     result.risk_mappings = build_risk_mappings(result, matrix_by_id)
     return result
 

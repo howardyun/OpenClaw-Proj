@@ -982,4 +982,10 @@ def print_resolution_error(exc: ResolutionError) -> None:
 
 
 if __name__ == "__main__":
+    import time
+
+    start = time.time()
     raise SystemExit(main())
+    end = time.time()
+
+    print("运行时间：", end - start, "秒")
