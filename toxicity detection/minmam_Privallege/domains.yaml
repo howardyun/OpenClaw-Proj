@@ -1,0 +1,1324 @@
+version: 2
+atom_family_max:
+  R: 10
+  Q: 4
+  S: 7
+  W: 4
+  U: 4
+  C: 5
+  X: 8
+  G: 5
+  O: 5
+  K: 6
+  A: 7
+  I: 7
+domains:
+- id: Dom-1
+  name: 纯计算/逻辑类
+  examples:
+  - 数学计算
+  - 单位换算
+  - 规则判断
+  max_tier_whitelist: 无 (None)
+  minimum_permission_set:
+    raw: R1，G1
+    atoms:
+    - G1
+    - R1
+  minimum_permission_combinations:
+    raw: R1 + G1
+    all_of:
+    - G1
+    - R1
+    one_of: []
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: R3-R10, Q1-Q4, S1-S7, W1-W4, U1-U4, C1-C5, X1-X8, G2-G5, O1-O5, K1-K6, A3-A7,
+      I1-I7
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - G2
+    - G3
+    - G4
+    - G5
+    - I1
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O1
+    - O2
+    - O3
+    - O4
+    - O5
+    - Q1
+    - Q2
+    - Q3
+    - Q4
+    - R3
+    - R4
+    - R5
+    - R6
+    - R7
+    - R8
+    - R9
+    - R10
+    - S1
+    - S2
+    - S3
+    - S4
+    - S5
+    - S6
+    - S7
+    - U1
+    - U2
+    - U3
+    - U4
+    - W1
+    - W2
+    - W3
+    - W4
+    - X1
+    - X2
+    - X3
+    - X4
+    - X5
+    - X6
+    - X7
+    - X8
+  out_of_scope_atoms:
+    raw: 任一私有读取（R4/R7/R8）、联网（W1/W2）、执行（X1/X2）、写入（G3/O2）
+    atoms:
+    - G3
+    - O2
+    - R4
+    - R7
+    - R8
+    - W1
+    - W2
+    - X1
+    - X2
+- id: Dom-2
+  name: 会话写作/改写类
+  examples:
+  - 润色
+  - 翻译
+  - 摘要改写
+  - 标题生成
+  max_tier_whitelist: 无 (None)
+  minimum_permission_set:
+    raw: R1，R2，G1
+    atoms:
+    - G1
+    - R1
+    - R2
+  minimum_permission_combinations:
+    raw: R1 + R2 + G1
+    all_of:
+    - G1
+    - R1
+    - R2
+    one_of: []
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: R3-R10, W1-W4, U1-U4, C1-C5, X1-X8, G3-G5, O1-O5, K1-K6, A3-A7, I1-I7
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - G3
+    - G4
+    - G5
+    - I1
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O1
+    - O2
+    - O3
+    - O4
+    - O5
+    - R3
+    - R4
+    - R5
+    - R6
+    - R7
+    - R8
+    - R9
+    - R10
+    - U1
+    - U2
+    - U3
+    - U4
+    - W1
+    - W2
+    - W3
+    - W4
+    - X1
+    - X2
+    - X3
+    - X4
+    - X5
+    - X6
+    - X7
+    - X8
+  out_of_scope_atoms:
+    raw: R4/R7/R8，W1/W2，G3/G4，C2/C3
+    atoms:
+    - C2
+    - C3
+    - G3
+    - G4
+    - R4
+    - R7
+    - R8
+    - W1
+    - W2
+- id: Dom-3
+  name: 在线信息检索类
+  examples:
+  - 天气预报
+  - 股票查询
+  - 搜文章
+  max_tier_whitelist: Tier 2 (通信)
+  minimum_permission_set:
+    raw: R1 ，W1，W2，Q1，G1
+    atoms:
+    - G1
+    - Q1
+    - R1
+    - W1
+    - W2
+  minimum_permission_combinations:
+    raw: R1 + (W1 或 W2) + Q1 + G1<br/>
+    all_of:
+    - G1
+    - Q1
+    - R1
+    one_of:
+    - - W1
+      - W2
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: R3-R10, S1-S7, U1-U4, C1-C5, X1-X8, G3-G5, O1-O5, K1-K6, A3-A7, I1-I7
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - G3
+    - G4
+    - G5
+    - I1
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O1
+    - O2
+    - O3
+    - O4
+    - O5
+    - R3
+    - R4
+    - R5
+    - R6
+    - R7
+    - R8
+    - R9
+    - R10
+    - S1
+    - S2
+    - S3
+    - S4
+    - S5
+    - S6
+    - S7
+    - U1
+    - U2
+    - U3
+    - U4
+    - X1
+    - X2
+    - X3
+    - X4
+    - X5
+    - X6
+    - X7
+    - X8
+  out_of_scope_atoms:
+    raw: R4/R7/R8（开始读私域）、W4（外部结果直接驱动动作）、O2/O5（外部写/自动外发）
+    atoms:
+    - O2
+    - O5
+    - R4
+    - R7
+    - R8
+    - W4
+- id: Dom-4
+  name: 外部内容采集类
+  examples:
+  - 下载公开 PDF
+  - 抓取网页内容
+  - 拉 API 数据
+  max_tier_whitelist: Tier 2 (通信)
+  minimum_permission_set:
+    raw: R1 ，W2，W3，Q1
+    atoms:
+    - Q1
+    - R1
+    - W2
+    - W3
+  minimum_permission_combinations:
+    raw: R1 + (W2 或 W3) + Q1
+    all_of:
+    - Q1
+    - R1
+    one_of:
+    - - W2
+      - W3
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: R3-R10, S1-S7, U1-U4, C1-C5, O1-O5, K1-K6, A3-A7, I1-I7
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - I1
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O1
+    - O2
+    - O3
+    - O4
+    - O5
+    - R3
+    - R4
+    - R5
+    - R6
+    - R7
+    - R8
+    - R9
+    - R10
+    - S1
+    - S2
+    - S3
+    - S4
+    - S5
+    - S6
+    - S7
+    - U1
+    - U2
+    - U3
+    - U4
+  out_of_scope_atoms:
+    raw: X1/X2/X3（下载后执行）、G3（开始本地落地）、C4/C5（持续上传/长连接）、O2+
+    atoms:
+    - C4
+    - C5
+    - G3
+    - O2
+    - X1
+    - X2
+    - X3
+- id: Dom-5
+  name: 私有知识读取/问答类
+  examples:
+  - 读附件答题
+  - 读知识库
+  - 读连接器内容后总结
+  max_tier_whitelist: Tier 1 (资源感知)
+  minimum_permission_set:
+    raw: R1，R4， R7，R8，Q1，G1
+    atoms:
+    - G1
+    - Q1
+    - R1
+    - R4
+    - R7
+    - R8
+  minimum_permission_combinations:
+    raw: R1 + (R4 或 R7 或 R8) + Q1 + G1
+    all_of:
+    - G1
+    - Q1
+    - R1
+    one_of:
+    - - R4
+      - R7
+      - R8
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: W1-W4, U1-U4, C1-C5, X1-X8, G3-G5, O1-O5, K1-K6, A3-A7, I2-I7
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - G3
+    - G4
+    - G5
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O1
+    - O2
+    - O3
+    - O4
+    - O5
+    - U1
+    - U2
+    - U3
+    - U4
+    - W1
+    - W2
+    - W3
+    - W4
+    - X1
+    - X2
+    - X3
+    - X4
+    - X5
+    - X6
+    - X7
+    - X8
+  out_of_scope_atoms:
+    raw: C2/C3，O1/O2，X1/X2，I2/I3
+    atoms:
+    - C2
+    - C3
+    - I2
+    - I3
+    - O1
+    - O2
+    - X1
+    - X2
+- id: Dom-6
+  name: 资源搜索/导航类
+  examples:
+  - 找文件
+  - 找邮件
+  - 找某份文档
+  - 找某条记录
+  max_tier_whitelist: Tier 1 (资源感知)
+  minimum_permission_set:
+    raw: R1，R4，R7，R8，R9，Q1，G1
+    atoms:
+    - G1
+    - Q1
+    - R1
+    - R4
+    - R7
+    - R8
+    - R9
+  minimum_permission_combinations:
+    raw: R1 + (R4 或 R7 或 R8 或 R9) + Q1 + G1
+    all_of:
+    - G1
+    - Q1
+    - R1
+    one_of:
+    - - R4
+      - R7
+      - R8
+      - R9
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: W1-W4, U1-U4, C1-C5, X1-X8, G2-G5, O1-O5, K1-K6, A3-A7, I2-I7
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - G2
+    - G3
+    - G4
+    - G5
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O1
+    - O2
+    - O3
+    - O4
+    - O5
+    - U1
+    - U2
+    - U3
+    - U4
+    - W1
+    - W2
+    - W3
+    - W4
+    - X1
+    - X2
+    - X3
+    - X4
+    - X5
+    - X6
+    - X7
+    - X8
+  out_of_scope_atoms:
+    raw: Q2（升级成分析域）、G3/G4（开始编辑）、O1/O2（开始写外部对象）
+    atoms:
+    - G3
+    - G4
+    - O1
+    - O2
+    - Q2
+- id: Dom-7
+  name: 只读分析/报表类
+  examples:
+  - BI 查询
+  - 聚合统计
+  - 筛选报表
+  - 只读数据分析
+  max_tier_whitelist: Tier 1 (资源感知)
+  minimum_permission_set:
+    raw: R1，R7，R8，Q2，G1
+    atoms:
+    - G1
+    - Q2
+    - R1
+    - R7
+    - R8
+  minimum_permission_combinations:
+    raw: R1 + (R7 或 R8) + Q2 + G1
+    all_of:
+    - G1
+    - Q2
+    - R1
+    one_of:
+    - - R7
+      - R8
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: W1-W4, U1-U4, C1-C5, X1-X8, G3-G5, O1-O5, K1-K6, A3-A7, I2-I7
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - G3
+    - G4
+    - G5
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O1
+    - O2
+    - O3
+    - O4
+    - O5
+    - U1
+    - U2
+    - U3
+    - U4
+    - W1
+    - W2
+    - W3
+    - W4
+    - X1
+    - X2
+    - X3
+    - X4
+    - X5
+    - X6
+    - X7
+    - X8
+  out_of_scope_atoms:
+    raw: O2/O3（写回系统）、C3（对外发送）、A3/A4（自动跑报表并触发动作）
+    atoms:
+    - A3
+    - A4
+    - C3
+    - O2
+    - O3
+- id: Dom-8
+  name: 环境感知类
+  examples:
+  - 拍照识别
+  - 语音记录理解
+  - 定位感知
+  - 系统状态读取
+  max_tier_whitelist: Tier 1 (资源感知)
+  minimum_permission_set:
+    raw: R1，S1，S2，S4，S7，G1
+    atoms:
+    - G1
+    - R1
+    - S1
+    - S2
+    - S4
+    - S7
+  minimum_permission_combinations:
+    raw: R1 + (S1/S2/S4/S7 其一) + G1
+    all_of:
+    - G1
+    - R1
+    one_of:
+    - - S1
+      - S2
+      - S4
+      - S7
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: W1-W4, U1-U4, C1-C5, X1-X8, O1-O5, K1-K6, A3-A7, I1-I7
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - I1
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O1
+    - O2
+    - O3
+    - O4
+    - O5
+    - U1
+    - U2
+    - U3
+    - U4
+    - W1
+    - W2
+    - W3
+    - W4
+    - X1
+    - X2
+    - X3
+    - X4
+    - X5
+    - X6
+    - X7
+    - X8
+  out_of_scope_atoms:
+    raw: C4/C5（感知结果实时上传）、A5/A6（持续监控后自动动作）、U2/K2（感知联动控制）
+    atoms:
+    - A5
+    - A6
+    - C4
+    - C5
+    - K2
+    - U2
+- id: Dom-9
+  name: 个人助理/处理类
+  examples:
+  - 简历润色
+  - 邮件草拟
+  - 日程建议
+  - 纪要整理
+  max_tier_whitelist: Tier 1 + Tier 2
+  minimum_permission_set:
+    raw: R1，R4，R7，R8，Q3，G2 ，O1
+    atoms:
+    - G2
+    - O1
+    - Q3
+    - R1
+    - R4
+    - R7
+    - R8
+  minimum_permission_combinations:
+    raw: R1 + (R4 或 R7 或 R8 或 Q3) + G2 + O1
+    all_of:
+    - G2
+    - O1
+    - R1
+    one_of:
+    - - Q3
+      - R4
+      - R7
+      - R8
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: X1-X8, K1-K6, A3-A7, I2-I7, O2-O5
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O2
+    - O3
+    - O4
+    - O5
+    - X1
+    - X2
+    - X3
+    - X4
+    - X5
+    - X6
+    - X7
+    - X8
+  out_of_scope_atoms:
+    raw: C2/C3（变成通信类）、O2（变成外部对象写入类）、A3/A4/A5（无人值守自动化）
+    atoms:
+    - A3
+    - A4
+    - A5
+    - C2
+    - C3
+    - O2
+- id: Dom-10
+  name: 通信/通知类
+  examples:
+  - 发邮件
+  - 发 IM
+  - 发短信
+  - 推送通知
+  - 创建草稿
+  max_tier_whitelist: Tier 1 + Tier 2
+  minimum_permission_set:
+    raw: R1，G2，C2，C3，O1
+    atoms:
+    - C2
+    - C3
+    - G2
+    - O1
+    - R1
+  minimum_permission_combinations:
+    raw: R1 + G2 + (C2 或 C3 或 O1)
+    all_of:
+    - G2
+    - R1
+    one_of:
+    - - C2
+      - C3
+      - O1
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: X1-X8, K1-K6, A3-A7, I2-I7, O3-O5
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O3
+    - O4
+    - O5
+    - X1
+    - X2
+    - X3
+    - X4
+    - X5
+    - X6
+    - X7
+    - X8
+  out_of_scope_atoms:
+    raw: A3-A7（自动发送）、I2/I3（跨系统身份外发）、O5（自动外发）
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - I2
+    - I3
+    - O5
+- id: Dom-11
+  name: UI 代操作类
+  examples:
+  - 代填表
+  - 代点按钮
+  - 网页前台辅助操作
+  max_tier_whitelist: Tier 2 (通信)
+  minimum_permission_set:
+    raw: R1，U2
+    atoms:
+    - R1
+    - U2
+  minimum_permission_combinations:
+    raw: R1 + U2
+    all_of:
+    - R1
+    - U2
+    one_of: []
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: X1-X8, K1-K6, A3-A7, I2-I7, C4-C5
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C4
+    - C5
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - X1
+    - X2
+    - X3
+    - X4
+    - X5
+    - X6
+    - X7
+    - X8
+  out_of_scope_atoms:
+    raw: U4（键盘监听）、A3/A5（后台持续代操作）、K1/K3（触达系统管控）
+    atoms:
+    - A3
+    - A5
+    - K1
+    - K3
+    - U4
+- id: Dom-12
+  name: 受限文档/工件编辑类
+  examples:
+  - Word/PDF/PPT 编辑
+  - 表格格式化
+  - 图片裁剪
+  max_tier_whitelist: Tier 1 + Tier 3
+  minimum_permission_set:
+    raw: R1，R4，R5，G3，G4
+    atoms:
+    - G3
+    - G4
+    - R1
+    - R4
+    - R5
+  minimum_permission_combinations:
+    raw: R1 + (R4 或 R5) + (G3 或 G4)
+    all_of:
+    - R1
+    one_of:
+    - - R4
+      - R5
+    - - G3
+      - G4
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: W1-W4, U1-U4, C1-C5, O2-O5, K1-K6, A3-A7, I2-I7
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O2
+    - O3
+    - O4
+    - O5
+    - U1
+    - U2
+    - U3
+    - U4
+    - W1
+    - W2
+    - W3
+    - W4
+  out_of_scope_atoms:
+    raw: G5（批量大改，需升级治理）、O2/O3（写外部对象）、U2（变成 UI 代操作）
+    atoms:
+    - G5
+    - O2
+    - O3
+    - U2
+- id: Dom-13
+  name: 系统/开发工具类
+  examples:
+  - 代码解释器
+  - 脚本执行
+  - 批量重命名
+  - repo 改写
+  max_tier_whitelist: Tier 1 + Tier 3
+  minimum_permission_set:
+    raw: R1 + R5 + (X1 或 X2 或 X8) + X6
+    atoms:
+    - R1
+    - R5
+    - X1
+    - X2
+    - X6
+    - X8
+  minimum_permission_combinations:
+    raw: R1 + R5 + (X1 或 X2 或 X8) + X6
+    all_of:
+    - R1
+    - R5
+    - X6
+    one_of:
+    - - X1
+      - X2
+      - X8
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: W1-W4, U1-U4, C1-C5, K1-K6, A3-A7, I2-I7, O2-O5
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O2
+    - O3
+    - O4
+    - O5
+    - U1
+    - U2
+    - U3
+    - U4
+    - W1
+    - W2
+    - W3
+    - W4
+  out_of_scope_atoms:
+    raw: X5（执行环境联网）、X7（读环境变量/密钥）、R6（读任意路径）、K1/K3（进入系统管理域）
+    atoms:
+    - K1
+    - K3
+    - R6
+    - X5
+    - X7
+- id: Dom-14
+  name: 外部业务对象写入类
+  examples:
+  - 改日历事件
+  - 写 CRM
+  - 更新工单
+  - 创建 SaaS 记录
+  max_tier_whitelist: Tier 1 + Tier 3
+  minimum_permission_set:
+    raw: R1，R8，Q3，G2，O2
+    atoms:
+    - G2
+    - O2
+    - Q3
+    - R1
+    - R8
+  minimum_permission_combinations:
+    raw: R1 + (R8 或 Q3) + G2 + O2
+    all_of:
+    - G2
+    - O2
+    - R1
+    one_of:
+    - - Q3
+      - R8
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: W1-W4, U1-U4, C1-C5, X1-X8, K1-K6, A3-A7, I2-I7, O3-O5
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O3
+    - O4
+    - O5
+    - U1
+    - U2
+    - U3
+    - U4
+    - W1
+    - W2
+    - W3
+    - W4
+    - X1
+    - X2
+    - X3
+    - X4
+    - X5
+    - X6
+    - X7
+    - X8
+  out_of_scope_atoms:
+    raw: O3（批量写）、O4（破坏性写）、A3/A4（自动写）、I3/I4（跨系统搬运/凭证注入）
+    atoms:
+    - A3
+    - A4
+    - I3
+    - I4
+    - O3
+    - O4
+- id: Dom-15
+  name: 系统/设备管理类
+  examples:
+  - 修改系统设置
+  - 安装/卸载应用
+  - 控制 WiFi/蓝牙
+  - 杀进程
+  max_tier_whitelist: Tier 3 (环境管控)
+  minimum_permission_set:
+    raw: R1，K1，K2、K3，K5
+    atoms:
+    - K1
+    - K2
+    - K3
+    - K5
+    - R1
+  minimum_permission_combinations:
+    raw: R1 + (K1/K2/K3/K5 其一)
+    all_of:
+    - R1
+    one_of:
+    - - K1
+      - K2
+      - K3
+      - K5
+    refs: []
+    placeholders: []
+  forbidden_atoms:
+    raw: W1-W4, U1-U4, C1-C5, O1-O5, A3-A7, I2-I7
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - O1
+    - O2
+    - O3
+    - O4
+    - O5
+    - U1
+    - U2
+    - U3
+    - U4
+    - W1
+    - W2
+    - W3
+    - W4
+  out_of_scope_atoms:
+    raw: A3/A5/A6（长期无人值守）、I2/I7（跨系统/跨设备代理）、W4（外部信息直接驱动系统改动）
+    atoms:
+    - A3
+    - A5
+    - A6
+    - I2
+    - I7
+    - W4
+- id: Dom-16
+  name: 自动化流程类
+  examples:
+  - 定时任务
+  - 事件触发
+  - 持续监控后自动处理
+  max_tier_whitelist: Tier 4 (代理协同)
+  minimum_permission_set:
+    raw: A3，A4，A5
+    atoms:
+    - A3
+    - A4
+    - A5
+  minimum_permission_combinations:
+    raw: 基础功能域最小权限 + (A3 或 A4 或 A5)
+    all_of: []
+    one_of:
+    - - A3
+      - A4
+      - A5
+    refs:
+    - base_domain_minimum_permission_set
+    placeholders: []
+  forbidden_atoms:
+    raw: I4/I6 默认禁；K1-K6 仅在明确限定场景允许
+    atoms:
+    - I4
+    - I6
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+  out_of_scope_atoms:
+    raw: I2/I3/I4/I5/I6/I7（进入身份代理子域）、O4（自动破坏性动作）
+    atoms:
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - O4
+- id: Dom-17
+  name: 跨系统身份代理类
+  examples:
+  - 代表用户跨多系统联动
+  - A 系统读 B 系统写
+  max_tier_whitelist: Tier 4 (代理协同)
+  minimum_permission_set:
+    raw: I2，I3，O2，C3，U2
+    atoms:
+    - C3
+    - I2
+    - I3
+    - O2
+    - U2
+  minimum_permission_combinations:
+    raw: 基础功能域最小权限 + (I2 或 I3) + 目标动作原子（如 O2/C3/U2）
+    all_of: []
+    one_of:
+    - - I2
+      - I3
+    refs:
+    - base_domain_minimum_permission_set
+    placeholders:
+    - name: target_action_atom
+      raw: 目标动作原子(如 O2/C3/U2)
+      examples:
+      - O2
+      - C3
+      - U2
+  forbidden_atoms:
+    raw: I4/I6 默认禁；K1-K6, O4 默认高危
+    atoms:
+    - I4
+    - I6
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O4
+  out_of_scope_atoms:
+    raw: I4（凭证注入）、I6（深度令牌管理）、A3-A7（长期无人值守放大风险）
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - I4
+    - I6
