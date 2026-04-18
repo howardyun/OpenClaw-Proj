@@ -1,2 +1,2 @@
-运行crawl_skills_mp文件会爬取skillsmp.com网站上skill信息并存入数据库skillsmp.db中，由于api限制了爬取速度，一天的次数不够爬取
+运行crawl_skills_mp文件会爬取skillsmp.com网站上skill信息并存入数据库skillsmp.db中，由于api限制了爬取速度，一天的次数不够爬取，上传的数据库是已经爬取完成的版本
 运行download_skills会从数据库记录的仓库进行下载并剔除多余的文件
