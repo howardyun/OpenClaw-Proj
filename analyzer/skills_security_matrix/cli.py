@@ -15,6 +15,7 @@ from .matrix_loader import load_matrix_definition
 from .models import AnalysisResult, RunConfig, RunSummary
 from .review.llm_provider import ProviderRegistry
 from .review.llm_reviewer import review_candidates
+from .review.skill_risk_reviewer import review_skill_risk
 from .review.providers.litellm_provider import LiteLLMReviewProvider
 from .review.providers.mock_provider import MockReviewProvider
 from .review.providers.openai_provider import OpenAIReviewProvider
@@ -210,8 +211,20 @@ def _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_regist
         matrix_definition.capability_mappings,
         matrix_definition.control_semantics,
     )
-    result.skill_has_risk = determine_skill_has_risk(result)
     result.risk_mappings = build_risk_mappings(result, matrix_by_id)
+    fallback_skill_has_risk = determine_skill_has_risk(result, matrix_by_id)
+    if args.llm_review_mode != "off":
+        provider = provider_registry.get(args.llm_provider)
+        result.skill_has_risk, result.skill_risk_adjudication = review_skill_risk(
+            result,
+            matrix_by_id,
+            provider,
+            model=args.llm_model,
+            timeout_seconds=args.llm_timeout_seconds,
+            fallback_skill_has_risk=fallback_skill_has_risk,
+        )
+    else:
+        result.skill_has_risk = fallback_skill_has_risk
     return result
 
 

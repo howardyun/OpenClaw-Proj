@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..models import EvidenceItem, RuleCandidate
+from ..models import EvidenceItem, FinalCategoryDecision, RuleCandidate
 
 
 @dataclass(slots=True)
@@ -44,3 +44,29 @@ class ReviewResponse:
     raw_payload: dict[str, object] | None = None
     error: str | None = None
     schema_version: str = "skills-security-matrix-review-v1"
+
+
+@dataclass(slots=True)
+class SkillRiskReviewRequest:
+    skill_id: str
+    final_decisions: list[FinalCategoryDecision] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class StructuredSkillRiskDecision:
+    skill_has_risk: str
+    reason: str
+    confidence: str
+    confidence_score: float
+
+
+@dataclass(slots=True)
+class SkillRiskReviewResponse:
+    skill_id: str
+    provider: str
+    model: str | None
+    review_status: str
+    decision: StructuredSkillRiskDecision | None = None
+    raw_payload: dict[str, object] | None = None
+    error: str | None = None
+    schema_version: str = "skills-skill-risk-review-v1"

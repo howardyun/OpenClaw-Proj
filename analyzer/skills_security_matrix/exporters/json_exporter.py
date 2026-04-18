@@ -4,6 +4,14 @@ import json
 from pathlib import Path
 
 from ..models import AnalysisResult, RunSummary, dataclass_to_dict
+from ..tier_mapping import (
+    build_exported_category_lookup,
+    export_classification,
+    export_discrepancy,
+    export_final_decision,
+    export_risk_mapping,
+    export_rule_candidate,
+)
 
 
 def export_json_files(output_dir: Path, results: list[AnalysisResult], summary: RunSummary) -> None:
@@ -24,7 +32,7 @@ def export_json_files(output_dir: Path, results: list[AnalysisResult], summary: 
     cases_dir = output_dir / "cases"
     cases_dir.mkdir(parents=True, exist_ok=True)
     for result in results:
-        _write_json(cases_dir / f"{_safe_filename(result.skill_id)}.json", dataclass_to_dict(result))
+        _write_json(cases_dir / f"{_safe_filename(result.skill_id)}.json", case_record(result))
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -45,6 +53,7 @@ def skill_record(result: AnalysisResult) -> dict[str, object]:
         "root_path": result.root_path,
         "structure_profile": dataclass_to_dict(result.structure_profile),
         "skill_has_risk": result.skill_has_risk,
+        "skill_risk_adjudication": dataclass_to_dict(result.skill_risk_adjudication),
         "errors": result.errors,
     }
 
@@ -57,10 +66,11 @@ def classification_record(result: AnalysisResult) -> dict[str, object]:
         "implementation_atomic_decisions": [dataclass_to_dict(item) for item in result.implementation_atomic_decisions],
         "declaration_control_decisions": [dataclass_to_dict(item) for item in result.declaration_control_decisions],
         "implementation_control_decisions": [dataclass_to_dict(item) for item in result.implementation_control_decisions],
-        "final_decisions": [dataclass_to_dict(item) for item in result.final_decisions],
-        "declaration_classifications": [dataclass_to_dict(item) for item in result.declaration_classifications],
-        "implementation_classifications": [dataclass_to_dict(item) for item in result.implementation_classifications],
-        "risk_mappings": result.risk_mappings,
+        "final_decisions": [dataclass_to_dict(export_final_decision(item)) for item in result.final_decisions],
+        "declaration_classifications": [dataclass_to_dict(export_classification(item)) for item in result.declaration_classifications],
+        "implementation_classifications": [dataclass_to_dict(export_classification(item)) for item in result.implementation_classifications],
+        "risk_mappings": [export_risk_mapping(item) for item in result.risk_mappings],
+        "skill_risk_adjudication": dataclass_to_dict(result.skill_risk_adjudication),
         "errors": result.errors,
     }
 
@@ -69,7 +79,8 @@ def candidate_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
         "skill_has_risk": result.skill_has_risk,
-        "rule_candidates": [dataclass_to_dict(item) for item in result.rule_candidates],
+        "rule_candidates": [dataclass_to_dict(export_rule_candidate(item)) for item in result.rule_candidates],
+        "skill_risk_adjudication": dataclass_to_dict(result.skill_risk_adjudication),
         "errors": result.errors,
     }
 
@@ -79,7 +90,8 @@ def discrepancy_record(result: AnalysisResult) -> dict[str, object]:
         "skill_id": result.skill_id,
         "skill_has_risk": result.skill_has_risk,
         "skill_level_discrepancy": result.skill_level_discrepancy,
-        "category_discrepancies": [dataclass_to_dict(item) for item in result.category_discrepancies],
+        "category_discrepancies": [dataclass_to_dict(export_discrepancy(item)) for item in result.category_discrepancies],
+        "skill_risk_adjudication": dataclass_to_dict(result.skill_risk_adjudication),
         "errors": result.errors,
     }
 
@@ -88,15 +100,47 @@ def risk_mapping_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
         "skill_has_risk": result.skill_has_risk,
-        "risk_mappings": result.risk_mappings,
+        "risk_mappings": [export_risk_mapping(item) for item in result.risk_mappings],
+        "skill_risk_adjudication": dataclass_to_dict(result.skill_risk_adjudication),
         "errors": result.errors,
     }
 
 
 def review_audit_record(result: AnalysisResult) -> dict[str, object]:
+    category_lookup = build_exported_category_lookup(result)
     return {
         "skill_id": result.skill_id,
         "skill_has_risk": result.skill_has_risk,
-        "review_audit_records": [dataclass_to_dict(item) for item in result.review_audit_records],
+        "review_audit_records": [
+            {
+                **dataclass_to_dict(item),
+                "category_id": category_lookup.get(item.category_id, (item.category_id, ""))[0],
+            }
+            for item in result.review_audit_records
+        ],
+        "skill_risk_adjudication": dataclass_to_dict(result.skill_risk_adjudication),
         "errors": result.errors,
     }
+
+
+def case_record(result: AnalysisResult) -> dict[str, object]:
+    category_lookup = build_exported_category_lookup(result)
+    payload = dataclass_to_dict(result)
+    payload["rule_candidates"] = [dataclass_to_dict(export_rule_candidate(item)) for item in result.rule_candidates]
+    payload["final_decisions"] = [dataclass_to_dict(export_final_decision(item)) for item in result.final_decisions]
+    payload["declaration_classifications"] = [
+        dataclass_to_dict(export_classification(item)) for item in result.declaration_classifications
+    ]
+    payload["implementation_classifications"] = [
+        dataclass_to_dict(export_classification(item)) for item in result.implementation_classifications
+    ]
+    payload["category_discrepancies"] = [dataclass_to_dict(export_discrepancy(item)) for item in result.category_discrepancies]
+    payload["risk_mappings"] = [export_risk_mapping(item) for item in result.risk_mappings]
+    payload["review_audit_records"] = [
+        {
+            **dataclass_to_dict(item),
+            "category_id": category_lookup.get(item.category_id, (item.category_id, ""))[0],
+        }
+        for item in result.review_audit_records
+    ]
+    return payload

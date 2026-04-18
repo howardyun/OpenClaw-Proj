@@ -230,6 +230,7 @@ def _scan_text_for_declaration(
     for index, line in enumerate(lines, start=1):
         if FENCE_PATTERN.match(line):
             in_fence = not in_fence
+            continue
         lowered = line.lower()
         if not line.strip():
             continue

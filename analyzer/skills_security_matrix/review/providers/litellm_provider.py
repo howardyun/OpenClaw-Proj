@@ -5,8 +5,15 @@ import os
 from dataclasses import asdict
 
 from ..llm_provider import LLMReviewProvider
-from ..models import ReviewRequest, ReviewResponse, StructuredReviewDecision
-from .prompting import build_review_system_prompt
+from ..models import (
+    ReviewRequest,
+    ReviewResponse,
+    SkillRiskReviewRequest,
+    SkillRiskReviewResponse,
+    StructuredReviewDecision,
+    StructuredSkillRiskDecision,
+)
+from .prompting import build_review_system_prompt, build_skill_risk_system_prompt
 
 
 class LiteLLMReviewProvider(LLMReviewProvider):
@@ -55,6 +62,55 @@ class LiteLLMReviewProvider(LLMReviewProvider):
             model=model,
             review_status="reviewed",
             decision=_decision_from_payload(payload),
+            raw_payload=payload,
+        )
+
+    def review_skill_risk(
+        self,
+        request: SkillRiskReviewRequest,
+        *,
+        model: str | None,
+        timeout_seconds: int,
+    ) -> SkillRiskReviewResponse:
+        try:
+            import litellm  # type: ignore
+        except ImportError as exc:
+            return SkillRiskReviewResponse(
+                skill_id=request.skill_id,
+                provider=self.provider_name,
+                model=model,
+                review_status="provider_error",
+                error=f"LiteLLM is not installed: {exc}",
+            )
+
+        schema = _skill_risk_schema()
+        prompt = _build_skill_risk_prompt(request)
+        try:
+            response = litellm.completion(
+                model=model or os.getenv("LITELLM_MODEL", ""),
+                messages=[
+                    {"role": "system", "content": build_skill_risk_system_prompt()},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_schema", "json_schema": schema},
+                timeout=timeout_seconds,
+            )
+            content = response.choices[0].message.content
+            payload = json.loads(content)
+        except Exception as exc:  # pragma: no cover - network/provider defensive path
+            return SkillRiskReviewResponse(
+                skill_id=request.skill_id,
+                provider=self.provider_name,
+                model=model,
+                review_status="provider_error",
+                error=str(exc),
+            )
+        return SkillRiskReviewResponse(
+            skill_id=request.skill_id,
+            provider=self.provider_name,
+            model=model,
+            review_status="reviewed",
+            decision=_skill_risk_decision_from_payload(payload),
             raw_payload=payload,
         )
 
@@ -149,4 +205,61 @@ def _decision_from_payload(payload: dict[str, object]) -> StructuredReviewDecisi
         confidence_score=float(payload["confidence_score"]),
         supporting_fingerprints=[str(item) for item in payload.get("supporting_fingerprints", [])],
         conflicting_fingerprints=[str(item) for item in payload.get("conflicting_fingerprints", [])],
+    )
+
+
+def _skill_risk_schema() -> dict[str, object]:
+    return {
+        "name": "skills_skill_risk_review",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "skill_has_risk": {"type": "string", "enum": ["yes", "no"]},
+                "reason": {"type": "string"},
+                "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+                "confidence_score": {"type": "number"},
+            },
+            "required": ["skill_has_risk", "reason", "confidence", "confidence_score"],
+            "additionalProperties": False,
+        },
+    }
+
+
+def _build_skill_risk_prompt(request: SkillRiskReviewRequest) -> str:
+    return json.dumps(
+        {
+            "task": "Decide whether this skill should be marked yes or no for skill_has_risk.",
+            "skill_id": request.skill_id,
+            "decision_policy": {
+                "allowed_statuses": ["yes", "no"],
+                "focus": "Use only final category decisions; retained implementation-layer decisions indicate realized capability.",
+                "forbidden_actions": [
+                    "changing category decisions",
+                    "inventing categories",
+                    "using evidence not present in the payload",
+                ],
+            },
+            "final_decisions": [
+                {
+                    "category_id": item.category_id,
+                    "category_name": item.category_name,
+                    "layer": item.layer,
+                    "decision_status": item.decision_status,
+                    "confidence": item.confidence,
+                    "confidence_score": item.confidence_score,
+                }
+                for item in request.final_decisions
+            ],
+        },
+        ensure_ascii=False,
+    )
+
+
+def _skill_risk_decision_from_payload(payload: dict[str, object]) -> StructuredSkillRiskDecision:
+    return StructuredSkillRiskDecision(
+        skill_has_risk=str(payload["skill_has_risk"]),
+        reason=str(payload["reason"]),
+        confidence=str(payload["confidence"]),
+        confidence_score=float(payload["confidence_score"]),
     )

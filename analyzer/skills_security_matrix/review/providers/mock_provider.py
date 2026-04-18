@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from ..llm_provider import LLMReviewProvider
 from ..models import ReviewRequest, ReviewResponse, StructuredReviewDecision
+from ..models import SkillRiskReviewRequest, SkillRiskReviewResponse, StructuredSkillRiskDecision
 
 
 class MockReviewProvider(LLMReviewProvider):
@@ -36,6 +37,31 @@ class MockReviewProvider(LLMReviewProvider):
                 confidence_score=confidence_score,
                 supporting_fingerprints=[item.evidence_fingerprint for item in support[:3]],
                 conflicting_fingerprints=[item.evidence_fingerprint for item in candidate.conflicting_evidence[:3]],
+            ),
+            raw_payload={"mock": True, "timeout_seconds": timeout_seconds},
+        )
+
+    def review_skill_risk(
+        self,
+        request: SkillRiskReviewRequest,
+        *,
+        model: str | None,
+        timeout_seconds: int,
+    ) -> SkillRiskReviewResponse:
+        skill_has_risk = "yes" if any(
+            item.layer == "implementation" and item.decision_status in {"accepted", "downgraded"}
+            for item in request.final_decisions
+        ) else "no"
+        return SkillRiskReviewResponse(
+            skill_id=request.skill_id,
+            provider=self.provider_name,
+            model=model,
+            review_status="reviewed",
+            decision=StructuredSkillRiskDecision(
+                skill_has_risk=skill_has_risk,
+                reason="mock skill risk review applied from final_decisions",
+                confidence="medium",
+                confidence_score=0.7 if skill_has_risk == "yes" else 0.6,
             ),
             raw_payload={"mock": True, "timeout_seconds": timeout_seconds},
         )

@@ -4,6 +4,7 @@ import csv
 from pathlib import Path
 
 from ..models import AnalysisResult
+from ..tier_mapping import apply_tier_export, build_exported_category_lookup
 
 
 SKILLS_FIELDNAMES = [
@@ -155,8 +156,16 @@ def classification_rows_for_result(result: AnalysisResult) -> list[dict[str, obj
                     {
                         "skill_id": result.skill_id,
                         "layer": layer,
-                        "category_id": classification.category_id,
-                        "category_name": classification.category_name,
+                        "category_id": apply_tier_export(
+                            classification.category_id,
+                            classification.category_name,
+                            evidence=classification.evidence,
+                        )[0],
+                        "category_name": apply_tier_export(
+                            classification.category_id,
+                            classification.category_name,
+                            evidence=classification.evidence,
+                        )[1],
                         "confidence": classification.confidence,
                         "source_path": evidence.source_path,
                         "line_start": evidence.line_start,
@@ -195,12 +204,17 @@ def discrepancy_rows_for_result(result: AnalysisResult) -> list[dict[str, object
         return rows
 
     for item in result.category_discrepancies:
+        category_id, category_name = apply_tier_export(
+            item.category_id,
+            item.category_name,
+            atomic_ids=item.declaration_atomic_ids + item.implementation_atomic_ids,
+        )
         rows.append(
             {
                 "skill_id": result.skill_id,
                 "skill_level_discrepancy": result.skill_level_discrepancy,
-                "category_id": item.category_id,
-                "category_name": item.category_name,
+                "category_id": category_id,
+                "category_name": category_name,
                 "status": item.status,
                 "declaration_present": item.declaration_present,
                 "implementation_present": item.implementation_present,
@@ -219,13 +233,18 @@ def candidate_rows(results: list[AnalysisResult]) -> list[dict[str, object]]:
 def candidate_rows_for_result(result: AnalysisResult) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for candidate in result.rule_candidates:
+        category_id, category_name = apply_tier_export(
+            candidate.category_id,
+            candidate.category_name,
+            evidence=candidate.supporting_evidence or candidate.conflicting_evidence,
+        )
         rows.append(
             {
                 "skill_id": result.skill_id,
                 "candidate_id": candidate.candidate_id,
                 "layer": candidate.layer,
-                "category_id": candidate.category_id,
-                "category_name": candidate.category_name,
+                "category_id": category_id,
+                "category_name": category_name,
                 "candidate_status": candidate.candidate_status,
                 "rule_confidence": candidate.rule_confidence,
                 "confidence_score": candidate.confidence_score,
@@ -246,11 +265,12 @@ def review_audit_rows(results: list[AnalysisResult]) -> list[dict[str, object]]:
 
 def review_audit_rows_for_result(result: AnalysisResult) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
+    category_lookup = build_exported_category_lookup(result)
     for record in result.review_audit_records:
         rows.append(
             {
                 "skill_id": result.skill_id,
-                "category_id": record.category_id,
+                "category_id": category_lookup.get(record.category_id, (record.category_id, ""))[0],
                 "layer": record.layer,
                 "review_status": record.review_status,
                 "provider": record.provider or "",

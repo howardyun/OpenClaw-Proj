@@ -40,6 +40,7 @@ from analyzer.skills_security_matrix.exporters.csv_exporter import (
     skill_rows,
 )
 from analyzer.skills_security_matrix.exporters.json_exporter import (
+    case_record,
     candidate_record,
     classification_record,
     discrepancy_record,
@@ -173,7 +174,7 @@ class BatchResultWriter:
             self._append_jsonl("risk_mappings", risk_mapping_record(result))
             self._append_jsonl("review_audit", review_audit_record(result))
             (self.cases_dir / f"{_safe_filename(result.skill_id)}.json").write_text(
-                json.dumps(dataclass_to_dict(result), ensure_ascii=False, indent=2),
+                json.dumps(case_record(result), ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
 

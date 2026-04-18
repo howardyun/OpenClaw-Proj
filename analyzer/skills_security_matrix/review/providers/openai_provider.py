@@ -2,11 +2,20 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import asdict
+from typing import Any
 
 from ..llm_provider import LLMReviewProvider
-from ..models import ReviewRequest, ReviewResponse, StructuredReviewDecision
-from .prompting import build_review_system_prompt
+from ..models import (
+    ReviewRequest,
+    ReviewResponse,
+    SkillRiskReviewRequest,
+    SkillRiskReviewResponse,
+    StructuredReviewDecision,
+    StructuredSkillRiskDecision,
+)
+from .prompting import build_review_system_prompt, build_skill_risk_system_prompt
 
 
 class OpenAIReviewProvider(LLMReviewProvider):
@@ -38,40 +47,21 @@ class OpenAIReviewProvider(LLMReviewProvider):
             )
 
         try:
+            model_name = model or os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
             client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout_seconds)
-            response = client.responses.create(
-                model=model or os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
-                input=[
-                    {
-                        "role": "system",
-                        "content": [
-                            {
-                                "type": "input_text",
-                                "text": build_review_system_prompt(),
-                            }
-                        ],
-                    },
-                    {
-                        "role": "user",
-                        "content": [{"type": "input_text", "text": _build_payload(request)}],
-                    },
-                ],
-                text={
-                    "format": {
-                        "type": "json_schema",
-                        "name": "skills_security_matrix_review",
-                        "strict": True,
-                        "schema": _review_schema(),
-                    }
-                },
+            parsed = _create_structured_chat_completion(
+                client,
+                model_name=model_name,
+                system_prompt=build_review_system_prompt(),
+                payload=_build_payload(request),
+                schema=_review_schema(),
             )
-            parsed = json.loads(response.output_text)
         except Exception as exc:  # pragma: no cover - network/provider defensive path
             return ReviewResponse(
                 category_id=request.candidate.category_id,
                 layer=request.candidate.layer,
                 provider=self.provider_name,
-                model=model,
+                model=model_name if "model_name" in locals() else model,
                 review_status="provider_error",
                 error=str(exc),
             )
@@ -80,7 +70,7 @@ class OpenAIReviewProvider(LLMReviewProvider):
             category_id=request.candidate.category_id,
             layer=request.candidate.layer,
             provider=self.provider_name,
-            model=model,
+            model=model_name,
             review_status="reviewed",
             decision=StructuredReviewDecision(
                 decision_status=str(parsed["decision_status"]),
@@ -93,30 +83,184 @@ class OpenAIReviewProvider(LLMReviewProvider):
             raw_payload=parsed,
         )
 
+    def review_skill_risk(
+        self,
+        request: SkillRiskReviewRequest,
+        *,
+        model: str | None,
+        timeout_seconds: int,
+    ) -> SkillRiskReviewResponse:
+        api_key = os.getenv("OPENAI_API_KEY")
+        base_url = os.getenv("OPENAI_API_BASE_URL")
+        if not api_key:
+            return SkillRiskReviewResponse(
+                skill_id=request.skill_id,
+                provider=self.provider_name,
+                model=model,
+                review_status="provider_error",
+                error="OPENAI_API_KEY is not set",
+            )
+
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            return SkillRiskReviewResponse(
+                skill_id=request.skill_id,
+                provider=self.provider_name,
+                model=model,
+                review_status="provider_error",
+                error=f"openai package is not installed: {exc}",
+            )
+
+        try:
+            model_name = model or os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+            client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout_seconds)
+            parsed = _create_structured_chat_completion(
+                client,
+                model_name=model_name,
+                system_prompt=build_skill_risk_system_prompt(),
+                payload=_build_skill_risk_payload(request),
+                schema=_skill_risk_schema(),
+            )
+        except Exception as exc:  # pragma: no cover - network/provider defensive path
+            return SkillRiskReviewResponse(
+                skill_id=request.skill_id,
+                provider=self.provider_name,
+                model=model_name if "model_name" in locals() else model,
+                review_status="provider_error",
+                error=str(exc),
+            )
+
+        return SkillRiskReviewResponse(
+            skill_id=request.skill_id,
+            provider=self.provider_name,
+            model=model_name,
+            review_status="reviewed",
+            decision=StructuredSkillRiskDecision(
+                skill_has_risk=str(parsed["skill_has_risk"]),
+                reason=str(parsed["reason"]),
+                confidence=str(parsed["confidence"]),
+                confidence_score=float(parsed["confidence_score"]),
+            ),
+            raw_payload=parsed,
+        )
+
+
+def _create_structured_chat_completion(
+    client: Any,
+    *,
+    model_name: str,
+    system_prompt: str,
+    payload: str,
+    schema: dict[str, object],
+) -> dict[str, object]:
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": _build_structured_user_prompt(payload, schema)},
+    ]
+    base_kwargs: dict[str, object] = {
+        "model": model_name,
+        "messages": messages,
+    }
+    if model_name.lower().startswith("qwen3"):
+        base_kwargs["extra_body"] = {"enable_thinking": False}
+
+    attempts: list[dict[str, object]] = [
+        {"response_format": {"type": "json_schema", "json_schema": schema}},
+        {"response_format": {"type": "json_object"}},
+        {},
+    ]
+    errors: list[str] = []
+    for extra_kwargs in attempts:
+        try:
+            response = client.chat.completions.create(**base_kwargs, **extra_kwargs)
+            content = _message_content_to_text(response.choices[0].message.content)
+            return _parse_json_object(content)
+        except Exception as exc:
+            errors.append(str(exc))
+    raise RuntimeError("chat.completions failed for all structured-output modes: " + " | ".join(errors))
+
+
+def _build_structured_user_prompt(payload: str, schema: dict[str, object]) -> str:
+    schema_json = json.dumps(schema["schema"], ensure_ascii=False, separators=(",", ":"))
+    return "\n".join(
+        [
+            payload,
+            "",
+            "Return exactly one JSON object.",
+            "Do not wrap the JSON in markdown fences.",
+            "Do not include any explanatory text before or after the JSON.",
+            f"JSON schema: {schema_json}",
+        ]
+    )
+
+
+def _message_content_to_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                text_parts.append(item)
+                continue
+            if isinstance(item, dict) and isinstance(item.get("text"), str):
+                text_parts.append(item["text"])
+                continue
+            text_value = getattr(item, "text", None)
+            if isinstance(text_value, str):
+                text_parts.append(text_value)
+        return "\n".join(part for part in text_parts if part).strip()
+    raise ValueError("Provider returned empty or unsupported message content")
+
+
+def _parse_json_object(content: str) -> dict[str, object]:
+    text = content.strip()
+    fenced = re.match(r"^```(?:json)?\s*(.*?)\s*```$", text, flags=re.DOTALL)
+    if fenced:
+        text = fenced.group(1).strip()
+
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        start = text.find("{")
+        end = text.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise ValueError(f"Model did not return valid JSON: {content[:400]}")
+        parsed = json.loads(text[start : end + 1])
+
+    if not isinstance(parsed, dict):
+        raise ValueError("Model returned JSON that is not an object")
+    return parsed
+
 
 def _review_schema() -> dict[str, object]:
     return {
-        "type": "object",
-        "properties": {
-            "decision_status": {
-                "type": "string",
-                "enum": ["accepted", "downgraded", "rejected_by_llm"],
+        "name": "skills_security_matrix_review",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "decision_status": {
+                    "type": "string",
+                    "enum": ["accepted", "downgraded", "rejected_by_llm"],
+                },
+                "reason": {"type": "string"},
+                "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+                "confidence_score": {"type": "number"},
+                "supporting_fingerprints": {"type": "array", "items": {"type": "string"}},
+                "conflicting_fingerprints": {"type": "array", "items": {"type": "string"}},
             },
-            "reason": {"type": "string"},
-            "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
-            "confidence_score": {"type": "number"},
-            "supporting_fingerprints": {"type": "array", "items": {"type": "string"}},
-            "conflicting_fingerprints": {"type": "array", "items": {"type": "string"}},
+            "required": [
+                "decision_status",
+                "reason",
+                "confidence",
+                "confidence_score",
+                "supporting_fingerprints",
+                "conflicting_fingerprints",
+            ],
+            "additionalProperties": False,
         },
-        "required": [
-            "decision_status",
-            "reason",
-            "confidence",
-            "confidence_score",
-            "supporting_fingerprints",
-            "conflicting_fingerprints",
-        ],
-        "additionalProperties": False,
     }
 
 
@@ -165,6 +309,54 @@ def _build_payload(request: ReviewRequest) -> str:
                 "reason_style": "brief, concrete, evidence-focused",
                 "fingerprint_rule": "Only return fingerprints that appear in the supplied evidence arrays.",
             },
+        },
+        ensure_ascii=False,
+    )
+
+
+def _skill_risk_schema() -> dict[str, object]:
+    return {
+        "name": "skills_skill_risk_review",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "skill_has_risk": {"type": "string", "enum": ["yes", "no"]},
+                "reason": {"type": "string"},
+                "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+                "confidence_score": {"type": "number"},
+            },
+            "required": ["skill_has_risk", "reason", "confidence", "confidence_score"],
+            "additionalProperties": False,
+        },
+    }
+
+
+def _build_skill_risk_payload(request: SkillRiskReviewRequest) -> str:
+    return json.dumps(
+        {
+            "task": "Decide whether this skill should be marked yes or no for skill_has_risk.",
+            "skill_id": request.skill_id,
+            "decision_policy": {
+                "allowed_statuses": ["yes", "no"],
+                "focus": "Use only final category decisions; retained implementation-layer decisions indicate realized capability.",
+                "forbidden_actions": [
+                    "changing category decisions",
+                    "inventing categories",
+                    "using evidence not present in the payload",
+                ],
+            },
+            "final_decisions": [
+                {
+                    "category_id": item.category_id,
+                    "category_name": item.category_name,
+                    "layer": item.layer,
+                    "decision_status": item.decision_status,
+                    "confidence": item.confidence,
+                    "confidence_score": item.confidence_score,
+                }
+                for item in request.final_decisions
+            ],
         },
         ensure_ascii=False,
     )

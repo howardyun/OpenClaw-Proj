@@ -192,6 +192,19 @@ class ReviewAuditRecord:
 
 
 @dataclass(slots=True)
+class SkillRiskAdjudication:
+    review_status: str
+    provider: str | None = None
+    model: str | None = None
+    skill_has_risk: str | None = None
+    reason: str | None = None
+    confidence: str | None = None
+    confidence_score: float | None = None
+    fallback_used: bool = False
+    schema_version: str | None = None
+
+
+@dataclass(slots=True)
 class CategoryDiscrepancy:
     category_id: str
     category_name: str
@@ -224,6 +237,7 @@ class AnalysisResult:
     skill_level_discrepancy: str = "insufficient_implementation_evidence"
     category_discrepancies: list[CategoryDiscrepancy] = field(default_factory=list)
     risk_mappings: list[dict[str, Any]] = field(default_factory=list)
+    skill_risk_adjudication: SkillRiskAdjudication | None = None
     review_audit_records: list[ReviewAuditRecord] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 

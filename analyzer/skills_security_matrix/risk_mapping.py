@@ -20,8 +20,7 @@ HIGH_SEVERITY_SKILL_MD_PATTERNS = [
     )
 ]
 
-
-def determine_skill_has_risk(result: AnalysisResult) -> str:
+def determine_skill_has_risk(result: AnalysisResult, matrix_by_id: dict[str, MatrixCategory]) -> str:
     if _is_skill_md_only(result):
         return _determine_skill_md_only_risk(result)
     risky_statuses = {"implementation_only_high_risk", "declared_less_than_implemented"}
@@ -29,7 +28,7 @@ def determine_skill_has_risk(result: AnalysisResult) -> str:
 
 
 def build_risk_mappings(result: AnalysisResult, matrix_by_id: dict[str, MatrixCategory]) -> list[dict[str, object]]:
-    category_ids = {decision.category_id for decision in result.final_decisions if decision.decision_status != "rejected_by_llm"}
+    category_ids = _retained_category_ids(result)
     declaration_atomic_by_category = _group_atomic_ids(result.declaration_atomic_decisions)
     implementation_atomic_by_category = _group_atomic_ids(result.implementation_atomic_decisions)
     declaration_controls = sorted(
@@ -56,6 +55,10 @@ def build_risk_mappings(result: AnalysisResult, matrix_by_id: dict[str, MatrixCa
             }
         )
     return mappings
+
+
+def _retained_category_ids(result: AnalysisResult) -> set[str]:
+    return {decision.category_id for decision in result.final_decisions if decision.decision_status != "rejected_by_llm"}
 
 
 def _group_atomic_ids(decisions) -> dict[str, set[str]]:
