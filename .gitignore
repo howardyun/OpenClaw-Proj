@@ -32,7 +32,7 @@ Thumbs.db
 .ace-tool/
 
 
-*.db
+
 skills_test/
 outputs/
 tests/
