@@ -212,7 +212,7 @@ def main():
     # 所有候选 repo
     all_repos = set(db_repos) | set(failed_dict.keys())
 
-    # 过滤已完成
+    # 过滤已完成，
     repos = list(all_repos - done_repos)
 
     total = len(repos)
