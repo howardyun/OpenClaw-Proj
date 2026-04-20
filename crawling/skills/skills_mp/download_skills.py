@@ -68,7 +68,7 @@ def save_failed_atomic(failed_dict: Dict[str, str]):
     os.replace(tmp_file, FAILED_JSON)
 
 
-# 读取已完成 repo
+# 已完成 repo
 def load_done_repos(output_dir: Path) -> Set[str]:
     done_repos = set()
 
@@ -151,17 +151,21 @@ def extract_skills(repo_dir: Path, output_dir: Path, repo: str):
     return True
 
 
-# 单任务
-def process_repo(repo: str, tmp_dir: Path, out_dir: Path,
+# 单任务（每个 repo 独立临时目录 立即释放）
+def process_repo(repo: str, out_dir: Path,
                  total: int, failed_dict: Dict[str, str]):
     global progress
 
-    repo_out = out_dir / repo.replace("/", "__")
+    tmp_dir = None
 
     try:
+        # 每个 repo 独立临时目录
+        tmp_dir = Path(tempfile.mkdtemp())
+
         repo_path = clone_repo(repo, tmp_dir)
         extract_skills(repo_path, out_dir, repo)
 
+        repo_out = out_dir / repo.replace("/", "__")
         repo_out.mkdir(parents=True, exist_ok=True)
         (repo_out / ".done").touch()
 
@@ -181,21 +185,24 @@ def process_repo(repo: str, tmp_dir: Path, out_dir: Path,
 
             if err_msg == "PRIVATE_OR_NO_PERMISSION":
                 print(f"[{progress}/{total}] [SKIP_PRIVATE] {repo}")
-                if repo in failed_dict:
-                    del failed_dict[repo]
-                    save_failed_atomic(failed_dict)
+                failed_dict.pop(repo, None)
+                save_failed_atomic(failed_dict)
                 return
 
             if err_msg == "REPO_NOT_FOUND":
                 print(f"[{progress}/{total}] [NOT_FOUND] {repo}")
-                if repo in failed_dict:
-                    del failed_dict[repo]
-                    save_failed_atomic(failed_dict)
+                failed_dict.pop(repo, None)
+                save_failed_atomic(failed_dict)
                 return
 
             print(f"[{progress}/{total}] [FAIL] {repo}")
             failed_dict[repo] = err_msg
             save_failed_atomic(failed_dict)
+
+    finally:
+        # 每个 repo 处理完立即删除临时目录
+        if tmp_dir and tmp_dir.exists():
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 # 主函数
@@ -206,13 +213,9 @@ def main():
     out_dir = Path(OUTPUT_DIR)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 已完成 repo
     done_repos = load_done_repos(out_dir)
 
-    # 所有候选 repo
     all_repos = set(db_repos) | set(failed_dict.keys())
-
-    # 过滤已完成，
     repos = list(all_repos - done_repos)
 
     total = len(repos)
@@ -227,17 +230,14 @@ def main():
         print("Nothing to do.")
         return
 
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp_dir = Path(tmp)
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = [
+            executor.submit(process_repo, repo, out_dir, total, failed_dict)
+            for repo in repos
+        ]
 
-        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            futures = [
-                executor.submit(process_repo, repo, tmp_dir, out_dir, total, failed_dict)
-                for repo in repos
-            ]
-
-            for _ in as_completed(futures):
-                pass
+        for _ in as_completed(futures):
+            pass
 
     print(f"\nFAILED LEFT: {len(failed_dict)}")
     print("ALL DONE")
