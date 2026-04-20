@@ -1,0 +1,5375 @@
+{
+  "template_version": "v1",
+  "source_file": "Skill 恶意组合风险清单（扩展版）.md",
+  "category_count": 8,
+  "combo_count": 96,
+  "categories": [
+    {
+      "category_name": "数据外泄类",
+      "items": [
+        {
+          "combo_id": "DL-01",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "R8（读取连接器数据） + I3（跨系统数据搬运） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "R8",
+              "name": "读取连接器数据"
+            },
+            {
+              "code": "I3",
+              "name": "跨系统数据搬运"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "R8",
+            "I3",
+            "O5"
+          ],
+          "effect": "将连接器中的数据搬运到另一外部系统并自动发送",
+          "risk": [
+            "敏感信息泄露",
+            "跨系统越权流动",
+            "静默外发"
+          ],
+          "risk_text": "敏感信息泄露、跨系统越权流动、静默外发",
+          "explanation": "R8 负责读取 Gmail、Slack、GitHub 等连接器数据，I3 负责跨系统搬运，O5 则完成自动发送，三者拼接后形成完整的数据外流闭环。"
+        },
+        {
+          "combo_id": "DL-02",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier2",
+          "atomic_ops_text": "R6（读取本地任意路径文件） + X2（执行解释器代码） + W2（调用外部公开 API）",
+          "atomic_ops": [
+            {
+              "code": "R6",
+              "name": "读取本地任意路径文件"
+            },
+            {
+              "code": "X2",
+              "name": "执行解释器代码"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            }
+          ],
+          "atomic_op_codes": [
+            "R6",
+            "X2",
+            "W2"
+          ],
+          "effect": "读取本地任意路径文件并处理后上传到外部接口",
+          "risk": [
+            "本地文件窃取",
+            "系统敏感信息泄露",
+            "数据出境"
+          ],
+          "risk_text": "本地文件窃取、系统敏感信息泄露、数据出境",
+          "explanation": "R6 使 Agent 能越过 repo 边界读取系统敏感文件，X2 对内容做提取整理，W2 再把结果发送给外部 API，构成“本地取数—处理—上传”的外泄链。"
+        },
+        {
+          "combo_id": "DL-03",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier3",
+          "atomic_ops_text": "Q3（敏感对象查询） + U1（屏幕内容捕获） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "Q3",
+              "name": "敏感对象查询"
+            },
+            {
+              "code": "U1",
+              "name": "屏幕内容捕获"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "Q3",
+            "U1",
+            "O5"
+          ],
+          "effect": "查询高敏对象后截图并自动发出",
+          "risk": [
+            "邮件",
+            "联系人",
+            "日程等高敏对象泄露",
+            "屏幕内容泄露"
+          ],
+          "risk_text": "邮件、联系人、日程等高敏对象泄露；屏幕内容泄露",
+          "explanation": "有些系统会限制结构化导出，但 U1 可以直接截图界面，再叠加 O5，原本只是“查看”的能力就变成了“复制并外发”。"
+        },
+        {
+          "combo_id": "DL-04",
+          "tier_combo": [
+            "Tier1",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier3",
+          "atomic_ops_text": "R4（读取会话附件） + X2（执行解释器代码） + G3（写本地临时文件）",
+          "atomic_ops": [
+            {
+              "code": "R4",
+              "name": "读取会话附件"
+            },
+            {
+              "code": "X2",
+              "name": "执行解释器代码"
+            },
+            {
+              "code": "G3",
+              "name": "写本地临时文件"
+            }
+          ],
+          "atomic_op_codes": [
+            "R4",
+            "X2",
+            "G3"
+          ],
+          "effect": "读取会话附件后提取敏感内容并写成本地临时汇总文件",
+          "risk": [
+            "附件敏感信息落地",
+            "二次泄露",
+            "脱敏失败"
+          ],
+          "risk_text": "附件敏感信息落地、二次泄露、脱敏失败",
+          "explanation": "R4 读取附件，X2 负责解析抽取，G3 把高价值内容落地为临时报告，使原本分散的敏感内容被集中化、结构化。"
+        },
+        {
+          "combo_id": "DL-05",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier4",
+          "atomic_ops_text": "R3（读取历史会话） + W2（调用外部公开 API） + A3（定时调度）",
+          "atomic_ops": [
+            {
+              "code": "R3",
+              "name": "读取历史会话"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            },
+            {
+              "code": "A3",
+              "name": "定时调度"
+            }
+          ],
+          "atomic_op_codes": [
+            "R3",
+            "W2",
+            "A3"
+          ],
+          "effect": "定时扫描历史会话并将摘要发给外部服务",
+          "risk": [
+            "长期记忆泄露",
+            "持续隐私外传",
+            "无人值守风险"
+          ],
+          "risk_text": "长期记忆泄露、持续隐私外传、无人值守风险",
+          "explanation": "R3 读取跨会话历史本身就高敏，再叠加 W2 与 A3，就形成定时、持续、无人在场的数据外流机制。"
+        },
+        {
+          "combo_id": "DL-06",
+          "tier_combo": [
+            "Tier1",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier3",
+          "atomic_ops_text": "R7（读取知识库或文档库） + Q2（结构化筛选与聚合） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "R7",
+              "name": "读取知识库或文档库"
+            },
+            {
+              "code": "Q2",
+              "name": "结构化筛选与聚合"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "R7",
+            "Q2",
+            "O5"
+          ],
+          "effect": "从知识库中批量聚合信息后对外发送",
+          "risk": [
+            "内部资料汇总泄露",
+            "商业机密外流",
+            "结果过量暴露"
+          ],
+          "risk_text": "内部资料汇总泄露、商业机密外流、结果过量暴露",
+          "explanation": "R7 提供内部文档入口，Q2 负责聚合筛选，O5 负责发出，使原本碎片化信息被压缩成高价值泄露包。"
+        },
+        {
+          "combo_id": "DL-07",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier4",
+          "atomic_ops_text": "R5（读取本地 repo 文件） + X7（访问环境变量） + I4（凭证注入外部调用）",
+          "atomic_ops": [
+            {
+              "code": "R5",
+              "name": "读取本地 repo 文件"
+            },
+            {
+              "code": "X7",
+              "name": "访问环境变量"
+            },
+            {
+              "code": "I4",
+              "name": "凭证注入外部调用"
+            }
+          ],
+          "atomic_op_codes": [
+            "R5",
+            "X7",
+            "I4"
+          ],
+          "effect": "读取本地 repo 与环境变量后把凭证注入外部调用链",
+          "risk": [
+            "源码与密钥联合泄露",
+            "凭证扩散",
+            "供应链风险放大"
+          ],
+          "risk_text": "源码与密钥联合泄露、凭证扩散、供应链风险放大",
+          "explanation": "R5 可读项目文件，X7 可读 env 中 token，I4 把这些凭证交给外部工具继续使用，风险比单纯读文件更高。"
+        },
+        {
+          "combo_id": "DL-08",
+          "tier_combo": [
+            "Tier1",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier1 + Tier2",
+          "atomic_ops_text": "R10（跨源数据拼接读取） + U1（屏幕内容捕获） + W2（调用外部公开 API）",
+          "atomic_ops": [
+            {
+              "code": "R10",
+              "name": "跨源数据拼接读取"
+            },
+            {
+              "code": "U1",
+              "name": "屏幕内容捕获"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            }
+          ],
+          "atomic_op_codes": [
+            "R10",
+            "U1",
+            "W2"
+          ],
+          "effect": "跨源拼接数据后通过截图或摘要上传外部接口",
+          "risk": [
+            "多源拼接泄露",
+            "隐私画像扩展",
+            "组合敏感性提升"
+          ],
+          "risk_text": "多源拼接泄露、隐私画像扩展、组合敏感性提升",
+          "explanation": "R10 会把多个低敏来源拼成高敏画像，U1 与 W2 则将这种高价值拼接结果快速带出系统。"
+        },
+        {
+          "combo_id": "DL-09",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "Q1（只读查询或搜索） + I3（跨系统数据搬运） + O2（外部单对象写入）",
+          "atomic_ops": [
+            {
+              "code": "Q1",
+              "name": "只读查询或搜索"
+            },
+            {
+              "code": "I3",
+              "name": "跨系统数据搬运"
+            },
+            {
+              "code": "O2",
+              "name": "外部单对象写入"
+            }
+          ],
+          "atomic_op_codes": [
+            "Q1",
+            "I3",
+            "O2"
+          ],
+          "effect": "查询结果被直接写入另一外部系统对象中",
+          "risk": [
+            "跨系统数据渗漏",
+            "业务污染",
+            "责任链断裂"
+          ],
+          "risk_text": "跨系统数据渗漏、业务污染、责任链断裂",
+          "explanation": "Q1 只读查询原本较安全，但一旦接 I3 与 O2，就会把查询到的数据落到另一个系统中，构成隐性搬运。"
+        },
+        {
+          "combo_id": "DL-10",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier3",
+          "atomic_ops_text": "R9（批量枚举文件或资源） + W1（访问公开网页） + X5（执行环境可联网）",
+          "atomic_ops": [
+            {
+              "code": "R9",
+              "name": "批量枚举文件或资源"
+            },
+            {
+              "code": "W1",
+              "name": "访问公开网页"
+            },
+            {
+              "code": "X5",
+              "name": "执行环境可联网"
+            }
+          ],
+          "atomic_op_codes": [
+            "R9",
+            "W1",
+            "X5"
+          ],
+          "effect": "枚举大量资源后访问外部页面/服务做批量比对",
+          "risk": [
+            "批量探测",
+            "资源画像外泄",
+            "外部联动泄露"
+          ],
+          "risk_text": "批量探测、资源画像外泄、外部联动泄露",
+          "explanation": "R9 提供规模化目标集合，W1/W2 提供外部连接，X5 使运行环境可联网，形成批量化外泄与画像构建能力。"
+        },
+        {
+          "combo_id": "DL-11",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier3",
+          "atomic_ops_text": "S7（系统状态读取） + W2（调用外部公开 API） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "S7",
+              "name": "系统状态读取"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "S7",
+            "W2",
+            "O5"
+          ],
+          "effect": "读取系统状态后向外部服务自动回传诊断信息",
+          "risk": [
+            "系统指纹外泄",
+            "脆弱面暴露",
+            "定向攻击辅助"
+          ],
+          "risk_text": "系统指纹外泄、脆弱面暴露、定向攻击辅助",
+          "explanation": "S7 能拿到运行参数和日志类信息，W2/O5 则把这些系统指纹主动发出，便于外部构造针对性攻击。"
+        },
+        {
+          "combo_id": "DL-12",
+          "tier_combo": [
+            "Tier1",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier3",
+          "atomic_ops_text": "S4（精确地理位置获取） + R8（读取连接器数据） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "S4",
+              "name": "精确地理位置获取"
+            },
+            {
+              "code": "R8",
+              "name": "读取连接器数据"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "S4",
+            "R8",
+            "O5"
+          ],
+          "effect": "把位置与连接器中的联系人/邮件信息绑定后外发",
+          "risk": [
+            "现实身份关联",
+            "轨迹隐私泄露",
+            "社会关系暴露"
+          ],
+          "risk_text": "现实身份关联、轨迹隐私泄露、社会关系暴露",
+          "explanation": "S4 提供物理位置信息，R8 提供社会关系数据，O5 将两者拼接结果发出后，泄露价值显著高于任一单源。"
+        }
+      ]
+    },
+    {
+      "category_name": "身份冒用类",
+      "items": [
+        {
+          "combo_id": "IA-01",
+          "tier_combo": [
+            "Tier2",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier2 + Tier4",
+          "atomic_ops_text": "U3（系统剪贴板读写） + U4（键盘输入消费） + I1（单系统身份访问）",
+          "atomic_ops": [
+            {
+              "code": "U3",
+              "name": "系统剪贴板读写"
+            },
+            {
+              "code": "U4",
+              "name": "键盘输入消费"
+            },
+            {
+              "code": "I1",
+              "name": "单系统身份访问"
+            }
+          ],
+          "atomic_op_codes": [
+            "U3",
+            "U4",
+            "I1"
+          ],
+          "effect": "截获剪贴板和键盘中的验证码、口令后代替用户完成认证",
+          "risk": [
+            "账号接管",
+            "身份冒用",
+            "验证码窃取"
+          ],
+          "risk_text": "账号接管、身份冒用、验证码窃取",
+          "explanation": "U3 和 U4 单独看像辅助输入，但结合 I1 后，就能把捕获到的认证信息直接用于登录或确认操作。"
+        },
+        {
+          "combo_id": "IA-02",
+          "tier_combo": [
+            "Tier2",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier2 + Tier4",
+          "atomic_ops_text": "U1（屏幕内容捕获） + U2（模拟 UI 操作控制） + I2（跨系统身份代理）",
+          "atomic_ops": [
+            {
+              "code": "U1",
+              "name": "屏幕内容捕获"
+            },
+            {
+              "code": "U2",
+              "name": "模拟 UI 操作控制"
+            },
+            {
+              "code": "I2",
+              "name": "跨系统身份代理"
+            }
+          ],
+          "atomic_op_codes": [
+            "U1",
+            "U2",
+            "I2"
+          ],
+          "effect": "观察屏幕状态并模拟点击，在多个系统中替用户完成操作",
+          "risk": [
+            "未授权审批",
+            "误转账",
+            "跨系统账户滥用"
+          ],
+          "risk_text": "未授权审批、误转账、跨系统账户滥用",
+          "explanation": "U1 负责感知界面状态，U2 负责执行点击、输入等操作，I2 让这种行为扩展到多系统联动。"
+        },
+        {
+          "combo_id": "IA-03",
+          "tier_combo": [
+            "Tier3",
+            "Tier4",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier3 + Tier4 + Tier2",
+          "atomic_ops_text": "X7（访问环境变量） + I4（凭证注入外部调用） + W2（调用外部公开 API）",
+          "atomic_ops": [
+            {
+              "code": "X7",
+              "name": "访问环境变量"
+            },
+            {
+              "code": "I4",
+              "name": "凭证注入外部调用"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            }
+          ],
+          "atomic_op_codes": [
+            "X7",
+            "I4",
+            "W2"
+          ],
+          "effect": "读取环境变量中的 token 并将其注入外部调用链",
+          "risk": [
+            "凭证扩散",
+            "API 盗用",
+            "资源盗刷"
+          ],
+          "risk_text": "凭证扩散、API 盗用、资源盗刷",
+          "explanation": "X7 负责读取本地 secret/token，I4 负责把凭证注入给外部工具或调用过程，W2 则真正使用这些凭证访问外部服务。"
+        },
+        {
+          "combo_id": "IA-04",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier2",
+          "atomic_ops_text": "S3（生物特征识别访问） + I1（单系统身份访问） + U2（模拟 UI 操作控制）",
+          "atomic_ops": [
+            {
+              "code": "S3",
+              "name": "生物特征识别访问"
+            },
+            {
+              "code": "I1",
+              "name": "单系统身份访问"
+            },
+            {
+              "code": "U2",
+              "name": "模拟 UI 操作控制"
+            }
+          ],
+          "atomic_op_codes": [
+            "S3",
+            "I1",
+            "U2"
+          ],
+          "effect": "利用生物识别校验结果代表用户执行高敏操作",
+          "risk": [
+            "本地认证结果滥用",
+            "强认证旁路",
+            "身份混淆"
+          ],
+          "risk_text": "本地认证结果滥用、强认证旁路、身份混淆",
+          "explanation": "S3 虽不直接暴露生物特征原文，但若可获取认证通过结果并联动 I1/U2，就能借用本地认证态完成敏感行为。"
+        },
+        {
+          "combo_id": "IA-05",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "R2（读取当前会话历史） + I1（单系统身份访问） + G2（生成结构化草稿）",
+          "atomic_ops": [
+            {
+              "code": "R2",
+              "name": "读取当前会话历史"
+            },
+            {
+              "code": "I1",
+              "name": "单系统身份访问"
+            },
+            {
+              "code": "G2",
+              "name": "生成结构化草稿"
+            }
+          ],
+          "atomic_op_codes": [
+            "R2",
+            "I1",
+            "G2"
+          ],
+          "effect": "根据当前会话上下文自动生成并填充冒名回复/审批草稿",
+          "risk": [
+            "越权回应",
+            "冒名沟通",
+            "社交工程增强"
+          ],
+          "risk_text": "越权回应、冒名沟通、社交工程增强",
+          "explanation": "R2 提供上下文与说话风格，I1 赋予代行能力，G2 则将其包装成看似真实的邮件或表单草稿。"
+        },
+        {
+          "combo_id": "IA-06",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "Q3（敏感对象查询） + I2（跨系统身份代理） + O2（外部单对象写入）",
+          "atomic_ops": [
+            {
+              "code": "Q3",
+              "name": "敏感对象查询"
+            },
+            {
+              "code": "I2",
+              "name": "跨系统身份代理"
+            },
+            {
+              "code": "O2",
+              "name": "外部单对象写入"
+            }
+          ],
+          "atomic_op_codes": [
+            "Q3",
+            "I2",
+            "O2"
+          ],
+          "effect": "读取联系人/日历等高敏对象后，以用户身份改写其内容",
+          "risk": [
+            "越权修改关键对象",
+            "业务偏转",
+            "信任受损"
+          ],
+          "risk_text": "越权修改关键对象、业务偏转、信任受损",
+          "explanation": "Q3 能拿到高敏对象，I2 允许跨系统代行，O2 则把修改落地，导致用户身份被用于篡改真实业务信息。"
+        },
+        {
+          "combo_id": "IA-07",
+          "tier_combo": [
+            "Tier2",
+            "Tier1",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier2 + Tier1 + Tier4",
+          "atomic_ops_text": "U1（屏幕内容捕获） + S2（硬件麦克风调用） + I1（单系统身份访问）",
+          "atomic_ops": [
+            {
+              "code": "U1",
+              "name": "屏幕内容捕获"
+            },
+            {
+              "code": "S2",
+              "name": "硬件麦克风调用"
+            },
+            {
+              "code": "I1",
+              "name": "单系统身份访问"
+            }
+          ],
+          "atomic_op_codes": [
+            "U1",
+            "S2",
+            "I1"
+          ],
+          "effect": "通过屏幕与环境语音判断认证时机后发起代行操作",
+          "risk": [
+            "多模态认证旁路",
+            "会话劫持",
+            "在场感伪装"
+          ],
+          "risk_text": "多模态认证旁路、会话劫持、在场感伪装",
+          "explanation": "U1 能看界面，S2 能听环境提示，I1 再利用这些时机信息完成冒用操作。"
+        },
+        {
+          "combo_id": "IA-08",
+          "tier_combo": [
+            "Tier3",
+            "Tier2",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier3 + Tier2 + Tier4",
+          "atomic_ops_text": "X8（调用本地工具） + U2（模拟 UI 操作控制） + I2（跨系统身份代理）",
+          "atomic_ops": [
+            {
+              "code": "X8",
+              "name": "调用本地工具"
+            },
+            {
+              "code": "U2",
+              "name": "模拟 UI 操作控制"
+            },
+            {
+              "code": "I2",
+              "name": "跨系统身份代理"
+            }
+          ],
+          "atomic_op_codes": [
+            "X8",
+            "U2",
+            "I2"
+          ],
+          "effect": "调用本地工具并用 UI 方式补全多系统认证流程",
+          "risk": [
+            "多阶段身份冒用",
+            "跨系统链式接管",
+            "审计逃逸"
+          ],
+          "risk_text": "多阶段身份冒用、跨系统链式接管、审计逃逸",
+          "explanation": "X8 能驱动本地 CLI/浏览器辅助流程，U2 完成剩余人工交互，I2 使多个系统连续受影响。"
+        },
+        {
+          "combo_id": "IA-09",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier4",
+          "atomic_ops_text": "R8（读取连接器数据） + U3（系统剪贴板读写） + I2（跨系统身份代理）",
+          "atomic_ops": [
+            {
+              "code": "R8",
+              "name": "读取连接器数据"
+            },
+            {
+              "code": "U3",
+              "name": "系统剪贴板读写"
+            },
+            {
+              "code": "I2",
+              "name": "跨系统身份代理"
+            }
+          ],
+          "atomic_op_codes": [
+            "R8",
+            "U3",
+            "I2"
+          ],
+          "effect": "从连接器读取个人资料并结合剪贴板中的凭证执行跨系统身份联动",
+          "risk": [
+            "凭证拼接",
+            "账户接管",
+            "连接器滥用"
+          ],
+          "risk_text": "凭证拼接、账户接管、连接器滥用",
+          "explanation": "R8 提供账户环境与对象线索，U3 捕获一次性口令或链接，I2 则扩大到多系统操作。"
+        },
+        {
+          "combo_id": "IA-10",
+          "tier_combo": [
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier4 + Tier3",
+          "atomic_ops_text": "I1（单系统身份访问） + A6（触发后自动动作） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "I1",
+              "name": "单系统身份访问"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "I1",
+            "A6",
+            "O5"
+          ],
+          "effect": "在满足某些条件后自动以用户名义发送消息或发布内容",
+          "risk": [
+            "身份滥用自动化",
+            "声誉损害",
+            "难以及时止损"
+          ],
+          "risk_text": "身份滥用自动化、声誉损害、难以及时止损",
+          "explanation": "I1 让 Agent 能代表用户，A6 使其无需逐次确认，O5 则把冒名动作直接公开化。"
+        },
+        {
+          "combo_id": "IA-11",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier4",
+          "atomic_ops_text": "R6（读取本地任意路径文件） + X1（执行 shell 命令） + I5（隐式权限继承）",
+          "atomic_ops": [
+            {
+              "code": "R6",
+              "name": "读取本地任意路径文件"
+            },
+            {
+              "code": "X1",
+              "name": "执行 shell 命令"
+            },
+            {
+              "code": "I5",
+              "name": "隐式权限继承"
+            }
+          ],
+          "atomic_op_codes": [
+            "R6",
+            "X1",
+            "I5"
+          ],
+          "effect": "读取本地配置中的已有授权信息并继承高权连接器继续行动",
+          "risk": [
+            "隐式授权继承",
+            "会话劫持",
+            "责任边界不清"
+          ],
+          "risk_text": "隐式授权继承、会话劫持、责任边界不清",
+          "explanation": "R6 使 Agent 能接触更多授权材料，X1 用于解析与调用，I5 则让其沿用本不属于当前任务的高权身份。"
+        },
+        {
+          "combo_id": "IA-12",
+          "tier_combo": [
+            "Tier2",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier2 + Tier4 + Tier3",
+          "atomic_ops_text": "U4（键盘输入消费） + I1（单系统身份访问） + G2（生成结构化草稿）",
+          "atomic_ops": [
+            {
+              "code": "U4",
+              "name": "键盘输入消费"
+            },
+            {
+              "code": "I1",
+              "name": "单系统身份访问"
+            },
+            {
+              "code": "G2",
+              "name": "生成结构化草稿"
+            }
+          ],
+          "atomic_op_codes": [
+            "U4",
+            "I1",
+            "G2"
+          ],
+          "effect": "监听输入模式后生成与用户风格一致的对外文本并代发",
+          "risk": [
+            "风格伪装",
+            "社工可信度提升",
+            "沟通欺骗"
+          ],
+          "risk_text": "风格伪装、社工可信度提升、沟通欺骗",
+          "explanation": "U4 可捕捉用户表达习惯，I1 允许代行，G2 把这种伪装封装成结构化外发内容。"
+        }
+      ]
+    },
+    {
+      "category_name": "执行投毒类",
+      "items": [
+        {
+          "combo_id": "EX-01",
+          "tier_combo": [
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier2 + Tier3",
+          "atomic_ops_text": "W3（下载外部文件） + X2（执行解释器代码） + G4（写本地项目文件）",
+          "atomic_ops": [
+            {
+              "code": "W3",
+              "name": "下载外部文件"
+            },
+            {
+              "code": "X2",
+              "name": "执行解释器代码"
+            },
+            {
+              "code": "G4",
+              "name": "写本地项目文件"
+            }
+          ],
+          "atomic_op_codes": [
+            "W3",
+            "X2",
+            "G4"
+          ],
+          "effect": "下载外部脚本或配置后在本地执行，并修改项目文件",
+          "risk": [
+            "代码投毒",
+            "后门植入",
+            "供应链污染"
+          ],
+          "risk_text": "代码投毒、后门植入、供应链污染",
+          "explanation": "W3 负责引入不可信输入，X2 让外部内容在本地运行，G4 则将其结果持久化到项目文件中。"
+        },
+        {
+          "combo_id": "EX-02",
+          "tier_combo": [
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier2 + Tier3",
+          "atomic_ops_text": "W3（下载外部文件） + X1（执行 shell 命令） + K3（应用程序管理）",
+          "atomic_ops": [
+            {
+              "code": "W3",
+              "name": "下载外部文件"
+            },
+            {
+              "code": "X1",
+              "name": "执行 shell 命令"
+            },
+            {
+              "code": "K3",
+              "name": "应用程序管理"
+            }
+          ],
+          "atomic_op_codes": [
+            "W3",
+            "X1",
+            "K3"
+          ],
+          "effect": "下载并执行安装脚本，进一步安装额外组件或程序",
+          "risk": [
+            "恶意软件安装",
+            "持久化驻留",
+            "宿主环境失陷"
+          ],
+          "risk_text": "恶意软件安装、持久化驻留、宿主环境失陷",
+          "explanation": "W3 下载内容，X1 执行命令，K3 管理应用安装，组合后就不再是简单“拉取工具”。"
+        },
+        {
+          "combo_id": "EX-03",
+          "tier_combo": [
+            "Tier3",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier3 + Tier2",
+          "atomic_ops_text": "X4（安装依赖或拉包） + X5（执行环境可联网） + W2（调用外部公开 API）",
+          "atomic_ops": [
+            {
+              "code": "X4",
+              "name": "安装依赖或拉包"
+            },
+            {
+              "code": "X5",
+              "name": "执行环境可联网"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            }
+          ],
+          "atomic_op_codes": [
+            "X4",
+            "X5",
+            "W2"
+          ],
+          "effect": "在线安装依赖并在联网环境下立即运行",
+          "risk": [
+            "恶意依赖引入",
+            "远程控制",
+            "供应链攻击"
+          ],
+          "risk_text": "恶意依赖引入、远程控制、供应链攻击",
+          "explanation": "X4 会引入新的依赖，X5 允许执行环境联网，W2 则可与外部服务联动，一旦依赖被污染就会形成实时入口。"
+        },
+        {
+          "combo_id": "EX-04",
+          "tier_combo": [
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier2 + Tier3",
+          "atomic_ops_text": "W1（访问公开网页） + X1（执行 shell 命令） + X6（写文件系统）",
+          "atomic_ops": [
+            {
+              "code": "W1",
+              "name": "访问公开网页"
+            },
+            {
+              "code": "X1",
+              "name": "执行 shell 命令"
+            },
+            {
+              "code": "X6",
+              "name": "写文件系统"
+            }
+          ],
+          "atomic_op_codes": [
+            "W1",
+            "X1",
+            "X6"
+          ],
+          "effect": "根据外部网页内容生成命令并直接写入本地配置/脚本",
+          "risk": [
+            "提示注入驱动执行",
+            "配置投毒",
+            "持久化污染"
+          ],
+          "risk_text": "提示注入驱动执行、配置投毒、持久化污染",
+          "explanation": "W1 提供不可信文本来源，X1 负责执行，X6 将结果写入本地文件系统，造成执行与持久化一体化。"
+        },
+        {
+          "combo_id": "EX-05",
+          "tier_combo": [
+            "Tier1",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier3",
+          "atomic_ops_text": "R5（读取本地 repo 文件） + X2（执行解释器代码） + G5（批量本地写文件）",
+          "atomic_ops": [
+            {
+              "code": "R5",
+              "name": "读取本地 repo 文件"
+            },
+            {
+              "code": "X2",
+              "name": "执行解释器代码"
+            },
+            {
+              "code": "G5",
+              "name": "批量本地写文件"
+            }
+          ],
+          "atomic_op_codes": [
+            "R5",
+            "X2",
+            "G5"
+          ],
+          "effect": "读取项目内容后自动批量改写多个文件",
+          "risk": [
+            "大范围代码破坏",
+            "逻辑投毒",
+            "回滚成本高"
+          ],
+          "risk_text": "大范围代码破坏、逻辑投毒、回滚成本高",
+          "explanation": "R5 帮助 Agent 理解项目结构，X2 负责生成修改逻辑，G5 进行多文件落地，破坏面远高于单文件修改。"
+        },
+        {
+          "combo_id": "EX-06",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier3",
+          "atomic_ops_text": "R7（读取知识库或文档库） + W2（调用外部公开 API） + X3（执行容器任务）",
+          "atomic_ops": [
+            {
+              "code": "R7",
+              "name": "读取知识库或文档库"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            },
+            {
+              "code": "X3",
+              "name": "执行容器任务"
+            }
+          ],
+          "atomic_op_codes": [
+            "R7",
+            "W2",
+            "X3"
+          ],
+          "effect": "根据内部文档指令拉起容器任务处理外部输入",
+          "risk": [
+            "容器逃逸面扩大",
+            "内部知识驱动的外部执行",
+            "组合投毒"
+          ],
+          "risk_text": "容器逃逸面扩大、内部知识驱动的外部执行、组合投毒",
+          "explanation": "R7 提供内部操作知识，W2 拉取外部数据或镜像，X3 在容器中执行，可能把内部规则用于扩展外部攻击面。"
+        },
+        {
+          "combo_id": "EX-07",
+          "tier_combo": [
+            "Tier3",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier3 + Tier2",
+          "atomic_ops_text": "X8（调用本地工具） + K1（修改系统级设置） + W2（调用外部公开 API）",
+          "atomic_ops": [
+            {
+              "code": "X8",
+              "name": "调用本地工具"
+            },
+            {
+              "code": "K1",
+              "name": "修改系统级设置"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            }
+          ],
+          "atomic_op_codes": [
+            "X8",
+            "K1",
+            "W2"
+          ],
+          "effect": "调用本地工具修改系统安全设置后与外部服务联动",
+          "risk": [
+            "降低防护后出网",
+            "环境劫持",
+            "长期暴露"
+          ],
+          "risk_text": "降低防护后出网、环境劫持、长期暴露",
+          "explanation": "X8 能调用 git/curl/系统工具，K1 可改安全策略，W2 让修改后的环境直接与外部联动。"
+        },
+        {
+          "combo_id": "EX-08",
+          "tier_combo": [
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier2 + Tier3",
+          "atomic_ops_text": "W3（下载外部文件） + X4（安装依赖或拉包） + X2（执行解释器代码）",
+          "atomic_ops": [
+            {
+              "code": "W3",
+              "name": "下载外部文件"
+            },
+            {
+              "code": "X4",
+              "name": "安装依赖或拉包"
+            },
+            {
+              "code": "X2",
+              "name": "执行解释器代码"
+            }
+          ],
+          "atomic_op_codes": [
+            "W3",
+            "X4",
+            "X2"
+          ],
+          "effect": "下载第三方包说明或脚本后自动安装并执行",
+          "risk": [
+            "供应链跟随式投毒",
+            "脚本链式执行",
+            "依赖污染"
+          ],
+          "risk_text": "供应链跟随式投毒、脚本链式执行、依赖污染",
+          "explanation": "W3 提供不可信下载内容，X4 安装依赖，X2 立即执行代码，使外部内容快速变成运行时风险。"
+        },
+        {
+          "combo_id": "EX-09",
+          "tier_combo": [
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier3 + Tier4",
+          "atomic_ops_text": "X2（执行解释器代码） + G4（写本地项目文件） + A7（自动重试/循环）",
+          "atomic_ops": [
+            {
+              "code": "X2",
+              "name": "执行解释器代码"
+            },
+            {
+              "code": "G4",
+              "name": "写本地项目文件"
+            },
+            {
+              "code": "A7",
+              "name": "自动重试/循环"
+            }
+          ],
+          "atomic_op_codes": [
+            "X2",
+            "G4",
+            "A7"
+          ],
+          "effect": "执行器生成并反复重试修改项目文件直到成功",
+          "risk": [
+            "错误放大",
+            "强行覆盖",
+            "难以人工介入"
+          ],
+          "risk_text": "错误放大、强行覆盖、难以人工介入",
+          "explanation": "X2 生成修改动作，G4 落地到项目文件，A7 则让失败自动重试，把局部错误放大成持续性破坏。"
+        },
+        {
+          "combo_id": "EX-10",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier2",
+          "atomic_ops_text": "R6（读取本地任意路径文件） + X8（调用本地工具） + W2（调用外部公开 API）",
+          "atomic_ops": [
+            {
+              "code": "R6",
+              "name": "读取本地任意路径文件"
+            },
+            {
+              "code": "X8",
+              "name": "调用本地工具"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            }
+          ],
+          "atomic_op_codes": [
+            "R6",
+            "X8",
+            "W2"
+          ],
+          "effect": "读取系统级配置后用本地工具对外同步或上报",
+          "risk": [
+            "系统配置外流",
+            "管理接口滥用",
+            "定向攻击辅助"
+          ],
+          "risk_text": "系统配置外流、管理接口滥用、定向攻击辅助",
+          "explanation": "R6 让 Agent 接触系统配置，X8 调用本地 CLI 进行格式转换或调用，W2 则将其同步到外部平台。"
+        },
+        {
+          "combo_id": "EX-11",
+          "tier_combo": [
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier3",
+          "atomic_ops_text": "X1（执行 shell 命令） + K5（进程强制管控） + X6（写文件系统）",
+          "atomic_ops": [
+            {
+              "code": "X1",
+              "name": "执行 shell 命令"
+            },
+            {
+              "code": "K5",
+              "name": "进程强制管控"
+            },
+            {
+              "code": "X6",
+              "name": "写文件系统"
+            }
+          ],
+          "atomic_op_codes": [
+            "X1",
+            "K5",
+            "X6"
+          ],
+          "effect": "通过命令停止关键进程并篡改相关文件",
+          "risk": [
+            "业务中断",
+            "掩盖痕迹",
+            "恢复困难"
+          ],
+          "risk_text": "业务中断、掩盖痕迹、恢复困难",
+          "explanation": "X1 提供进程控制命令能力，K5 可强制管控其他进程，X6/G4 则篡改配置或日志文件以制造持久影响。"
+        },
+        {
+          "combo_id": "EX-12",
+          "tier_combo": [
+            "Tier2",
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier2 + Tier3 + Tier4",
+          "atomic_ops_text": "W2（调用外部公开 API） + X5（执行环境可联网） + I4（凭证注入外部调用）",
+          "atomic_ops": [
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            },
+            {
+              "code": "X5",
+              "name": "执行环境可联网"
+            },
+            {
+              "code": "I4",
+              "name": "凭证注入外部调用"
+            }
+          ],
+          "atomic_op_codes": [
+            "W2",
+            "X5",
+            "I4"
+          ],
+          "effect": "从外部 API 拉取任务并携带本地凭证在执行环境中运行",
+          "risk": [
+            "远程任务注入",
+            "凭证伴随执行",
+            "供应链侧向渗透"
+          ],
+          "risk_text": "远程任务注入、凭证伴随执行、供应链侧向渗透",
+          "explanation": "W2 提供外部任务入口，X5 让执行环境联网，I4 把本地凭证注入任务链，形成高危的远程指令执行闭环。"
+        }
+      ]
+    },
+    {
+      "category_name": "自动扩散类",
+      "items": [
+        {
+          "combo_id": "AU-01",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier4",
+          "atomic_ops_text": "Q4（自动推荐或判定） + G2（生成结构化草稿） + O5（自动外发） + A6（触发后自动动作）",
+          "atomic_ops": [
+            {
+              "code": "Q4",
+              "name": "自动推荐或判定"
+            },
+            {
+              "code": "G2",
+              "name": "生成结构化草稿"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            }
+          ],
+          "atomic_op_codes": [
+            "Q4",
+            "G2",
+            "O5",
+            "A6"
+          ],
+          "effect": "根据查询结果自动生成内容并自动发送",
+          "risk": [
+            "错误信息规模化传播",
+            "自动化钓鱼",
+            "业务误导"
+          ],
+          "risk_text": "错误信息规模化传播、自动化钓鱼、业务误导",
+          "explanation": "Q4 的问题本来只是建议或判定可能出错，但加上 G2 + O5 + A6 后，错误会直接变成外部动作并自动扩散。"
+        },
+        {
+          "combo_id": "AU-02",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "R9（批量枚举文件或资源） + A7（自动重试/循环） + O3（外部多对象批量写入） + O4（破坏性写入）",
+          "atomic_ops": [
+            {
+              "code": "R9",
+              "name": "批量枚举文件或资源"
+            },
+            {
+              "code": "A7",
+              "name": "自动重试/循环"
+            },
+            {
+              "code": "O3",
+              "name": "外部多对象批量写入"
+            },
+            {
+              "code": "O4",
+              "name": "破坏性写入"
+            }
+          ],
+          "atomic_op_codes": [
+            "R9",
+            "A7",
+            "O3",
+            "O4"
+          ],
+          "effect": "批量枚举资源并循环重试地批量修改或删除",
+          "risk": [
+            "大规模误删",
+            "批量破坏",
+            "错误放大"
+          ],
+          "risk_text": "大规模误删、批量破坏、错误放大",
+          "explanation": "R9 提供大规模目标集合，A7 使动作可以自动重试，若再叠加 O3/O4 的批量写入或破坏性写入，就会把单点失误放大成规模化事故。"
+        },
+        {
+          "combo_id": "AU-03",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "R3（读取历史会话） + A3（定时调度） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "R3",
+              "name": "读取历史会话"
+            },
+            {
+              "code": "A3",
+              "name": "定时调度"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "R3",
+            "A3",
+            "O5"
+          ],
+          "effect": "定时扫描历史会话并自动对外发送摘要或提取内容",
+          "risk": [
+            "长期记忆泄露",
+            "持续隐私外传",
+            "无人值守风险"
+          ],
+          "risk_text": "长期记忆泄露、持续隐私外传、无人值守风险",
+          "explanation": "R3 能读取跨会话历史，A3 表示定时调度，O5 则将结果持续外发。"
+        },
+        {
+          "combo_id": "AU-04",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "S5（后台位置持续追踪） + A6（触发后自动动作） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "S5",
+              "name": "后台位置持续追踪"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "S5",
+            "A6",
+            "O5"
+          ],
+          "effect": "后台持续追踪位置并在满足条件后自动通知外部",
+          "risk": [
+            "轨迹持续外泄",
+            "场景触发泄露",
+            "现实世界风险"
+          ],
+          "risk_text": "轨迹持续外泄、场景触发泄露、现实世界风险",
+          "explanation": "S5 本身就具有长期监测性质，再叠加 A6/O5 就会把位置变化变成自动触发条件。"
+        },
+        {
+          "combo_id": "AU-05",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "Q1（只读查询或搜索） + A4（事件触发） + O2（外部单对象写入）",
+          "atomic_ops": [
+            {
+              "code": "Q1",
+              "name": "只读查询或搜索"
+            },
+            {
+              "code": "A4",
+              "name": "事件触发"
+            },
+            {
+              "code": "O2",
+              "name": "外部单对象写入"
+            }
+          ],
+          "atomic_op_codes": [
+            "Q1",
+            "A4",
+            "O2"
+          ],
+          "effect": "一旦外部事件触发，自动依据查询结果改写对象",
+          "risk": [
+            "事件风暴",
+            "误触发改写",
+            "链式业务污染"
+          ],
+          "risk_text": "事件风暴、误触发改写、链式业务污染",
+          "explanation": "Q1 提供上下文数据，A4 用事件作为触发器，O2 直接修改对象，导致事件与修改之间形成强耦合。"
+        },
+        {
+          "combo_id": "AU-06",
+          "tier_combo": [
+            "Tier3",
+            "Tier4",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier3 + Tier4 + Tier2",
+          "atomic_ops_text": "G2（生成结构化草稿） + A6（触发后自动动作） + U2（模拟 UI 操作控制）",
+          "atomic_ops": [
+            {
+              "code": "G2",
+              "name": "生成结构化草稿"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            },
+            {
+              "code": "U2",
+              "name": "模拟 UI 操作控制"
+            }
+          ],
+          "atomic_op_codes": [
+            "G2",
+            "A6",
+            "U2"
+          ],
+          "effect": "自动生成表单/消息并由 UI 模拟直接提交",
+          "risk": [
+            "自动化提交",
+            "误操作规模化",
+            "审批污染"
+          ],
+          "risk_text": "自动化提交、误操作规模化、审批污染",
+          "explanation": "G2 生成结构化草稿，U2 代为点击提交，A6 取消逐次人工干预，易将错误迅速写入真实系统。"
+        },
+        {
+          "combo_id": "AU-07",
+          "tier_combo": [
+            "Tier1",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier4",
+          "atomic_ops_text": "R8（读取连接器数据） + Q2（结构化筛选与聚合） + A5（持续监控）",
+          "atomic_ops": [
+            {
+              "code": "R8",
+              "name": "读取连接器数据"
+            },
+            {
+              "code": "Q2",
+              "name": "结构化筛选与聚合"
+            },
+            {
+              "code": "A5",
+              "name": "持续监控"
+            }
+          ],
+          "atomic_op_codes": [
+            "R8",
+            "Q2",
+            "A5"
+          ],
+          "effect": "持续监听连接器数据并自动聚合异常模式",
+          "risk": [
+            "长期监控",
+            "员工画像",
+            "越界数据分析"
+          ],
+          "risk_text": "长期监控、员工画像、越界数据分析",
+          "explanation": "R8 给出连接器入口，Q2 用于聚合统计，A5 让监听长期化，风险从一次性读数据升级为持续性画像。"
+        },
+        {
+          "combo_id": "AU-08",
+          "tier_combo": [
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier3 + Tier4",
+          "atomic_ops_text": "X2（执行解释器代码） + A7（自动重试/循环） + G3（写本地临时文件）",
+          "atomic_ops": [
+            {
+              "code": "X2",
+              "name": "执行解释器代码"
+            },
+            {
+              "code": "A7",
+              "name": "自动重试/循环"
+            },
+            {
+              "code": "G3",
+              "name": "写本地临时文件"
+            }
+          ],
+          "atomic_op_codes": [
+            "X2",
+            "A7",
+            "G3"
+          ],
+          "effect": "自动生成本地缓存/报告并重复更新",
+          "risk": [
+            "敏感内容长期落地",
+            "缓存扩张",
+            "难以清理"
+          ],
+          "risk_text": "敏感内容长期落地、缓存扩张、难以清理",
+          "explanation": "X2 可持续处理数据，A7 反复重试或重复运行，G3 使中间结果长期保留在本地。"
+        },
+        {
+          "combo_id": "AU-09",
+          "tier_combo": [
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier4 + Tier3",
+          "atomic_ops_text": "I1（单系统身份访问） + A3（定时调度） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "I1",
+              "name": "单系统身份访问"
+            },
+            {
+              "code": "A3",
+              "name": "定时调度"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "I1",
+            "A3",
+            "O5"
+          ],
+          "effect": "定时以用户身份发送信息或报告",
+          "risk": [
+            "身份滥用自动化",
+            "声誉损害",
+            "难以及时察觉"
+          ],
+          "risk_text": "身份滥用自动化、声誉损害、难以及时察觉",
+          "explanation": "I1 允许代行，A3 负责周期调度，O5 则把代行结果发布到外部系统。"
+        },
+        {
+          "combo_id": "AU-10",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier4",
+          "atomic_ops_text": "R7（读取知识库或文档库） + X2（执行解释器代码） + A6（触发后自动动作）",
+          "atomic_ops": [
+            {
+              "code": "R7",
+              "name": "读取知识库或文档库"
+            },
+            {
+              "code": "X2",
+              "name": "执行解释器代码"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            }
+          ],
+          "atomic_op_codes": [
+            "R7",
+            "X2",
+            "A6"
+          ],
+          "effect": "根据知识库内容自动执行某类运维/管理动作",
+          "risk": [
+            "知识驱动自动操作",
+            "误执行",
+            "规模化失误"
+          ],
+          "risk_text": "知识驱动自动操作、误执行、规模化失误",
+          "explanation": "R7 提供内部文档知识，X2 把知识转成执行逻辑，A6 让动作在条件满足后直接发生。"
+        },
+        {
+          "combo_id": "AU-11",
+          "tier_combo": [
+            "Tier2",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier2 + Tier4 + Tier3",
+          "atomic_ops_text": "W4（使用搜索驱动后续动作） + A6（触发后自动动作） + X1（执行 shell 命令）",
+          "atomic_ops": [
+            {
+              "code": "W4",
+              "name": "使用搜索驱动后续动作"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            },
+            {
+              "code": "X1",
+              "name": "执行 shell 命令"
+            }
+          ],
+          "atomic_op_codes": [
+            "W4",
+            "A6",
+            "X1"
+          ],
+          "effect": "搜索结果直接驱动后续命令执行",
+          "risk": [
+            "外部信息驱动高权动作",
+            "搜索污染放大",
+            "误执行"
+          ],
+          "risk_text": "外部信息驱动高权动作、搜索污染放大、误执行",
+          "explanation": "W4 最大的问题在于把外部世界作为决策依据，一旦叠加 A6 和 X1，就能把网页污染直接转化为本地命令。"
+        },
+        {
+          "combo_id": "AU-12",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier2",
+          "atomic_ops_text": "S2（硬件麦克风调用） + A4（事件触发） + C1（多媒体输出控制）",
+          "atomic_ops": [
+            {
+              "code": "S2",
+              "name": "硬件麦克风调用"
+            },
+            {
+              "code": "A4",
+              "name": "事件触发"
+            },
+            {
+              "code": "C1",
+              "name": "多媒体输出控制"
+            }
+          ],
+          "atomic_op_codes": [
+            "S2",
+            "A4",
+            "C1"
+          ],
+          "effect": "检测到环境声音事件后自动控制投屏、音量或亮度",
+          "risk": [
+            "环境触发干扰",
+            "会议泄露",
+            "物理扰动"
+          ],
+          "risk_text": "环境触发干扰、会议泄露、物理扰动",
+          "explanation": "S2 能把环境声音变成事件输入，A4 将其转为触发条件，C1 再实施现实世界中的自动控制。"
+        }
+      ]
+    },
+    {
+      "category_name": "物理感知与现实干扰类",
+      "items": [
+        {
+          "combo_id": "PH-01",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "S4（精确地理位置获取） + A5（持续监控） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "S4",
+              "name": "精确地理位置获取"
+            },
+            {
+              "code": "A5",
+              "name": "持续监控"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "S4",
+            "A5",
+            "O5"
+          ],
+          "effect": "持续监控位置变化，并在特定位置自动共享轨迹或触发消息",
+          "risk": [
+            "轨迹跟踪",
+            "现实骚扰",
+            "人身安全风险"
+          ],
+          "risk_text": "轨迹跟踪、现实骚扰、人身安全风险",
+          "explanation": "S4 单独看只是一次定位，但和 A5 的持续监控及 O5 的自动外发组合后，就会变成实时轨迹跟踪系统。"
+        },
+        {
+          "combo_id": "PH-02",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier4",
+          "atomic_ops_text": "S1（硬件摄像头调用） + S2（硬件麦克风调用） + C1（多媒体输出控制） + A6（触发后自动动作）",
+          "atomic_ops": [
+            {
+              "code": "S1",
+              "name": "硬件摄像头调用"
+            },
+            {
+              "code": "S2",
+              "name": "硬件麦克风调用"
+            },
+            {
+              "code": "C1",
+              "name": "多媒体输出控制"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            }
+          ],
+          "atomic_op_codes": [
+            "S1",
+            "S2",
+            "C1",
+            "A6"
+          ],
+          "effect": "基于摄像头或麦克风感知结果自动控制设备行为",
+          "risk": [
+            "环境监听",
+            "物理干扰",
+            "会议/办公场景泄露"
+          ],
+          "risk_text": "环境监听、物理干扰、会议/办公场景泄露",
+          "explanation": "S1/S2 负责感知环境，C1 负责对屏幕、音量、投屏等做控制，A6 让动作在满足条件后自动执行。"
+        },
+        {
+          "combo_id": "PH-03",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier3",
+          "atomic_ops_text": "S1（硬件摄像头调用） + U1（屏幕内容捕获） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "S1",
+              "name": "硬件摄像头调用"
+            },
+            {
+              "code": "U1",
+              "name": "屏幕内容捕获"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "S1",
+            "U1",
+            "O5"
+          ],
+          "effect": "摄像头图像与屏幕内容联合采集后发往外部",
+          "risk": [
+            "场景与界面双重泄露",
+            "在场人员隐私暴露",
+            "会议敏感信息外泄"
+          ],
+          "risk_text": "场景与界面双重泄露、在场人员隐私暴露、会议敏感信息外泄",
+          "explanation": "S1 能看到现实环境，U1 能看到数字界面，两者叠加后可形成高价值场景复原。"
+        },
+        {
+          "combo_id": "PH-04",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier4",
+          "atomic_ops_text": "S6（扫描附近硬件设备） + K2（硬件开关控制） + A6（触发后自动动作）",
+          "atomic_ops": [
+            {
+              "code": "S6",
+              "name": "扫描附近硬件设备"
+            },
+            {
+              "code": "K2",
+              "name": "硬件开关控制"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            }
+          ],
+          "atomic_op_codes": [
+            "S6",
+            "K2",
+            "A6"
+          ],
+          "effect": "扫描附近设备并自动启用相应无线开关进行连接/探测",
+          "risk": [
+            "物理边界穿透",
+            "周边设备探测",
+            "蓝牙/WiFi 滥用"
+          ],
+          "risk_text": "物理边界穿透、周边设备探测、蓝牙/WiFi 滥用",
+          "explanation": "S6 负责发现周边设备，K2 控制无线模块开关，A6 让相关操作自动化，容易扩展物理攻击面。"
+        },
+        {
+          "combo_id": "PH-05",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier3",
+          "atomic_ops_text": "S4（精确地理位置获取） + W2（调用外部公开 API） + O2（外部单对象写入）",
+          "atomic_ops": [
+            {
+              "code": "S4",
+              "name": "精确地理位置获取"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            },
+            {
+              "code": "O2",
+              "name": "外部单对象写入"
+            }
+          ],
+          "atomic_op_codes": [
+            "S4",
+            "W2",
+            "O2"
+          ],
+          "effect": "将精确位置写入外部工单、日历或消息对象中",
+          "risk": [
+            "位置隐私嵌入业务对象",
+            "长期可见",
+            "扩散难控"
+          ],
+          "risk_text": "位置隐私嵌入业务对象、长期可见、扩散难控",
+          "explanation": "S4 的位置信息一旦经 W2/O2 落到外部对象，就会在业务系统中持续可见并被复制传播。"
+        },
+        {
+          "combo_id": "PH-06",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier4",
+          "atomic_ops_text": "S2（硬件麦克风调用） + U2（模拟 UI 操作控制） + I1（单系统身份访问）",
+          "atomic_ops": [
+            {
+              "code": "S2",
+              "name": "硬件麦克风调用"
+            },
+            {
+              "code": "U2",
+              "name": "模拟 UI 操作控制"
+            },
+            {
+              "code": "I1",
+              "name": "单系统身份访问"
+            }
+          ],
+          "atomic_op_codes": [
+            "S2",
+            "U2",
+            "I1"
+          ],
+          "effect": "根据环境语音提示判断时机并代理用户进行操作",
+          "risk": [
+            "在场环境劫持",
+            "会话趁隙操作",
+            "物理场景联动冒用"
+          ],
+          "risk_text": "在场环境劫持、会话趁隙操作、物理场景联动冒用",
+          "explanation": "S2 能听到会议/电话中的提示信息，U2 与 I1 则让这些时机被直接利用来发起高敏动作。"
+        },
+        {
+          "combo_id": "PH-07",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier2",
+          "atomic_ops_text": "S7（系统状态读取） + X2（执行解释器代码） + W2（调用外部公开 API）",
+          "atomic_ops": [
+            {
+              "code": "S7",
+              "name": "系统状态读取"
+            },
+            {
+              "code": "X2",
+              "name": "执行解释器代码"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            }
+          ],
+          "atomic_op_codes": [
+            "S7",
+            "X2",
+            "W2"
+          ],
+          "effect": "读取系统状态并生成环境指纹后同步到外部分析服务",
+          "risk": [
+            "设备画像",
+            "漏洞定向利用辅助",
+            "隐形遥测"
+          ],
+          "risk_text": "设备画像、漏洞定向利用辅助、隐形遥测",
+          "explanation": "S7 给出系统运行细节，X2 负责清洗建模，W2 则把这些数据送到外部服务形成遥测闭环。"
+        },
+        {
+          "combo_id": "PH-08",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "S5（后台位置持续追踪） + A6（触发后自动动作） + K4（闹钟与唤醒管理）",
+          "atomic_ops": [
+            {
+              "code": "S5",
+              "name": "后台位置持续追踪"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            },
+            {
+              "code": "K4",
+              "name": "闹钟与唤醒管理"
+            }
+          ],
+          "atomic_op_codes": [
+            "S5",
+            "A6",
+            "K4"
+          ],
+          "effect": "根据位置或环境状态自动设置闹钟与唤醒任务",
+          "risk": [
+            "隐蔽唤醒",
+            "后台持续运行",
+            "现实干扰增强"
+          ],
+          "risk_text": "隐蔽唤醒、后台持续运行、现实干扰增强",
+          "explanation": "S5 让环境变化可被持续感知，A6 将其转为动作条件，K4 则提供定时唤醒与后台驻留能力。"
+        },
+        {
+          "combo_id": "PH-09",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier3",
+          "atomic_ops_text": "S1（硬件摄像头调用） + C1（多媒体输出控制） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "S1",
+              "name": "硬件摄像头调用"
+            },
+            {
+              "code": "C1",
+              "name": "多媒体输出控制"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "S1",
+            "C1",
+            "O5"
+          ],
+          "effect": "感知到某类场景后自动投屏或外播内容",
+          "risk": [
+            "现场信息泄露",
+            "显示内容被外放",
+            "社工辅助"
+          ],
+          "risk_text": "现场信息泄露、显示内容被外放、社工辅助",
+          "explanation": "S1 提供场景判断依据，C1 负责现实输出，O5 则进一步把结果同步到外部系统，增加传播范围。"
+        },
+        {
+          "combo_id": "PH-10",
+          "tier_combo": [
+            "Tier1",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier4",
+          "atomic_ops_text": "S4（精确地理位置获取） + R2（读取当前会话历史） + A6（触发后自动动作）",
+          "atomic_ops": [
+            {
+              "code": "S4",
+              "name": "精确地理位置获取"
+            },
+            {
+              "code": "R2",
+              "name": "读取当前会话历史"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            }
+          ],
+          "atomic_op_codes": [
+            "S4",
+            "R2",
+            "A6"
+          ],
+          "effect": "根据当前位置和当前会话内容自动触发敏感动作",
+          "risk": [
+            "语境+位置联合触发",
+            "现实场景误伤",
+            "上下文越权"
+          ],
+          "risk_text": "语境+位置联合触发、现实场景误伤、上下文越权",
+          "explanation": "S4 提供现实条件，R2 提供对话语境，A6 把二者组合成自动行为决策。"
+        },
+        {
+          "combo_id": "PH-11",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier2",
+          "atomic_ops_text": "S6（扫描附近硬件设备） + K2（硬件开关控制） + U2（模拟 UI 操作控制）",
+          "atomic_ops": [
+            {
+              "code": "S6",
+              "name": "扫描附近硬件设备"
+            },
+            {
+              "code": "K2",
+              "name": "硬件开关控制"
+            },
+            {
+              "code": "U2",
+              "name": "模拟 UI 操作控制"
+            }
+          ],
+          "atomic_op_codes": [
+            "S6",
+            "K2",
+            "U2"
+          ],
+          "effect": "发现附近设备后自动弹出或执行交互流程",
+          "risk": [
+            "近场社工",
+            "误配对",
+            "无线设备滥连"
+          ],
+          "risk_text": "近场社工、误配对、无线设备滥连",
+          "explanation": "S6 负责发现设备，K2 管理无线接口，U2 完成交互确认或输入，组合后更容易诱导用户或越界配对。"
+        },
+        {
+          "combo_id": "PH-12",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "S3（生物特征识别访问） + I2（跨系统身份代理） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "S3",
+              "name": "生物特征识别访问"
+            },
+            {
+              "code": "I2",
+              "name": "跨系统身份代理"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "S3",
+            "I2",
+            "O5"
+          ],
+          "effect": "利用本地认证状态在多系统中代表用户发布/同步信息",
+          "risk": [
+            "本地认证结果外溢",
+            "跨系统身份扩散",
+            "信任误用"
+          ],
+          "risk_text": "本地认证结果外溢、跨系统身份扩散、信任误用",
+          "explanation": "S3 虽只是本地认证结果，但一旦与 I2/O5 联动，就会使本地信任被放大到多个外部系统。"
+        }
+      ]
+    },
+    {
+      "category_name": "权限蠕动类",
+      "items": [
+        {
+          "combo_id": "PR-01",
+          "tier_combo": [
+            "Tier1",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier4",
+          "atomic_ops_text": "R10（跨源数据拼接读取） + I5（隐式权限继承） + A6（触发后自动动作）",
+          "atomic_ops": [
+            {
+              "code": "R10",
+              "name": "跨源数据拼接读取"
+            },
+            {
+              "code": "I5",
+              "name": "隐式权限继承"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            }
+          ],
+          "atomic_op_codes": [
+            "R10",
+            "I5",
+            "A6"
+          ],
+          "effect": "拼接多源数据后沿用已有高权连接器自动执行动作",
+          "risk": [
+            "权限扩大",
+            "责任不清",
+            "跨域越权"
+          ],
+          "risk_text": "权限扩大、责任不清、跨域越权",
+          "explanation": "R10 将多个来源的信息拼接成更高价值的上下文，I5 则隐式继承已有高权连接器，A6 进一步把这种越权操作自动化。"
+        },
+        {
+          "combo_id": "PR-02",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "R8（读取连接器数据） + I2（跨系统身份代理） + O2（外部单对象写入）",
+          "atomic_ops": [
+            {
+              "code": "R8",
+              "name": "读取连接器数据"
+            },
+            {
+              "code": "I2",
+              "name": "跨系统身份代理"
+            },
+            {
+              "code": "O2",
+              "name": "外部单对象写入"
+            }
+          ],
+          "atomic_op_codes": [
+            "R8",
+            "I2",
+            "O2"
+          ],
+          "effect": "利用一个系统中读取的数据去修改另一个系统中的对象",
+          "risk": [
+            "跨系统越权修改",
+            "业务污染",
+            "责任链断裂"
+          ],
+          "risk_text": "跨系统越权修改、业务污染、责任链断裂",
+          "explanation": "例如先从邮箱、文档或工单系统中读取内容，再在另一个系统里创建或修改对象。"
+        },
+        {
+          "combo_id": "PR-03",
+          "tier_combo": [
+            "Tier1",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier4",
+          "atomic_ops_text": "R7（读取知识库或文档库） + Q3（敏感对象查询） + I5（隐式权限继承）",
+          "atomic_ops": [
+            {
+              "code": "R7",
+              "name": "读取知识库或文档库"
+            },
+            {
+              "code": "Q3",
+              "name": "敏感对象查询"
+            },
+            {
+              "code": "I5",
+              "name": "隐式权限继承"
+            }
+          ],
+          "atomic_op_codes": [
+            "R7",
+            "Q3",
+            "I5"
+          ],
+          "effect": "通过知识库与高敏对象查询推断更高权限操作路径",
+          "risk": [
+            "间接越权",
+            "推断式权限扩展",
+            "隐性横向移动"
+          ],
+          "risk_text": "间接越权、推断式权限扩展、隐性横向移动",
+          "explanation": "R7 提供组织知识，Q3 提供高敏对象入口，I5 则允许沿用已有授权，形成“先理解系统，再扩大权限”的路径。"
+        },
+        {
+          "combo_id": "PR-04",
+          "tier_combo": [
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier3 + Tier4",
+          "atomic_ops_text": "X8（调用本地工具） + I5（隐式权限继承） + K1（修改系统级设置）",
+          "atomic_ops": [
+            {
+              "code": "X8",
+              "name": "调用本地工具"
+            },
+            {
+              "code": "I5",
+              "name": "隐式权限继承"
+            },
+            {
+              "code": "K1",
+              "name": "修改系统级设置"
+            }
+          ],
+          "atomic_op_codes": [
+            "X8",
+            "I5",
+            "K1"
+          ],
+          "effect": "调用本地工具读取已授权状态后修改系统级安全配置",
+          "risk": [
+            "高权继承后降防",
+            "权限链污染",
+            "全局安全下降"
+          ],
+          "risk_text": "高权继承后降防、权限链污染、全局安全下降",
+          "explanation": "X8 能调用系统工具，I5 让其沿用本不该给当前任务的高权身份，K1 再把结果落到系统级配置上。"
+        },
+        {
+          "combo_id": "PR-05",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier4",
+          "atomic_ops_text": "R6（读取本地任意路径文件） + X7（访问环境变量） + I5（隐式权限继承）",
+          "atomic_ops": [
+            {
+              "code": "R6",
+              "name": "读取本地任意路径文件"
+            },
+            {
+              "code": "X7",
+              "name": "访问环境变量"
+            },
+            {
+              "code": "I5",
+              "name": "隐式权限继承"
+            }
+          ],
+          "atomic_op_codes": [
+            "R6",
+            "X7",
+            "I5"
+          ],
+          "effect": "读取本地配置与环境变量后继承历史连接器权限",
+          "risk": [
+            "隐式授权复用",
+            "会话残留滥用",
+            "权限边界模糊"
+          ],
+          "risk_text": "隐式授权复用、会话残留滥用、权限边界模糊",
+          "explanation": "R6/X7 让 Agent 接触凭证与配置，I5 则把“看到的授权”变成“继续使用的授权”。"
+        },
+        {
+          "combo_id": "PR-06",
+          "tier_combo": [
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier4 + Tier3",
+          "atomic_ops_text": "I1（单系统身份访问） + I2（跨系统身份代理） + O3（外部多对象批量写入）",
+          "atomic_ops": [
+            {
+              "code": "I1",
+              "name": "单系统身份访问"
+            },
+            {
+              "code": "I2",
+              "name": "跨系统身份代理"
+            },
+            {
+              "code": "O3",
+              "name": "外部多对象批量写入"
+            }
+          ],
+          "atomic_op_codes": [
+            "I1",
+            "I2",
+            "O3"
+          ],
+          "effect": "先在单系统中取得代理权，再扩展为跨系统批量写入",
+          "risk": [
+            "代理链条升级",
+            "横向扩散",
+            "批量越权"
+          ],
+          "risk_text": "代理链条升级、横向扩散、批量越权",
+          "explanation": "I1 表示单点代行，I2 将其跨系统化，O3 则把影响范围扩大到多个对象。"
+        },
+        {
+          "combo_id": "PR-07",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier4",
+          "atomic_ops_text": "R8（读取连接器数据） + W4（使用搜索驱动后续动作） + I2（跨系统身份代理）",
+          "atomic_ops": [
+            {
+              "code": "R8",
+              "name": "读取连接器数据"
+            },
+            {
+              "code": "W4",
+              "name": "使用搜索驱动后续动作"
+            },
+            {
+              "code": "I2",
+              "name": "跨系统身份代理"
+            }
+          ],
+          "atomic_op_codes": [
+            "R8",
+            "W4",
+            "I2"
+          ],
+          "effect": "把外部搜索结果与已授权连接器结合来规划跨系统动作",
+          "risk": [
+            "外部信息驱动权限迁移",
+            "错误升级为越权",
+            "难以追责"
+          ],
+          "risk_text": "外部信息驱动权限迁移、错误升级为越权、难以追责",
+          "explanation": "R8 提供已有权限入口，W4 提供外部决策依据，I2 则让这些依据在多个系统中生效。"
+        },
+        {
+          "combo_id": "PR-08",
+          "tier_combo": [
+            "Tier1",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier4",
+          "atomic_ops_text": "S7（系统状态读取） + I5（隐式权限继承） + A3（定时调度）",
+          "atomic_ops": [
+            {
+              "code": "S7",
+              "name": "系统状态读取"
+            },
+            {
+              "code": "I5",
+              "name": "隐式权限继承"
+            },
+            {
+              "code": "A3",
+              "name": "定时调度"
+            }
+          ],
+          "atomic_op_codes": [
+            "S7",
+            "I5",
+            "A3"
+          ],
+          "effect": "基于系统状态判断何时调用高权连接器",
+          "risk": [
+            "机会型越权",
+            "静默长期运行",
+            "审计难度提升"
+          ],
+          "risk_text": "机会型越权、静默长期运行、审计难度提升",
+          "explanation": "S7 帮助 Agent 判断最佳时机，I5 提供隐式高权，A3 让过程可以长期定时化。"
+        },
+        {
+          "combo_id": "PR-09",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "R10（跨源数据拼接读取） + I2（跨系统身份代理） + G2（生成结构化草稿）",
+          "atomic_ops": [
+            {
+              "code": "R10",
+              "name": "跨源数据拼接读取"
+            },
+            {
+              "code": "I2",
+              "name": "跨系统身份代理"
+            },
+            {
+              "code": "G2",
+              "name": "生成结构化草稿"
+            }
+          ],
+          "atomic_op_codes": [
+            "R10",
+            "I2",
+            "G2"
+          ],
+          "effect": "根据跨源数据生成跨系统操作草稿并引导执行",
+          "risk": [
+            "低敏拼接成高危行动",
+            "社会工程增强",
+            "权限误用"
+          ],
+          "risk_text": "低敏拼接成高危行动、社会工程增强、权限误用",
+          "explanation": "R10 把不同来源的碎片信息整合起来，I2 提供跨系统代理，G2 则将其包装成看似合理的操作方案。"
+        },
+        {
+          "combo_id": "PR-10",
+          "tier_combo": [
+            "Tier2",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier2 + Tier4",
+          "atomic_ops_text": "U2（模拟 UI 操作控制） + I5（隐式权限继承） + A6（触发后自动动作）",
+          "atomic_ops": [
+            {
+              "code": "U2",
+              "name": "模拟 UI 操作控制"
+            },
+            {
+              "code": "I5",
+              "name": "隐式权限继承"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            }
+          ],
+          "atomic_op_codes": [
+            "U2",
+            "I5",
+            "A6"
+          ],
+          "effect": "通过 UI 自动化复用已有登录态执行高权动作",
+          "risk": [
+            "会话复用",
+            "隐式授权滥用",
+            "前台行为伪装"
+          ],
+          "risk_text": "会话复用、隐式授权滥用、前台行为伪装",
+          "explanation": "U2 可直接利用前台登录态，I5 让其沿用既有高权身份，A6 则让这种行为无需逐次审批。"
+        },
+        {
+          "combo_id": "PR-11",
+          "tier_combo": [
+            "Tier3",
+            "Tier4",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier3 + Tier4 + Tier2",
+          "atomic_ops_text": "X5（执行环境可联网） + I4（凭证注入外部调用） + W2（调用外部公开 API）",
+          "atomic_ops": [
+            {
+              "code": "X5",
+              "name": "执行环境可联网"
+            },
+            {
+              "code": "I4",
+              "name": "凭证注入外部调用"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            }
+          ],
+          "atomic_op_codes": [
+            "X5",
+            "I4",
+            "W2"
+          ],
+          "effect": "在联网执行环境中使用高权凭证继续访问外部服务",
+          "risk": [
+            "高权凭证伴随执行",
+            "越权出网",
+            "边界突破"
+          ],
+          "risk_text": "高权凭证伴随执行、越权出网、边界突破",
+          "explanation": "X5 给出联网执行能力，I4 注入高权凭证，W2 完成真实访问，使高权边界从本地扩展到外部。"
+        },
+        {
+          "combo_id": "PR-12",
+          "tier_combo": [
+            "Tier1",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier4 + Tier3",
+          "atomic_ops_text": "R8（读取连接器数据） + I2（跨系统身份代理） + K3（应用程序管理）",
+          "atomic_ops": [
+            {
+              "code": "R8",
+              "name": "读取连接器数据"
+            },
+            {
+              "code": "I2",
+              "name": "跨系统身份代理"
+            },
+            {
+              "code": "K3",
+              "name": "应用程序管理"
+            }
+          ],
+          "atomic_op_codes": [
+            "R8",
+            "I2",
+            "K3"
+          ],
+          "effect": "利用跨系统身份代理去安装或管理其它应用/连接器",
+          "risk": [
+            "权限跨域蔓延",
+            "攻击面扩大",
+            "生态级影响"
+          ],
+          "risk_text": "权限跨域蔓延、攻击面扩大、生态级影响",
+          "explanation": "R8 提供连接器入口，I2 使权限跨系统流动，K3 则把这种授权进一步固化为新的应用安装或管理能力。"
+        }
+      ]
+    },
+    {
+      "category_name": "系统破坏类",
+      "items": [
+        {
+          "combo_id": "SD-01",
+          "tier_combo": [
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier3 + Tier4",
+          "atomic_ops_text": "X1（执行 shell 命令） + O4（破坏性写入） + A7（自动重试/循环）",
+          "atomic_ops": [
+            {
+              "code": "X1",
+              "name": "执行 shell 命令"
+            },
+            {
+              "code": "O4",
+              "name": "破坏性写入"
+            },
+            {
+              "code": "A7",
+              "name": "自动重试/循环"
+            }
+          ],
+          "atomic_op_codes": [
+            "X1",
+            "O4",
+            "A7"
+          ],
+          "effect": "执行删除/归档命令并自动重试直到成功",
+          "risk": [
+            "数据不可逆丢失",
+            "误删放大",
+            "恢复困难"
+          ],
+          "risk_text": "数据不可逆丢失、误删放大、恢复困难",
+          "explanation": "X1 可直接执行高危命令，O4 具有破坏性写入属性，A7 会把失败重试变成持续性破坏。"
+        },
+        {
+          "combo_id": "SD-02",
+          "tier_combo": [
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier3",
+          "atomic_ops_text": "X1（执行 shell 命令） + K5（进程强制管控） + G4（写本地项目文件）",
+          "atomic_ops": [
+            {
+              "code": "X1",
+              "name": "执行 shell 命令"
+            },
+            {
+              "code": "K5",
+              "name": "进程强制管控"
+            },
+            {
+              "code": "G4",
+              "name": "写本地项目文件"
+            }
+          ],
+          "atomic_op_codes": [
+            "X1",
+            "K5",
+            "G4"
+          ],
+          "effect": "停止关键进程后篡改项目或配置文件",
+          "risk": [
+            "业务中断",
+            "服务不可用",
+            "故障排查困难"
+          ],
+          "risk_text": "业务中断、服务不可用、故障排查困难",
+          "explanation": "K5 可终止关键进程，X1/G4 则修改相关配置，使破坏从瞬时中断升级为持续性失效。"
+        },
+        {
+          "combo_id": "SD-03",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier4",
+          "atomic_ops_text": "R9（批量枚举文件或资源） + O4（破坏性写入） + A6（触发后自动动作）",
+          "atomic_ops": [
+            {
+              "code": "R9",
+              "name": "批量枚举文件或资源"
+            },
+            {
+              "code": "O4",
+              "name": "破坏性写入"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            }
+          ],
+          "atomic_op_codes": [
+            "R9",
+            "O4",
+            "A6"
+          ],
+          "effect": "枚举对象后依据条件自动批量删除或归档",
+          "risk": [
+            "规模化破坏",
+            "误删全局对象",
+            "组织级事故"
+          ],
+          "risk_text": "规模化破坏、误删全局对象、组织级事故",
+          "explanation": "R9 拿到大量对象列表，O4 赋予破坏性动作，A6 则使系统在条件满足时自动下手。"
+        },
+        {
+          "combo_id": "SD-04",
+          "tier_combo": [
+            "Tier3",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier3 + Tier2",
+          "atomic_ops_text": "X8（调用本地工具） + K1（修改系统级设置） + W2（调用外部公开 API）",
+          "atomic_ops": [
+            {
+              "code": "X8",
+              "name": "调用本地工具"
+            },
+            {
+              "code": "K1",
+              "name": "修改系统级设置"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            }
+          ],
+          "atomic_op_codes": [
+            "X8",
+            "K1",
+            "W2"
+          ],
+          "effect": "修改系统安全设置后立即对外同步/拉取新配置",
+          "risk": [
+            "防护降级",
+            "配置污染",
+            "被外部远程接管"
+          ],
+          "risk_text": "防护降级、配置污染、被外部远程接管",
+          "explanation": "X8 调用系统工具修改，K1 更改全局策略，W2 把配置变化与外部服务联动，易形成被动接管面。"
+        },
+        {
+          "combo_id": "SD-05",
+          "tier_combo": [
+            "Tier2",
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier2 + Tier3 + Tier4",
+          "atomic_ops_text": "U2（模拟 UI 操作控制） + O4（破坏性写入） + A6（触发后自动动作）",
+          "atomic_ops": [
+            {
+              "code": "U2",
+              "name": "模拟 UI 操作控制"
+            },
+            {
+              "code": "O4",
+              "name": "破坏性写入"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            }
+          ],
+          "atomic_op_codes": [
+            "U2",
+            "O4",
+            "A6"
+          ],
+          "effect": "通过 UI 自动化执行危险删除/重置流程",
+          "risk": [
+            "人为操作伪装",
+            "误触高危流程",
+            "审计混淆"
+          ],
+          "risk_text": "人为操作伪装、误触高危流程、审计混淆",
+          "explanation": "U2 能伪装成正常前台操作，O4 是破坏性写入，A6 让这些动作在条件满足时自动触发。"
+        },
+        {
+          "combo_id": "SD-06",
+          "tier_combo": [
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier3",
+          "atomic_ops_text": "X6（写文件系统） + G5（批量本地写文件） + K1（修改系统级设置）",
+          "atomic_ops": [
+            {
+              "code": "X6",
+              "name": "写文件系统"
+            },
+            {
+              "code": "G5",
+              "name": "批量本地写文件"
+            },
+            {
+              "code": "K1",
+              "name": "修改系统级设置"
+            }
+          ],
+          "atomic_op_codes": [
+            "X6",
+            "G5",
+            "K1"
+          ],
+          "effect": "批量重写本地文件并修改全局配置",
+          "risk": [
+            "环境破坏",
+            "批量配置漂移",
+            "恢复成本高"
+          ],
+          "risk_text": "环境破坏、批量配置漂移、恢复成本高",
+          "explanation": "X6/G5 负责大规模本地改写，K1 则让这种改写跨越到全局配置层面。"
+        },
+        {
+          "combo_id": "SD-07",
+          "tier_combo": [
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier3 + Tier4",
+          "atomic_ops_text": "X1（执行 shell 命令） + K4（闹钟与唤醒管理） + A3（定时调度）",
+          "atomic_ops": [
+            {
+              "code": "X1",
+              "name": "执行 shell 命令"
+            },
+            {
+              "code": "K4",
+              "name": "闹钟与唤醒管理"
+            },
+            {
+              "code": "A3",
+              "name": "定时调度"
+            }
+          ],
+          "atomic_op_codes": [
+            "X1",
+            "K4",
+            "A3"
+          ],
+          "effect": "定时唤醒后执行系统级破坏命令",
+          "risk": [
+            "隐蔽持久破坏",
+            "夜间/空闲时段攻击",
+            "长期驻留"
+          ],
+          "risk_text": "隐蔽持久破坏、夜间/空闲时段攻击、长期驻留",
+          "explanation": "K4 负责唤醒，A3 负责调度，X1 负责实际破坏命令，危险在于无人值守与持久化。"
+        },
+        {
+          "combo_id": "SD-08",
+          "tier_combo": [
+            "Tier1",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier3",
+          "atomic_ops_text": "R6（读取本地任意路径文件） + X1（执行 shell 命令） + K3（应用程序管理）",
+          "atomic_ops": [
+            {
+              "code": "R6",
+              "name": "读取本地任意路径文件"
+            },
+            {
+              "code": "X1",
+              "name": "执行 shell 命令"
+            },
+            {
+              "code": "K3",
+              "name": "应用程序管理"
+            }
+          ],
+          "atomic_op_codes": [
+            "R6",
+            "X1",
+            "K3"
+          ],
+          "effect": "读取系统布局后卸载关键应用或组件",
+          "risk": [
+            "功能缺失",
+            "环境失稳",
+            "业务中断"
+          ],
+          "risk_text": "功能缺失、环境失稳、业务中断",
+          "explanation": "R6 帮助识别哪些文件/组件关键，X1 与 K3 则将识别结果直接变成卸载动作。"
+        },
+        {
+          "combo_id": "SD-09",
+          "tier_combo": [
+            "Tier3",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier3 + Tier2",
+          "atomic_ops_text": "X5（执行环境可联网） + W2（调用外部公开 API） + G4（写本地项目文件）",
+          "atomic_ops": [
+            {
+              "code": "X5",
+              "name": "执行环境可联网"
+            },
+            {
+              "code": "W2",
+              "name": "调用外部公开 API"
+            },
+            {
+              "code": "G4",
+              "name": "写本地项目文件"
+            }
+          ],
+          "atomic_op_codes": [
+            "X5",
+            "W2",
+            "G4"
+          ],
+          "effect": "联网拉取破坏性配置并覆盖本地项目",
+          "risk": [
+            "远程配置投毒",
+            "版本回退",
+            "项目损坏"
+          ],
+          "risk_text": "远程配置投毒、版本回退、项目损坏",
+          "explanation": "X5 让执行器能联网，W2 获取外部配置，G4 直接覆盖本地文件，导致外部输入可即时破坏本地系统。"
+        },
+        {
+          "combo_id": "SD-10",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier2",
+          "atomic_ops_text": "S7（系统状态读取） + K2（硬件开关控制） + C1（多媒体输出控制）",
+          "atomic_ops": [
+            {
+              "code": "S7",
+              "name": "系统状态读取"
+            },
+            {
+              "code": "K2",
+              "name": "硬件开关控制"
+            },
+            {
+              "code": "C1",
+              "name": "多媒体输出控制"
+            }
+          ],
+          "atomic_op_codes": [
+            "S7",
+            "K2",
+            "C1"
+          ],
+          "effect": "根据系统负载/状态自动调整无线、亮度、投屏等",
+          "risk": [
+            "服务干扰",
+            "设备异常",
+            "用户体验破坏"
+          ],
+          "risk_text": "服务干扰、设备异常、用户体验破坏",
+          "explanation": "S7 负责感知系统状态，K2/C1 负责物理与系统开关控制，可能被用来制造扰动或掩护其他动作。"
+        },
+        {
+          "combo_id": "SD-11",
+          "tier_combo": [
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier3 + Tier4",
+          "atomic_ops_text": "O3（外部多对象批量写入） + I2（跨系统身份代理） + A7（自动重试/循环）",
+          "atomic_ops": [
+            {
+              "code": "O3",
+              "name": "外部多对象批量写入"
+            },
+            {
+              "code": "I2",
+              "name": "跨系统身份代理"
+            },
+            {
+              "code": "A7",
+              "name": "自动重试/循环"
+            }
+          ],
+          "atomic_op_codes": [
+            "O3",
+            "I2",
+            "A7"
+          ],
+          "effect": "以跨系统身份批量重写对象并自动重试",
+          "risk": [
+            "跨系统批量污染",
+            "错误固化",
+            "回滚复杂"
+          ],
+          "risk_text": "跨系统批量污染、错误固化、回滚复杂",
+          "explanation": "O3 给出批量写能力，I2 带来跨系统代行，A7 让错误动作反复发生。"
+        },
+        {
+          "combo_id": "SD-12",
+          "tier_combo": [
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier2 + Tier3",
+          "atomic_ops_text": "W4（使用搜索驱动后续动作） + X1（执行 shell 命令） + K5（进程强制管控）",
+          "atomic_ops": [
+            {
+              "code": "W4",
+              "name": "使用搜索驱动后续动作"
+            },
+            {
+              "code": "X1",
+              "name": "执行 shell 命令"
+            },
+            {
+              "code": "K5",
+              "name": "进程强制管控"
+            }
+          ],
+          "atomic_op_codes": [
+            "W4",
+            "X1",
+            "K5"
+          ],
+          "effect": "依据搜索结果执行命令并终止相关服务进程",
+          "risk": [
+            "搜索污染引发破坏",
+            "命令误导",
+            "服务中断"
+          ],
+          "risk_text": "搜索污染引发破坏、命令误导、服务中断",
+          "explanation": "W4 把外部内容直接卷入决策，X1 执行命令，K5 终止服务进程，使外部污染快速转化为本地破坏。"
+        }
+      ]
+    },
+    {
+      "category_name": "隐蔽操控与社会工程类",
+      "items": [
+        {
+          "combo_id": "SM-01",
+          "tier_combo": [
+            "Tier1",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier3",
+          "atomic_ops_text": "R2（读取当前会话历史） + G2（生成结构化草稿） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "R2",
+              "name": "读取当前会话历史"
+            },
+            {
+              "code": "G2",
+              "name": "生成结构化草稿"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "R2",
+            "G2",
+            "O5"
+          ],
+          "effect": "根据当前会话内容生成高度拟真的对外消息并发送",
+          "risk": [
+            "社会工程增强",
+            "误导沟通",
+            "冒充正常交流"
+          ],
+          "risk_text": "社会工程增强、误导沟通、冒充正常交流",
+          "explanation": "R2 提供真实语境，G2 负责结构化包装，O5 则把内容直接发出，因此更容易伪装成正常业务沟通。"
+        },
+        {
+          "combo_id": "SM-02",
+          "tier_combo": [
+            "Tier1",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier3",
+          "atomic_ops_text": "R8（读取连接器数据） + Q3（敏感对象查询） + G2（生成结构化草稿）",
+          "atomic_ops": [
+            {
+              "code": "R8",
+              "name": "读取连接器数据"
+            },
+            {
+              "code": "Q3",
+              "name": "敏感对象查询"
+            },
+            {
+              "code": "G2",
+              "name": "生成结构化草稿"
+            }
+          ],
+          "atomic_op_codes": [
+            "R8",
+            "Q3",
+            "G2"
+          ],
+          "effect": "利用连接器和高敏对象信息生成定向钓鱼草稿",
+          "risk": [
+            "定向社工",
+            "精准诱导",
+            "信任滥用"
+          ],
+          "risk_text": "定向社工、精准诱导、信任滥用",
+          "explanation": "R8/Q3 提供受害者画像与上下文，G2 则把这些信息封装成更具可信度的消息或表单。"
+        },
+        {
+          "combo_id": "SM-03",
+          "tier_combo": [
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier2 + Tier3",
+          "atomic_ops_text": "U1（屏幕内容捕获） + G1（生成文本建议） + W1（访问公开网页）",
+          "atomic_ops": [
+            {
+              "code": "U1",
+              "name": "屏幕内容捕获"
+            },
+            {
+              "code": "G1",
+              "name": "生成文本建议"
+            },
+            {
+              "code": "W1",
+              "name": "访问公开网页"
+            }
+          ],
+          "atomic_op_codes": [
+            "U1",
+            "G1",
+            "W1"
+          ],
+          "effect": "根据当前屏幕内容实时生成诱导话术并展示/发往网页",
+          "risk": [
+            "界面上下文诱导",
+            "话术自适应",
+            "用户判断被操纵"
+          ],
+          "risk_text": "界面上下文诱导、话术自适应、用户判断被操纵",
+          "explanation": "U1 使话术能够贴合当前界面，G1 负责实时生成，W1 则把其投送到外部网页或聊天场景。"
+        },
+        {
+          "combo_id": "SM-04",
+          "tier_combo": [
+            "Tier1",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier3",
+          "atomic_ops_text": "S2（硬件麦克风调用） + G2（生成结构化草稿） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "S2",
+              "name": "硬件麦克风调用"
+            },
+            {
+              "code": "G2",
+              "name": "生成结构化草稿"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "S2",
+            "G2",
+            "O5"
+          ],
+          "effect": "依据环境语音内容自动生成针对性沟通文本并外发",
+          "risk": [
+            "会议内容泄露",
+            "对话定向社工",
+            "现实场景联动"
+          ],
+          "risk_text": "会议内容泄露、对话定向社工、现实场景联动",
+          "explanation": "S2 能听到会议或通话内容，G2 把这些内容转成消息草稿，O5 直接对外发送。"
+        },
+        {
+          "combo_id": "SM-05",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier3",
+          "atomic_ops_text": "R3（读取历史会话） + U1（屏幕内容捕获） + G2（生成结构化草稿）",
+          "atomic_ops": [
+            {
+              "code": "R3",
+              "name": "读取历史会话"
+            },
+            {
+              "code": "U1",
+              "name": "屏幕内容捕获"
+            },
+            {
+              "code": "G2",
+              "name": "生成结构化草稿"
+            }
+          ],
+          "atomic_op_codes": [
+            "R3",
+            "U1",
+            "G2"
+          ],
+          "effect": "基于历史会话与当前界面生成看似合理的诱导步骤",
+          "risk": [
+            "历史上下文被利用",
+            "界面引导欺骗",
+            "长期信任侵蚀"
+          ],
+          "risk_text": "历史上下文被利用、界面引导欺骗、长期信任侵蚀",
+          "explanation": "R3 提供长期记忆，U1 提供当前状态，G2 则生成贴合用户习惯的操作建议或提示。"
+        },
+        {
+          "combo_id": "SM-06",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier4",
+          "atomic_ops_text": "Q4（自动推荐或判定） + G2（生成结构化草稿） + A6（触发后自动动作）",
+          "atomic_ops": [
+            {
+              "code": "Q4",
+              "name": "自动推荐或判定"
+            },
+            {
+              "code": "G2",
+              "name": "生成结构化草稿"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            }
+          ],
+          "atomic_op_codes": [
+            "Q4",
+            "G2",
+            "A6"
+          ],
+          "effect": "把自动判定结果包装成看似权威的结论并自动触达用户",
+          "risk": [
+            "错误权威化",
+            "自动误导",
+            "业务决策被影响"
+          ],
+          "risk_text": "错误权威化、自动误导、业务决策被影响",
+          "explanation": "Q4 的不确定判断经 G2 包装后更像确定结论，再叠加 A6 就会自动进入真实工作流。"
+        },
+        {
+          "combo_id": "SM-07",
+          "tier_combo": [
+            "Tier2",
+            "Tier4",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier2 + Tier4 + Tier3",
+          "atomic_ops_text": "U2（模拟 UI 操作控制） + I1（单系统身份访问） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "U2",
+              "name": "模拟 UI 操作控制"
+            },
+            {
+              "code": "I1",
+              "name": "单系统身份访问"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "U2",
+            "I1",
+            "O5"
+          ],
+          "effect": "借助 UI 模拟与代行能力向外发布貌似用户亲自确认的信息",
+          "risk": [
+            "前台伪装",
+            "代行欺骗",
+            "责任归属混乱"
+          ],
+          "risk_text": "前台伪装、代行欺骗、责任归属混乱",
+          "explanation": "U2 让动作看起来像前台人工操作，I1 允许代表用户，O5 将最终结果对外公开。"
+        },
+        {
+          "combo_id": "SM-08",
+          "tier_combo": [
+            "Tier1",
+            "Tier3",
+            "Tier2"
+          ],
+          "tier_combo_text": "Tier1 + Tier3 + Tier2",
+          "atomic_ops_text": "R8（读取连接器数据） + G2（生成结构化草稿） + U2（模拟 UI 操作控制）",
+          "atomic_ops": [
+            {
+              "code": "R8",
+              "name": "读取连接器数据"
+            },
+            {
+              "code": "G2",
+              "name": "生成结构化草稿"
+            },
+            {
+              "code": "U2",
+              "name": "模拟 UI 操作控制"
+            }
+          ],
+          "atomic_op_codes": [
+            "R8",
+            "G2",
+            "U2"
+          ],
+          "effect": "读取联系人/邮件信息后自动填充邀请、审批或转账界面",
+          "risk": [
+            "精准诱导",
+            "目标定向错误操作",
+            "业务欺骗"
+          ],
+          "risk_text": "精准诱导、目标定向错误操作、业务欺骗",
+          "explanation": "R8 提供真实对象信息，G2 生成可信文本，U2 直接把内容填入真实界面，危险在于高度拟真。"
+        },
+        {
+          "combo_id": "SM-09",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier3",
+          "atomic_ops_text": "S1（硬件摄像头调用） + C1（多媒体输出控制） + G1（生成文本建议）",
+          "atomic_ops": [
+            {
+              "code": "S1",
+              "name": "硬件摄像头调用"
+            },
+            {
+              "code": "C1",
+              "name": "多媒体输出控制"
+            },
+            {
+              "code": "G1",
+              "name": "生成文本建议"
+            }
+          ],
+          "atomic_op_codes": [
+            "S1",
+            "C1",
+            "G1"
+          ],
+          "effect": "感知现场状态后生成并通过屏幕/音频输出诱导内容",
+          "risk": [
+            "现场操纵",
+            "舆情误导",
+            "用户行为被引导"
+          ],
+          "risk_text": "现场操纵、舆情误导、用户行为被引导",
+          "explanation": "S1 用于判断当前场景，G1 生成针对性内容，C1 负责把内容输出到现实设备。"
+        },
+        {
+          "combo_id": "SM-10",
+          "tier_combo": [
+            "Tier2",
+            "Tier3",
+            "Tier4"
+          ],
+          "tier_combo_text": "Tier2 + Tier3 + Tier4",
+          "atomic_ops_text": "W4（使用搜索驱动后续动作） + G2（生成结构化草稿） + A6（触发后自动动作）",
+          "atomic_ops": [
+            {
+              "code": "W4",
+              "name": "使用搜索驱动后续动作"
+            },
+            {
+              "code": "G2",
+              "name": "生成结构化草稿"
+            },
+            {
+              "code": "A6",
+              "name": "触发后自动动作"
+            }
+          ],
+          "atomic_op_codes": [
+            "W4",
+            "G2",
+            "A6"
+          ],
+          "effect": "把搜索到的外部信息直接包装成行动建议并自动下发",
+          "risk": [
+            "外部污染转化为内部指令",
+            "错误扩散",
+            "可信边界破坏"
+          ],
+          "risk_text": "外部污染转化为内部指令、错误扩散、可信边界破坏",
+          "explanation": "W4 使外部内容直接进入决策链，G2 提升其表面可信度，A6 则让其自动进入执行流程。"
+        },
+        {
+          "combo_id": "SM-11",
+          "tier_combo": [
+            "Tier1",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier3",
+          "atomic_ops_text": "R10（跨源数据拼接读取） + Q2（结构化筛选与聚合） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "R10",
+              "name": "跨源数据拼接读取"
+            },
+            {
+              "code": "Q2",
+              "name": "结构化筛选与聚合"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "R10",
+            "Q2",
+            "O5"
+          ],
+          "effect": "对多源信息聚合后生成带偏向性的报告或摘要并外发",
+          "risk": [
+            "舆论操纵",
+            "信息失真",
+            "选择性披露"
+          ],
+          "risk_text": "舆论操纵、信息失真、选择性披露",
+          "explanation": "R10/Q2 能把多源数据压缩成单一叙事，O5 则把这种偏向性结果直接传播到外部。"
+        },
+        {
+          "combo_id": "SM-12",
+          "tier_combo": [
+            "Tier1",
+            "Tier2",
+            "Tier3"
+          ],
+          "tier_combo_text": "Tier1 + Tier2 + Tier3",
+          "atomic_ops_text": "S2（硬件麦克风调用） + U3（系统剪贴板读写） + O5（自动外发）",
+          "atomic_ops": [
+            {
+              "code": "S2",
+              "name": "硬件麦克风调用"
+            },
+            {
+              "code": "U3",
+              "name": "系统剪贴板读写"
+            },
+            {
+              "code": "O5",
+              "name": "自动外发"
+            }
+          ],
+          "atomic_op_codes": [
+            "S2",
+            "U3",
+            "O5"
+          ],
+          "effect": "监听环境语音并结合剪贴板内容组织诱导性消息后外发",
+          "risk": [
+            "隐私窃听",
+            "上下文增强社工",
+            "临时敏感信息泄露"
+          ],
+          "risk_text": "隐私窃听、上下文增强社工、临时敏感信息泄露",
+          "explanation": "S2 能获取环境内容，U3 能拿到复制的临时口令/链接，O5 使这些内容被立即用于外发欺骗。"
+        }
+      ]
+    }
+  ],
+  "all_combo_ids": [
+    "DL-01",
+    "DL-02",
+    "DL-03",
+    "DL-04",
+    "DL-05",
+    "DL-06",
+    "DL-07",
+    "DL-08",
+    "DL-09",
+    "DL-10",
+    "DL-11",
+    "DL-12",
+    "IA-01",
+    "IA-02",
+    "IA-03",
+    "IA-04",
+    "IA-05",
+    "IA-06",
+    "IA-07",
+    "IA-08",
+    "IA-09",
+    "IA-10",
+    "IA-11",
+    "IA-12",
+    "EX-01",
+    "EX-02",
+    "EX-03",
+    "EX-04",
+    "EX-05",
+    "EX-06",
+    "EX-07",
+    "EX-08",
+    "EX-09",
+    "EX-10",
+    "EX-11",
+    "EX-12",
+    "AU-01",
+    "AU-02",
+    "AU-03",
+    "AU-04",
+    "AU-05",
+    "AU-06",
+    "AU-07",
+    "AU-08",
+    "AU-09",
+    "AU-10",
+    "AU-11",
+    "AU-12",
+    "PH-01",
+    "PH-02",
+    "PH-03",
+    "PH-04",
+    "PH-05",
+    "PH-06",
+    "PH-07",
+    "PH-08",
+    "PH-09",
+    "PH-10",
+    "PH-11",
+    "PH-12",
+    "PR-01",
+    "PR-02",
+    "PR-03",
+    "PR-04",
+    "PR-05",
+    "PR-06",
+    "PR-07",
+    "PR-08",
+    "PR-09",
+    "PR-10",
+    "PR-11",
+    "PR-12",
+    "SD-01",
+    "SD-02",
+    "SD-03",
+    "SD-04",
+    "SD-05",
+    "SD-06",
+    "SD-07",
+    "SD-08",
+    "SD-09",
+    "SD-10",
+    "SD-11",
+    "SD-12",
+    "SM-01",
+    "SM-02",
+    "SM-03",
+    "SM-04",
+    "SM-05",
+    "SM-06",
+    "SM-07",
+    "SM-08",
+    "SM-09",
+    "SM-10",
+    "SM-11",
+    "SM-12"
+  ],
+  "atomic_op_catalog": [
+    {
+      "code": "R8",
+      "name": "读取连接器数据"
+    },
+    {
+      "code": "I3",
+      "name": "跨系统数据搬运"
+    },
+    {
+      "code": "O5",
+      "name": "自动外发"
+    },
+    {
+      "code": "R6",
+      "name": "读取本地任意路径文件"
+    },
+    {
+      "code": "X2",
+      "name": "执行解释器代码"
+    },
+    {
+      "code": "W2",
+      "name": "调用外部公开 API"
+    },
+    {
+      "code": "Q3",
+      "name": "敏感对象查询"
+    },
+    {
+      "code": "U1",
+      "name": "屏幕内容捕获"
+    },
+    {
+      "code": "R4",
+      "name": "读取会话附件"
+    },
+    {
+      "code": "G3",
+      "name": "写本地临时文件"
+    },
+    {
+      "code": "R3",
+      "name": "读取历史会话"
+    },
+    {
+      "code": "A3",
+      "name": "定时调度"
+    },
+    {
+      "code": "R7",
+      "name": "读取知识库或文档库"
+    },
+    {
+      "code": "Q2",
+      "name": "结构化筛选与聚合"
+    },
+    {
+      "code": "R5",
+      "name": "读取本地 repo 文件"
+    },
+    {
+      "code": "X7",
+      "name": "访问环境变量"
+    },
+    {
+      "code": "I4",
+      "name": "凭证注入外部调用"
+    },
+    {
+      "code": "R10",
+      "name": "跨源数据拼接读取"
+    },
+    {
+      "code": "Q1",
+      "name": "只读查询或搜索"
+    },
+    {
+      "code": "O2",
+      "name": "外部单对象写入"
+    },
+    {
+      "code": "R9",
+      "name": "批量枚举文件或资源"
+    },
+    {
+      "code": "W1",
+      "name": "访问公开网页"
+    },
+    {
+      "code": "X5",
+      "name": "执行环境可联网"
+    },
+    {
+      "code": "S7",
+      "name": "系统状态读取"
+    },
+    {
+      "code": "S4",
+      "name": "精确地理位置获取"
+    },
+    {
+      "code": "U3",
+      "name": "系统剪贴板读写"
+    },
+    {
+      "code": "U4",
+      "name": "键盘输入消费"
+    },
+    {
+      "code": "I1",
+      "name": "单系统身份访问"
+    },
+    {
+      "code": "U2",
+      "name": "模拟 UI 操作控制"
+    },
+    {
+      "code": "I2",
+      "name": "跨系统身份代理"
+    },
+    {
+      "code": "S3",
+      "name": "生物特征识别访问"
+    },
+    {
+      "code": "R2",
+      "name": "读取当前会话历史"
+    },
+    {
+      "code": "G2",
+      "name": "生成结构化草稿"
+    },
+    {
+      "code": "S2",
+      "name": "硬件麦克风调用"
+    },
+    {
+      "code": "X8",
+      "name": "调用本地工具"
+    },
+    {
+      "code": "A6",
+      "name": "触发后自动动作"
+    },
+    {
+      "code": "X1",
+      "name": "执行 shell 命令"
+    },
+    {
+      "code": "I5",
+      "name": "隐式权限继承"
+    },
+    {
+      "code": "W3",
+      "name": "下载外部文件"
+    },
+    {
+      "code": "G4",
+      "name": "写本地项目文件"
+    },
+    {
+      "code": "K3",
+      "name": "应用程序管理"
+    },
+    {
+      "code": "X4",
+      "name": "安装依赖或拉包"
+    },
+    {
+      "code": "X6",
+      "name": "写文件系统"
+    },
+    {
+      "code": "G5",
+      "name": "批量本地写文件"
+    },
+    {
+      "code": "X3",
+      "name": "执行容器任务"
+    },
+    {
+      "code": "K1",
+      "name": "修改系统级设置"
+    },
+    {
+      "code": "A7",
+      "name": "自动重试/循环"
+    },
+    {
+      "code": "K5",
+      "name": "进程强制管控"
+    },
+    {
+      "code": "Q4",
+      "name": "自动推荐或判定"
+    },
+    {
+      "code": "O3",
+      "name": "外部多对象批量写入"
+    },
+    {
+      "code": "O4",
+      "name": "破坏性写入"
+    },
+    {
+      "code": "S5",
+      "name": "后台位置持续追踪"
+    },
+    {
+      "code": "A4",
+      "name": "事件触发"
+    },
+    {
+      "code": "A5",
+      "name": "持续监控"
+    },
+    {
+      "code": "W4",
+      "name": "使用搜索驱动后续动作"
+    },
+    {
+      "code": "C1",
+      "name": "多媒体输出控制"
+    },
+    {
+      "code": "S1",
+      "name": "硬件摄像头调用"
+    },
+    {
+      "code": "S6",
+      "name": "扫描附近硬件设备"
+    },
+    {
+      "code": "K2",
+      "name": "硬件开关控制"
+    },
+    {
+      "code": "K4",
+      "name": "闹钟与唤醒管理"
+    },
+    {
+      "code": "G1",
+      "name": "生成文本建议"
+    }
+  ],
+  "atomic_op_count": 61,
+  "category_index": [
+    {
+      "category_name": "数据外泄类",
+      "combo_count": 12,
+      "combo_ids": [
+        "DL-01",
+        "DL-02",
+        "DL-03",
+        "DL-04",
+        "DL-05",
+        "DL-06",
+        "DL-07",
+        "DL-08",
+        "DL-09",
+        "DL-10",
+        "DL-11",
+        "DL-12"
+      ]
+    },
+    {
+      "category_name": "身份冒用类",
+      "combo_count": 12,
+      "combo_ids": [
+        "IA-01",
+        "IA-02",
+        "IA-03",
+        "IA-04",
+        "IA-05",
+        "IA-06",
+        "IA-07",
+        "IA-08",
+        "IA-09",
+        "IA-10",
+        "IA-11",
+        "IA-12"
+      ]
+    },
+    {
+      "category_name": "执行投毒类",
+      "combo_count": 12,
+      "combo_ids": [
+        "EX-01",
+        "EX-02",
+        "EX-03",
+        "EX-04",
+        "EX-05",
+        "EX-06",
+        "EX-07",
+        "EX-08",
+        "EX-09",
+        "EX-10",
+        "EX-11",
+        "EX-12"
+      ]
+    },
+    {
+      "category_name": "自动扩散类",
+      "combo_count": 12,
+      "combo_ids": [
+        "AU-01",
+        "AU-02",
+        "AU-03",
+        "AU-04",
+        "AU-05",
+        "AU-06",
+        "AU-07",
+        "AU-08",
+        "AU-09",
+        "AU-10",
+        "AU-11",
+        "AU-12"
+      ]
+    },
+    {
+      "category_name": "物理感知与现实干扰类",
+      "combo_count": 12,
+      "combo_ids": [
+        "PH-01",
+        "PH-02",
+        "PH-03",
+        "PH-04",
+        "PH-05",
+        "PH-06",
+        "PH-07",
+        "PH-08",
+        "PH-09",
+        "PH-10",
+        "PH-11",
+        "PH-12"
+      ]
+    },
+    {
+      "category_name": "权限蠕动类",
+      "combo_count": 12,
+      "combo_ids": [
+        "PR-01",
+        "PR-02",
+        "PR-03",
+        "PR-04",
+        "PR-05",
+        "PR-06",
+        "PR-07",
+        "PR-08",
+        "PR-09",
+        "PR-10",
+        "PR-11",
+        "PR-12"
+      ]
+    },
+    {
+      "category_name": "系统破坏类",
+      "combo_count": 12,
+      "combo_ids": [
+        "SD-01",
+        "SD-02",
+        "SD-03",
+        "SD-04",
+        "SD-05",
+        "SD-06",
+        "SD-07",
+        "SD-08",
+        "SD-09",
+        "SD-10",
+        "SD-11",
+        "SD-12"
+      ]
+    },
+    {
+      "category_name": "隐蔽操控与社会工程类",
+      "combo_count": 12,
+      "combo_ids": [
+        "SM-01",
+        "SM-02",
+        "SM-03",
+        "SM-04",
+        "SM-05",
+        "SM-06",
+        "SM-07",
+        "SM-08",
+        "SM-09",
+        "SM-10",
+        "SM-11",
+        "SM-12"
+      ]
+    }
+  ],
+  "stats": {
+    "category_count": 8,
+    "combo_count": 96,
+    "atomic_op_count": 61
+  },
+  "combo_index": {
+    "DL-01": {
+      "category_name": "数据外泄类",
+      "atomic_op_codes": [
+        "R8",
+        "I3",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "敏感信息泄露、跨系统越权流动、静默外发"
+    },
+    "DL-02": {
+      "category_name": "数据外泄类",
+      "atomic_op_codes": [
+        "R6",
+        "X2",
+        "W2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier2"
+      ],
+      "risk_text": "本地文件窃取、系统敏感信息泄露、数据出境"
+    },
+    "DL-03": {
+      "category_name": "数据外泄类",
+      "atomic_op_codes": [
+        "Q3",
+        "U1",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "邮件、联系人、日程等高敏对象泄露；屏幕内容泄露"
+    },
+    "DL-04": {
+      "category_name": "数据外泄类",
+      "atomic_op_codes": [
+        "R4",
+        "X2",
+        "G3"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3"
+      ],
+      "risk_text": "附件敏感信息落地、二次泄露、脱敏失败"
+    },
+    "DL-05": {
+      "category_name": "数据外泄类",
+      "atomic_op_codes": [
+        "R3",
+        "W2",
+        "A3"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier4"
+      ],
+      "risk_text": "长期记忆泄露、持续隐私外传、无人值守风险"
+    },
+    "DL-06": {
+      "category_name": "数据外泄类",
+      "atomic_op_codes": [
+        "R7",
+        "Q2",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3"
+      ],
+      "risk_text": "内部资料汇总泄露、商业机密外流、结果过量暴露"
+    },
+    "DL-07": {
+      "category_name": "数据外泄类",
+      "atomic_op_codes": [
+        "R5",
+        "X7",
+        "I4"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "源码与密钥联合泄露、凭证扩散、供应链风险放大"
+    },
+    "DL-08": {
+      "category_name": "数据外泄类",
+      "atomic_op_codes": [
+        "R10",
+        "U1",
+        "W2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2"
+      ],
+      "risk_text": "多源拼接泄露、隐私画像扩展、组合敏感性提升"
+    },
+    "DL-09": {
+      "category_name": "数据外泄类",
+      "atomic_op_codes": [
+        "Q1",
+        "I3",
+        "O2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "跨系统数据渗漏、业务污染、责任链断裂"
+    },
+    "DL-10": {
+      "category_name": "数据外泄类",
+      "atomic_op_codes": [
+        "R9",
+        "W1",
+        "X5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "批量探测、资源画像外泄、外部联动泄露"
+    },
+    "DL-11": {
+      "category_name": "数据外泄类",
+      "atomic_op_codes": [
+        "S7",
+        "W2",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "系统指纹外泄、脆弱面暴露、定向攻击辅助"
+    },
+    "DL-12": {
+      "category_name": "数据外泄类",
+      "atomic_op_codes": [
+        "S4",
+        "R8",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3"
+      ],
+      "risk_text": "现实身份关联、轨迹隐私泄露、社会关系暴露"
+    },
+    "IA-01": {
+      "category_name": "身份冒用类",
+      "atomic_op_codes": [
+        "U3",
+        "U4",
+        "I1"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier4"
+      ],
+      "risk_text": "账号接管、身份冒用、验证码窃取"
+    },
+    "IA-02": {
+      "category_name": "身份冒用类",
+      "atomic_op_codes": [
+        "U1",
+        "U2",
+        "I2"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier4"
+      ],
+      "risk_text": "未授权审批、误转账、跨系统账户滥用"
+    },
+    "IA-03": {
+      "category_name": "身份冒用类",
+      "atomic_op_codes": [
+        "X7",
+        "I4",
+        "W2"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier4",
+        "Tier2"
+      ],
+      "risk_text": "凭证扩散、API 盗用、资源盗刷"
+    },
+    "IA-04": {
+      "category_name": "身份冒用类",
+      "atomic_op_codes": [
+        "S3",
+        "I1",
+        "U2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier2"
+      ],
+      "risk_text": "本地认证结果滥用、强认证旁路、身份混淆"
+    },
+    "IA-05": {
+      "category_name": "身份冒用类",
+      "atomic_op_codes": [
+        "R2",
+        "I1",
+        "G2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "越权回应、冒名沟通、社交工程增强"
+    },
+    "IA-06": {
+      "category_name": "身份冒用类",
+      "atomic_op_codes": [
+        "Q3",
+        "I2",
+        "O2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "越权修改关键对象、业务偏转、信任受损"
+    },
+    "IA-07": {
+      "category_name": "身份冒用类",
+      "atomic_op_codes": [
+        "U1",
+        "S2",
+        "I1"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier1",
+        "Tier4"
+      ],
+      "risk_text": "多模态认证旁路、会话劫持、在场感伪装"
+    },
+    "IA-08": {
+      "category_name": "身份冒用类",
+      "atomic_op_codes": [
+        "X8",
+        "U2",
+        "I2"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier2",
+        "Tier4"
+      ],
+      "risk_text": "多阶段身份冒用、跨系统链式接管、审计逃逸"
+    },
+    "IA-09": {
+      "category_name": "身份冒用类",
+      "atomic_op_codes": [
+        "R8",
+        "U3",
+        "I2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier4"
+      ],
+      "risk_text": "凭证拼接、账户接管、连接器滥用"
+    },
+    "IA-10": {
+      "category_name": "身份冒用类",
+      "atomic_op_codes": [
+        "I1",
+        "A6",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "身份滥用自动化、声誉损害、难以及时止损"
+    },
+    "IA-11": {
+      "category_name": "身份冒用类",
+      "atomic_op_codes": [
+        "R6",
+        "X1",
+        "I5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "隐式授权继承、会话劫持、责任边界不清"
+    },
+    "IA-12": {
+      "category_name": "身份冒用类",
+      "atomic_op_codes": [
+        "U4",
+        "I1",
+        "G2"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "风格伪装、社工可信度提升、沟通欺骗"
+    },
+    "EX-01": {
+      "category_name": "执行投毒类",
+      "atomic_op_codes": [
+        "W3",
+        "X2",
+        "G4"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "代码投毒、后门植入、供应链污染"
+    },
+    "EX-02": {
+      "category_name": "执行投毒类",
+      "atomic_op_codes": [
+        "W3",
+        "X1",
+        "K3"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "恶意软件安装、持久化驻留、宿主环境失陷"
+    },
+    "EX-03": {
+      "category_name": "执行投毒类",
+      "atomic_op_codes": [
+        "X4",
+        "X5",
+        "W2"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier2"
+      ],
+      "risk_text": "恶意依赖引入、远程控制、供应链攻击"
+    },
+    "EX-04": {
+      "category_name": "执行投毒类",
+      "atomic_op_codes": [
+        "W1",
+        "X1",
+        "X6"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "提示注入驱动执行、配置投毒、持久化污染"
+    },
+    "EX-05": {
+      "category_name": "执行投毒类",
+      "atomic_op_codes": [
+        "R5",
+        "X2",
+        "G5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3"
+      ],
+      "risk_text": "大范围代码破坏、逻辑投毒、回滚成本高"
+    },
+    "EX-06": {
+      "category_name": "执行投毒类",
+      "atomic_op_codes": [
+        "R7",
+        "W2",
+        "X3"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "容器逃逸面扩大、内部知识驱动的外部执行、组合投毒"
+    },
+    "EX-07": {
+      "category_name": "执行投毒类",
+      "atomic_op_codes": [
+        "X8",
+        "K1",
+        "W2"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier2"
+      ],
+      "risk_text": "降低防护后出网、环境劫持、长期暴露"
+    },
+    "EX-08": {
+      "category_name": "执行投毒类",
+      "atomic_op_codes": [
+        "W3",
+        "X4",
+        "X2"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "供应链跟随式投毒、脚本链式执行、依赖污染"
+    },
+    "EX-09": {
+      "category_name": "执行投毒类",
+      "atomic_op_codes": [
+        "X2",
+        "G4",
+        "A7"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "错误放大、强行覆盖、难以人工介入"
+    },
+    "EX-10": {
+      "category_name": "执行投毒类",
+      "atomic_op_codes": [
+        "R6",
+        "X8",
+        "W2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier2"
+      ],
+      "risk_text": "系统配置外流、管理接口滥用、定向攻击辅助"
+    },
+    "EX-11": {
+      "category_name": "执行投毒类",
+      "atomic_op_codes": [
+        "X1",
+        "K5",
+        "X6"
+      ],
+      "tier_combo": [
+        "Tier3"
+      ],
+      "risk_text": "业务中断、掩盖痕迹、恢复困难"
+    },
+    "EX-12": {
+      "category_name": "执行投毒类",
+      "atomic_op_codes": [
+        "W2",
+        "X5",
+        "I4"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "远程任务注入、凭证伴随执行、供应链侧向渗透"
+    },
+    "AU-01": {
+      "category_name": "自动扩散类",
+      "atomic_op_codes": [
+        "Q4",
+        "G2",
+        "O5",
+        "A6"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "错误信息规模化传播、自动化钓鱼、业务误导"
+    },
+    "AU-02": {
+      "category_name": "自动扩散类",
+      "atomic_op_codes": [
+        "R9",
+        "A7",
+        "O3",
+        "O4"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "大规模误删、批量破坏、错误放大"
+    },
+    "AU-03": {
+      "category_name": "自动扩散类",
+      "atomic_op_codes": [
+        "R3",
+        "A3",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "长期记忆泄露、持续隐私外传、无人值守风险"
+    },
+    "AU-04": {
+      "category_name": "自动扩散类",
+      "atomic_op_codes": [
+        "S5",
+        "A6",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "轨迹持续外泄、场景触发泄露、现实世界风险"
+    },
+    "AU-05": {
+      "category_name": "自动扩散类",
+      "atomic_op_codes": [
+        "Q1",
+        "A4",
+        "O2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "事件风暴、误触发改写、链式业务污染"
+    },
+    "AU-06": {
+      "category_name": "自动扩散类",
+      "atomic_op_codes": [
+        "G2",
+        "A6",
+        "U2"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier4",
+        "Tier2"
+      ],
+      "risk_text": "自动化提交、误操作规模化、审批污染"
+    },
+    "AU-07": {
+      "category_name": "自动扩散类",
+      "atomic_op_codes": [
+        "R8",
+        "Q2",
+        "A5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4"
+      ],
+      "risk_text": "长期监控、员工画像、越界数据分析"
+    },
+    "AU-08": {
+      "category_name": "自动扩散类",
+      "atomic_op_codes": [
+        "X2",
+        "A7",
+        "G3"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "敏感内容长期落地、缓存扩张、难以清理"
+    },
+    "AU-09": {
+      "category_name": "自动扩散类",
+      "atomic_op_codes": [
+        "I1",
+        "A3",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "身份滥用自动化、声誉损害、难以及时察觉"
+    },
+    "AU-10": {
+      "category_name": "自动扩散类",
+      "atomic_op_codes": [
+        "R7",
+        "X2",
+        "A6"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "知识驱动自动操作、误执行、规模化失误"
+    },
+    "AU-11": {
+      "category_name": "自动扩散类",
+      "atomic_op_codes": [
+        "W4",
+        "A6",
+        "X1"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "外部信息驱动高权动作、搜索污染放大、误执行"
+    },
+    "AU-12": {
+      "category_name": "自动扩散类",
+      "atomic_op_codes": [
+        "S2",
+        "A4",
+        "C1"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier2"
+      ],
+      "risk_text": "环境触发干扰、会议泄露、物理扰动"
+    },
+    "PH-01": {
+      "category_name": "物理感知与现实干扰类",
+      "atomic_op_codes": [
+        "S4",
+        "A5",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "轨迹跟踪、现实骚扰、人身安全风险"
+    },
+    "PH-02": {
+      "category_name": "物理感知与现实干扰类",
+      "atomic_op_codes": [
+        "S1",
+        "S2",
+        "C1",
+        "A6"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier4"
+      ],
+      "risk_text": "环境监听、物理干扰、会议/办公场景泄露"
+    },
+    "PH-03": {
+      "category_name": "物理感知与现实干扰类",
+      "atomic_op_codes": [
+        "S1",
+        "U1",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "场景与界面双重泄露、在场人员隐私暴露、会议敏感信息外泄"
+    },
+    "PH-04": {
+      "category_name": "物理感知与现实干扰类",
+      "atomic_op_codes": [
+        "S6",
+        "K2",
+        "A6"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "物理边界穿透、周边设备探测、蓝牙/WiFi 滥用"
+    },
+    "PH-05": {
+      "category_name": "物理感知与现实干扰类",
+      "atomic_op_codes": [
+        "S4",
+        "W2",
+        "O2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "位置隐私嵌入业务对象、长期可见、扩散难控"
+    },
+    "PH-06": {
+      "category_name": "物理感知与现实干扰类",
+      "atomic_op_codes": [
+        "S2",
+        "U2",
+        "I1"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier4"
+      ],
+      "risk_text": "在场环境劫持、会话趁隙操作、物理场景联动冒用"
+    },
+    "PH-07": {
+      "category_name": "物理感知与现实干扰类",
+      "atomic_op_codes": [
+        "S7",
+        "X2",
+        "W2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier2"
+      ],
+      "risk_text": "设备画像、漏洞定向利用辅助、隐形遥测"
+    },
+    "PH-08": {
+      "category_name": "物理感知与现实干扰类",
+      "atomic_op_codes": [
+        "S5",
+        "A6",
+        "K4"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "隐蔽唤醒、后台持续运行、现实干扰增强"
+    },
+    "PH-09": {
+      "category_name": "物理感知与现实干扰类",
+      "atomic_op_codes": [
+        "S1",
+        "C1",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "现场信息泄露、显示内容被外放、社工辅助"
+    },
+    "PH-10": {
+      "category_name": "物理感知与现实干扰类",
+      "atomic_op_codes": [
+        "S4",
+        "R2",
+        "A6"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4"
+      ],
+      "risk_text": "语境+位置联合触发、现实场景误伤、上下文越权"
+    },
+    "PH-11": {
+      "category_name": "物理感知与现实干扰类",
+      "atomic_op_codes": [
+        "S6",
+        "K2",
+        "U2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier2"
+      ],
+      "risk_text": "近场社工、误配对、无线设备滥连"
+    },
+    "PH-12": {
+      "category_name": "物理感知与现实干扰类",
+      "atomic_op_codes": [
+        "S3",
+        "I2",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "本地认证结果外溢、跨系统身份扩散、信任误用"
+    },
+    "PR-01": {
+      "category_name": "权限蠕动类",
+      "atomic_op_codes": [
+        "R10",
+        "I5",
+        "A6"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4"
+      ],
+      "risk_text": "权限扩大、责任不清、跨域越权"
+    },
+    "PR-02": {
+      "category_name": "权限蠕动类",
+      "atomic_op_codes": [
+        "R8",
+        "I2",
+        "O2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "跨系统越权修改、业务污染、责任链断裂"
+    },
+    "PR-03": {
+      "category_name": "权限蠕动类",
+      "atomic_op_codes": [
+        "R7",
+        "Q3",
+        "I5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4"
+      ],
+      "risk_text": "间接越权、推断式权限扩展、隐性横向移动"
+    },
+    "PR-04": {
+      "category_name": "权限蠕动类",
+      "atomic_op_codes": [
+        "X8",
+        "I5",
+        "K1"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "高权继承后降防、权限链污染、全局安全下降"
+    },
+    "PR-05": {
+      "category_name": "权限蠕动类",
+      "atomic_op_codes": [
+        "R6",
+        "X7",
+        "I5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "隐式授权复用、会话残留滥用、权限边界模糊"
+    },
+    "PR-06": {
+      "category_name": "权限蠕动类",
+      "atomic_op_codes": [
+        "I1",
+        "I2",
+        "O3"
+      ],
+      "tier_combo": [
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "代理链条升级、横向扩散、批量越权"
+    },
+    "PR-07": {
+      "category_name": "权限蠕动类",
+      "atomic_op_codes": [
+        "R8",
+        "W4",
+        "I2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier4"
+      ],
+      "risk_text": "外部信息驱动权限迁移、错误升级为越权、难以追责"
+    },
+    "PR-08": {
+      "category_name": "权限蠕动类",
+      "atomic_op_codes": [
+        "S7",
+        "I5",
+        "A3"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4"
+      ],
+      "risk_text": "机会型越权、静默长期运行、审计难度提升"
+    },
+    "PR-09": {
+      "category_name": "权限蠕动类",
+      "atomic_op_codes": [
+        "R10",
+        "I2",
+        "G2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "低敏拼接成高危行动、社会工程增强、权限误用"
+    },
+    "PR-10": {
+      "category_name": "权限蠕动类",
+      "atomic_op_codes": [
+        "U2",
+        "I5",
+        "A6"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier4"
+      ],
+      "risk_text": "会话复用、隐式授权滥用、前台行为伪装"
+    },
+    "PR-11": {
+      "category_name": "权限蠕动类",
+      "atomic_op_codes": [
+        "X5",
+        "I4",
+        "W2"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier4",
+        "Tier2"
+      ],
+      "risk_text": "高权凭证伴随执行、越权出网、边界突破"
+    },
+    "PR-12": {
+      "category_name": "权限蠕动类",
+      "atomic_op_codes": [
+        "R8",
+        "I2",
+        "K3"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "权限跨域蔓延、攻击面扩大、生态级影响"
+    },
+    "SD-01": {
+      "category_name": "系统破坏类",
+      "atomic_op_codes": [
+        "X1",
+        "O4",
+        "A7"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "数据不可逆丢失、误删放大、恢复困难"
+    },
+    "SD-02": {
+      "category_name": "系统破坏类",
+      "atomic_op_codes": [
+        "X1",
+        "K5",
+        "G4"
+      ],
+      "tier_combo": [
+        "Tier3"
+      ],
+      "risk_text": "业务中断、服务不可用、故障排查困难"
+    },
+    "SD-03": {
+      "category_name": "系统破坏类",
+      "atomic_op_codes": [
+        "R9",
+        "O4",
+        "A6"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "规模化破坏、误删全局对象、组织级事故"
+    },
+    "SD-04": {
+      "category_name": "系统破坏类",
+      "atomic_op_codes": [
+        "X8",
+        "K1",
+        "W2"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier2"
+      ],
+      "risk_text": "防护降级、配置污染、被外部远程接管"
+    },
+    "SD-05": {
+      "category_name": "系统破坏类",
+      "atomic_op_codes": [
+        "U2",
+        "O4",
+        "A6"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "人为操作伪装、误触高危流程、审计混淆"
+    },
+    "SD-06": {
+      "category_name": "系统破坏类",
+      "atomic_op_codes": [
+        "X6",
+        "G5",
+        "K1"
+      ],
+      "tier_combo": [
+        "Tier3"
+      ],
+      "risk_text": "环境破坏、批量配置漂移、恢复成本高"
+    },
+    "SD-07": {
+      "category_name": "系统破坏类",
+      "atomic_op_codes": [
+        "X1",
+        "K4",
+        "A3"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "隐蔽持久破坏、夜间/空闲时段攻击、长期驻留"
+    },
+    "SD-08": {
+      "category_name": "系统破坏类",
+      "atomic_op_codes": [
+        "R6",
+        "X1",
+        "K3"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3"
+      ],
+      "risk_text": "功能缺失、环境失稳、业务中断"
+    },
+    "SD-09": {
+      "category_name": "系统破坏类",
+      "atomic_op_codes": [
+        "X5",
+        "W2",
+        "G4"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier2"
+      ],
+      "risk_text": "远程配置投毒、版本回退、项目损坏"
+    },
+    "SD-10": {
+      "category_name": "系统破坏类",
+      "atomic_op_codes": [
+        "S7",
+        "K2",
+        "C1"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier2"
+      ],
+      "risk_text": "服务干扰、设备异常、用户体验破坏"
+    },
+    "SD-11": {
+      "category_name": "系统破坏类",
+      "atomic_op_codes": [
+        "O3",
+        "I2",
+        "A7"
+      ],
+      "tier_combo": [
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "跨系统批量污染、错误固化、回滚复杂"
+    },
+    "SD-12": {
+      "category_name": "系统破坏类",
+      "atomic_op_codes": [
+        "W4",
+        "X1",
+        "K5"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "搜索污染引发破坏、命令误导、服务中断"
+    },
+    "SM-01": {
+      "category_name": "隐蔽操控与社会工程类",
+      "atomic_op_codes": [
+        "R2",
+        "G2",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3"
+      ],
+      "risk_text": "社会工程增强、误导沟通、冒充正常交流"
+    },
+    "SM-02": {
+      "category_name": "隐蔽操控与社会工程类",
+      "atomic_op_codes": [
+        "R8",
+        "Q3",
+        "G2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3"
+      ],
+      "risk_text": "定向社工、精准诱导、信任滥用"
+    },
+    "SM-03": {
+      "category_name": "隐蔽操控与社会工程类",
+      "atomic_op_codes": [
+        "U1",
+        "G1",
+        "W1"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "界面上下文诱导、话术自适应、用户判断被操纵"
+    },
+    "SM-04": {
+      "category_name": "隐蔽操控与社会工程类",
+      "atomic_op_codes": [
+        "S2",
+        "G2",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3"
+      ],
+      "risk_text": "会议内容泄露、对话定向社工、现实场景联动"
+    },
+    "SM-05": {
+      "category_name": "隐蔽操控与社会工程类",
+      "atomic_op_codes": [
+        "R3",
+        "U1",
+        "G2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "历史上下文被利用、界面引导欺骗、长期信任侵蚀"
+    },
+    "SM-06": {
+      "category_name": "隐蔽操控与社会工程类",
+      "atomic_op_codes": [
+        "Q4",
+        "G2",
+        "A6"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "错误权威化、自动误导、业务决策被影响"
+    },
+    "SM-07": {
+      "category_name": "隐蔽操控与社会工程类",
+      "atomic_op_codes": [
+        "U2",
+        "I1",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier4",
+        "Tier3"
+      ],
+      "risk_text": "前台伪装、代行欺骗、责任归属混乱"
+    },
+    "SM-08": {
+      "category_name": "隐蔽操控与社会工程类",
+      "atomic_op_codes": [
+        "R8",
+        "G2",
+        "U2"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3",
+        "Tier2"
+      ],
+      "risk_text": "精准诱导、目标定向错误操作、业务欺骗"
+    },
+    "SM-09": {
+      "category_name": "隐蔽操控与社会工程类",
+      "atomic_op_codes": [
+        "S1",
+        "C1",
+        "G1"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "现场操纵、舆情误导、用户行为被引导"
+    },
+    "SM-10": {
+      "category_name": "隐蔽操控与社会工程类",
+      "atomic_op_codes": [
+        "W4",
+        "G2",
+        "A6"
+      ],
+      "tier_combo": [
+        "Tier2",
+        "Tier3",
+        "Tier4"
+      ],
+      "risk_text": "外部污染转化为内部指令、错误扩散、可信边界破坏"
+    },
+    "SM-11": {
+      "category_name": "隐蔽操控与社会工程类",
+      "atomic_op_codes": [
+        "R10",
+        "Q2",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier3"
+      ],
+      "risk_text": "舆论操纵、信息失真、选择性披露"
+    },
+    "SM-12": {
+      "category_name": "隐蔽操控与社会工程类",
+      "atomic_op_codes": [
+        "S2",
+        "U3",
+        "O5"
+      ],
+      "tier_combo": [
+        "Tier1",
+        "Tier2",
+        "Tier3"
+      ],
+      "risk_text": "隐私窃听、上下文增强社工、临时敏感信息泄露"
+    }
+  }
+}
