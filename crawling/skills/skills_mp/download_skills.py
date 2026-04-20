@@ -6,7 +6,7 @@ import sqlite3
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import List, Set, Dict
+from typing import Set, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
@@ -21,14 +21,12 @@ lock = threading.Lock()
 progress = 0
 
 
-
 # 提取 repo
 def extract_repo_from_url(url: str) -> str | None:
     if not url:
         return None
     m = re.match(r"https://github\.com/([^/]+/[^/]+)", url)
     return m.group(1) if m else None
-
 
 
 # 读取 repo（数据库）
@@ -48,7 +46,6 @@ def load_repos(db_path: Path) -> Set[str]:
     return repos
 
 
-
 # 读取失败 repo
 def load_failed() -> Dict[str, str]:
     if not Path(FAILED_JSON).exists():
@@ -60,34 +57,70 @@ def load_failed() -> Dict[str, str]:
     return {item["repo"]: item.get("error", "") for item in data}
 
 
-
-# 保存失败 repo
-def save_failed(failed_dict: Dict[str, str]):
+# 原子写入
+def save_failed_atomic(failed_dict: Dict[str, str]):
+    tmp_file = FAILED_JSON + ".tmp"
     data = [{"repo": k, "error": v} for k, v in failed_dict.items()]
 
-    with open(FAILED_JSON, "w", encoding="utf-8") as f:
+    with open(tmp_file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
+    os.replace(tmp_file, FAILED_JSON)
 
 
-# clone repo（完整）
+# 读取已完成 repo
+def load_done_repos(output_dir: Path) -> Set[str]:
+    done_repos = set()
+
+    if not output_dir.exists():
+        return done_repos
+
+    for repo_dir in output_dir.iterdir():
+        if not repo_dir.is_dir():
+            continue
+
+        done_flag = repo_dir / ".done"
+        if done_flag.exists():
+            repo = repo_dir.name.replace("__", "/")
+            done_repos.add(repo)
+
+    return done_repos
+
+
+# clone repo（禁用交互）
 def clone_repo(repo: str, tmp_dir: Path) -> Path:
     target = tmp_dir / repo.replace("/", "__")
 
     cmd = [
         "git",
+        "-c", "credential.helper=",
+        "-c", "core.askPass=",
         "clone",
         f"https://github.com/{repo}.git",
         str(target),
     ]
 
-    result = subprocess.run(cmd, capture_output=True)
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        env=env
+    )
 
     if result.returncode != 0:
-        raise RuntimeError(result.stderr.decode(errors="ignore"))
+        err = result.stderr.decode(errors="ignore").lower()
+
+        if "authentication" in err or "permission denied" in err:
+            raise RuntimeError("PRIVATE_OR_NO_PERMISSION")
+
+        if "not found" in err:
+            raise RuntimeError("REPO_NOT_FOUND")
+
+        raise RuntimeError(err)
 
     return target
-
 
 
 # 找 skill
@@ -95,7 +128,6 @@ def find_skill_folders(repo_dir: Path):
     for root, _, files in os.walk(repo_dir):
         if "SKILL.md" in files:
             yield Path(root)
-
 
 
 # 提取 skill
@@ -119,46 +151,51 @@ def extract_skills(repo_dir: Path, output_dir: Path, repo: str):
     return True
 
 
-
 # 单任务
 def process_repo(repo: str, tmp_dir: Path, out_dir: Path,
                  total: int, failed_dict: Dict[str, str]):
     global progress
 
     repo_out = out_dir / repo.replace("/", "__")
-    done_flag = repo_out / ".done"
-
-    # ✅ 强一致跳过
-    if done_flag.exists():
-        with lock:
-            progress += 1
-            print(f"[{progress}/{total}] [SKIP] {repo}")
-        return
 
     try:
         repo_path = clone_repo(repo, tmp_dir)
-        ok = extract_skills(repo_path, out_dir, repo)
+        extract_skills(repo_path, out_dir, repo)
 
-        # 创建 done 标记
         repo_out.mkdir(parents=True, exist_ok=True)
-        done_flag.touch()
+        (repo_out / ".done").touch()
 
         with lock:
             progress += 1
             print(f"[{progress}/{total}] [OK] {repo}")
 
-        # ✅ 成功后从失败列表移除
-        with lock:
             if repo in failed_dict:
                 del failed_dict[repo]
+                save_failed_atomic(failed_dict)
 
     except Exception as e:
+        err_msg = str(e)
+
         with lock:
             progress += 1
+
+            if err_msg == "PRIVATE_OR_NO_PERMISSION":
+                print(f"[{progress}/{total}] [SKIP_PRIVATE] {repo}")
+                if repo in failed_dict:
+                    del failed_dict[repo]
+                    save_failed_atomic(failed_dict)
+                return
+
+            if err_msg == "REPO_NOT_FOUND":
+                print(f"[{progress}/{total}] [NOT_FOUND] {repo}")
+                if repo in failed_dict:
+                    del failed_dict[repo]
+                    save_failed_atomic(failed_dict)
+                return
+
             print(f"[{progress}/{total}] [FAIL] {repo}")
-
-            failed_dict[repo] = str(e)
-
+            failed_dict[repo] = err_msg
+            save_failed_atomic(failed_dict)
 
 
 # 主函数
@@ -166,17 +203,29 @@ def main():
     db_repos = load_repos(Path(DB_PATH))
     failed_dict = load_failed()
 
-    # ✅ 合并任务：优先失败的
-    repos = list(set(db_repos) | set(failed_dict.keys()))
-    total = len(repos)
-
     out_dir = Path(OUTPUT_DIR)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # 已完成 repo
+    done_repos = load_done_repos(out_dir)
+
+    # 所有候选 repo
+    all_repos = set(db_repos) | set(failed_dict.keys())
+
+    # 过滤已完成，
+    repos = list(all_repos - done_repos)
+
+    total = len(repos)
+
     print(f"\nTOTAL TASKS: {total}")
+    print(f"ALREADY DONE: {len(done_repos)}")
     print(f"FAILED RETRY: {len(failed_dict)}")
     print(f"MAX WORKERS: {MAX_WORKERS}")
     print("\n=== START ===\n")
+
+    if total == 0:
+        print("Nothing to do.")
+        return
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp_dir = Path(tmp)
@@ -189,9 +238,6 @@ def main():
 
             for _ in as_completed(futures):
                 pass
-
-    # 保存失败
-    save_failed(failed_dict)
 
     print(f"\nFAILED LEFT: {len(failed_dict)}")
     print("ALL DONE")
