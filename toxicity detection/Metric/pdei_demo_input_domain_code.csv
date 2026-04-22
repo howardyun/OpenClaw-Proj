@@ -1,0 +1,5 @@
+skill_id,skill_name,domain,requested_atoms,necessary_atoms,skill_download_count,skill_star_count,skill_fork_count,developer_github_stars,developer_is_org
+skill_001,Calendar Assistant Pro,Dom-3,"R1,R2,R3,R9,C3,C5,A6,I2,I3","R1,R2",12500,320,890,2300,False
+skill_002,Weather Query,Dom-11,"R1,R2,W1","R1,R2,W1",0,25,4,80,False
+skill_003,Auto File Cleaner,Dom-14,"R1,R2,R6,X6,K3,A6","R1,R2",8600,150,210,1200,True
+skill_004,Research Browser Agent,Dom-6,"R1,R2,W1,W2,W4,U2,C4,X1,A3,A6,I1,I4","R1,R2,W1,W2",54000,1200,3200,980,True
