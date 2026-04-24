@@ -48,10 +48,17 @@ class MockReviewProvider(LLMReviewProvider):
         model: str | None,
         timeout_seconds: int,
     ) -> SkillRiskReviewResponse:
-        skill_has_risk = "yes" if any(
-            item.layer == "implementation" and item.decision_status in {"accepted", "downgraded"}
+        declaration_ids = {
+            item.category_id
             for item in request.final_decisions
-        ) else "no"
+            if item.layer == "declaration" and item.decision_status != "rejected_by_llm"
+        }
+        implementation_ids = {
+            item.category_id
+            for item in request.final_decisions
+            if item.layer == "implementation" and item.decision_status != "rejected_by_llm"
+        }
+        skill_has_risk = "yes" if implementation_ids - declaration_ids else "no"
         return SkillRiskReviewResponse(
             skill_id=request.skill_id,
             provider=self.provider_name,
@@ -59,7 +66,7 @@ class MockReviewProvider(LLMReviewProvider):
             review_status="reviewed",
             decision=StructuredSkillRiskDecision(
                 skill_has_risk=skill_has_risk,
-                reason="mock skill risk review applied from final_decisions",
+                reason="mock skill risk review applied from declaration and implementation decisions",
                 confidence="medium",
                 confidence_score=0.7 if skill_has_risk == "yes" else 0.6,
             ),

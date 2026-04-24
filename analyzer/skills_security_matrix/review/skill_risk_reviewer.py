@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from ..models import AnalysisResult, MatrixCategory, SkillRiskAdjudication
+from ..models import AnalysisResult, MatrixCategory, SkillArtifact, SkillRiskAdjudication
 from .llm_provider import LLMReviewProvider
 from .models import SkillRiskReviewRequest
+from .skill_description import extract_skill_description
 
 
 def review_skill_risk(
     result: AnalysisResult,
+    skill: SkillArtifact,
     matrix_by_id: dict[str, MatrixCategory],
     provider: LLMReviewProvider | None,
     *,
@@ -27,6 +29,7 @@ def review_skill_risk(
 
     request = SkillRiskReviewRequest(
         skill_id=result.skill_id,
+        description=extract_skill_description(skill),
         final_decisions=result.final_decisions,
     )
     response = provider.review_skill_risk(request, model=model, timeout_seconds=timeout_seconds)

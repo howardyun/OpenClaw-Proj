@@ -3,9 +3,9 @@ from __future__ import annotations
 from ..domain_mapping import allowed_domain_definitions, allowed_domain_ids
 from ..exporters.permission_summary import build_fallback_skill_domain
 from ..models import AnalysisResult, DomainAdjudication, SkillArtifact
-from ..skill_structure import extract_frontmatter_and_body, parse_frontmatter
 from .llm_provider import LLMReviewProvider
 from .models import DomainReviewRequest
+from .skill_description import extract_skill_description
 
 
 DOMAIN_SCHEMA_VERSION = "skills-domain-review-v1"
@@ -20,7 +20,7 @@ def review_domain(
     timeout_seconds: int,
 ) -> tuple[str, DomainAdjudication]:
     fallback_domain = build_fallback_skill_domain(result)
-    description = _extract_description(skill)
+    description = extract_skill_description(skill)
     if not description:
         return fallback_domain, DomainAdjudication(
             review_status="description_missing",
@@ -97,17 +97,3 @@ def build_rule_based_domain_adjudication(result: AnalysisResult) -> DomainAdjudi
         fallback_used=True,
         schema_version=DOMAIN_SCHEMA_VERSION,
     )
-
-
-def _extract_description(skill: SkillArtifact) -> str:
-    skill_md = skill.root_path / "SKILL.md"
-    if not skill_md.exists():
-        return ""
-    try:
-        text = skill_md.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        return ""
-    frontmatter, _body = extract_frontmatter_and_body(text)
-    if not frontmatter:
-        return ""
-    return parse_frontmatter(frontmatter).get("description", "").strip()

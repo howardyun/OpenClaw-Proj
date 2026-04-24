@@ -279,29 +279,44 @@ def _skill_risk_schema() -> dict[str, object]:
 
 
 def _build_skill_risk_prompt(request: SkillRiskReviewRequest) -> str:
+    retained_decisions = [item for item in request.final_decisions if item.decision_status != "rejected_by_llm"]
     return json.dumps(
         {
             "task": "Decide whether this skill should be marked yes or no for skill_has_risk.",
             "skill_id": request.skill_id,
+            "description": request.description,
             "decision_policy": {
                 "allowed_statuses": ["yes", "no"],
-                "focus": "Use only final category decisions; retained implementation-layer decisions indicate realized capability.",
+                "description_role": "Use the description together with retained declaration and implementation decisions to judge whether any apparent mismatch is reasonably implied, necessary, incidental, or materially broader in context.",
+                "focus": "Treat retained declaration and implementation decisions as structured signals for contextual least-privilege review, not as mechanically binding set-membership rules.",
                 "forbidden_actions": [
                     "changing category decisions",
                     "inventing categories",
+                    "deriving retained categories from description alone",
                     "using evidence not present in the payload",
                 ],
             },
-            "final_decisions": [
+            "declaration_decisions": [
                 {
                     "category_id": item.category_id,
                     "category_name": item.category_name,
-                    "layer": item.layer,
                     "decision_status": item.decision_status,
                     "confidence": item.confidence,
                     "confidence_score": item.confidence_score,
                 }
-                for item in request.final_decisions
+                for item in retained_decisions
+                if item.layer == "declaration"
+            ],
+            "implementation_decisions": [
+                {
+                    "category_id": item.category_id,
+                    "category_name": item.category_name,
+                    "decision_status": item.decision_status,
+                    "confidence": item.confidence,
+                    "confidence_score": item.confidence_score,
+                }
+                for item in retained_decisions
+                if item.layer == "implementation"
             ],
         },
         ensure_ascii=False,

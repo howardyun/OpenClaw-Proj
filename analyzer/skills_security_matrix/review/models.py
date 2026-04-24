@@ -49,6 +49,7 @@ class ReviewResponse:
 @dataclass(slots=True)
 class SkillRiskReviewRequest:
     skill_id: str
+    description: str = ""
     final_decisions: list[FinalCategoryDecision] = field(default_factory=list)
 
 

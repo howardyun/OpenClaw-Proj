@@ -252,6 +252,7 @@ def _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_regist
         provider = provider_registry.get(args.llm_provider)
         result.skill_has_risk, result.skill_risk_adjudication = review_skill_risk(
             result,
+            skill,
             matrix_by_id,
             provider,
             model=args.llm_model,

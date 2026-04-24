@@ -4,6 +4,7 @@ import csv
 from pathlib import Path
 
 from ..models import AnalysisResult
+from .no_classifications import no_classification_record, no_classification_results
 from .permission_summary import build_permission_summary
 from ..tier_mapping import apply_tier_export, build_exported_category_lookup
 
@@ -73,6 +74,11 @@ DISCREPANCIES_FIELDNAMES = [
     "declaration_present",
     "implementation_present",
 ]
+NO_CLASSIFICATIONS_FIELDNAMES = [
+    "skill_id",
+    "domain",
+    "error",
+]
 REVIEW_AUDIT_FIELDNAMES = [
     "skill_id",
     "category_id",
@@ -126,6 +132,11 @@ def export_csv_files(
         output_dir / "implementation_only_high_risk.csv",
         DISCREPANCIES_FIELDNAMES,
         discrepancy_rows(implementation_only_high_risk_results(results)),
+    )
+    _write_csv(
+        output_dir / "no_classifications.csv",
+        NO_CLASSIFICATIONS_FIELDNAMES,
+        no_classification_rows(results),
     )
     _write_csv(
         output_dir / "review_audit.csv",
@@ -191,6 +202,10 @@ def classification_rows_for_result(result: AnalysisResult) -> list[dict[str, obj
                     }
                 )
     return rows
+
+
+def no_classification_rows(results: list[AnalysisResult]) -> list[dict[str, str]]:
+    return [no_classification_record(result) for result in no_classification_results(results)]
 
 
 def implementation_only_high_risk_results(results: list[AnalysisResult]) -> list[AnalysisResult]:

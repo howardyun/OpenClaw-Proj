@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from ..models import AnalysisResult, RunSummary, dataclass_to_dict
+from .no_classifications import no_classification_record, no_classification_results
 from .permission_summary import build_permission_summary
 from ..tier_mapping import (
     build_exported_category_lookup,
@@ -34,6 +35,10 @@ def export_json_files(
     _write_json(
         output_dir / "implementation_only_high_risk.json",
         [discrepancy_record(result) for result in implementation_only_high_risk_results(results)],
+    )
+    _write_json(
+        output_dir / "no_classifications.json",
+        [no_classification_record(result) for result in no_classification_results(results)],
     )
     if emit_risk_mappings:
         _write_json(output_dir / "risk_mappings.json", [risk_mapping_record(result) for result in results])
