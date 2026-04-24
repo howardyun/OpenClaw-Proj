@@ -129,9 +129,18 @@ class RepoSkillIndexCache:
 
 
 class BatchResultWriter:
-    def __init__(self, run_dir: Path, requested_formats: list[str]) -> None:
+    def __init__(
+        self,
+        run_dir: Path,
+        requested_formats: list[str],
+        *,
+        emit_category_discrepancies: bool = False,
+        emit_risk_mappings: bool = False,
+    ) -> None:
         self.run_dir = run_dir
         self.requested_formats = set(requested_formats)
+        self.emit_category_discrepancies = emit_category_discrepancies
+        self.emit_risk_mappings = emit_risk_mappings
         self.cases_dir = run_dir / "cases"
         self._jsonl_handles: dict[str, object] = {}
         self._csv_handles: list[object] = []
@@ -143,19 +152,22 @@ class BatchResultWriter:
                 "skills",
                 "rule_candidates",
                 "classifications",
-                "discrepancies",
-                "risk_mappings",
                 "review_audit",
             ):
                 path = run_dir / f"{stem}.jsonl"
                 self._jsonl_handles[stem] = path.open("w", encoding="utf-8")
+            if self.emit_category_discrepancies:
+                self._jsonl_handles["discrepancies"] = (run_dir / "discrepancies.jsonl").open("w", encoding="utf-8")
+            if self.emit_risk_mappings:
+                self._jsonl_handles["risk_mappings"] = (run_dir / "risk_mappings.jsonl").open("w", encoding="utf-8")
 
         if "csv" in self.requested_formats:
             self._register_csv_writer("skills", SKILLS_FIELDNAMES)
             self._register_csv_writer("classifications", CLASSIFICATIONS_FIELDNAMES)
             self._register_csv_writer("rule_candidates", RULE_CANDIDATES_FIELDNAMES)
-            self._register_csv_writer("discrepancies", DISCREPANCIES_FIELDNAMES)
             self._register_csv_writer("review_audit", REVIEW_AUDIT_FIELDNAMES)
+            if self.emit_category_discrepancies:
+                self._register_csv_writer("discrepancies", DISCREPANCIES_FIELDNAMES)
 
     def _register_csv_writer(self, stem: str, fieldnames: list[str]) -> None:
         handle = (self.run_dir / f"{stem}.csv").open("w", encoding="utf-8", newline="")
@@ -169,12 +181,25 @@ class BatchResultWriter:
         if "json" in self.requested_formats:
             self._append_jsonl("skills", skill_record(result))
             self._append_jsonl("rule_candidates", candidate_record(result))
-            self._append_jsonl("classifications", classification_record(result))
-            self._append_jsonl("discrepancies", discrepancy_record(result))
-            self._append_jsonl("risk_mappings", risk_mapping_record(result))
+            self._append_jsonl(
+                "classifications",
+                classification_record(result, emit_risk_mappings=self.emit_risk_mappings),
+            )
+            if self.emit_category_discrepancies:
+                self._append_jsonl("discrepancies", discrepancy_record(result))
+            if self.emit_risk_mappings:
+                self._append_jsonl("risk_mappings", risk_mapping_record(result))
             self._append_jsonl("review_audit", review_audit_record(result))
             (self.cases_dir / f"{_safe_filename(result.skill_id)}.json").write_text(
-                json.dumps(case_record(result), ensure_ascii=False, indent=2),
+                json.dumps(
+                    case_record(
+                        result,
+                        emit_category_discrepancies=self.emit_category_discrepancies,
+                        emit_risk_mappings=self.emit_risk_mappings,
+                    ),
+                    ensure_ascii=False,
+                    indent=2,
+                ),
                 encoding="utf-8",
             )
 
@@ -182,7 +207,8 @@ class BatchResultWriter:
             self._csv_writers["skills"].writerows(skill_rows(result))
             self._csv_writers["classifications"].writerows(classification_rows_for_result(result))
             self._csv_writers["rule_candidates"].writerows(candidate_rows_for_result(result))
-            self._csv_writers["discrepancies"].writerows(discrepancy_rows_for_result(result))
+            if self.emit_category_discrepancies:
+                self._csv_writers["discrepancies"].writerows(discrepancy_rows_for_result(result))
             self._csv_writers["review_audit"].writerows(review_audit_rows_for_result(result))
             for handle in self._csv_handles:
                 handle.flush()
@@ -253,6 +279,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--llm-fail-open", action="store_true")
     parser.add_argument("--llm-fail-closed", action="store_true")
     parser.add_argument("--emit-review-audit", action="store_true")
+    parser.add_argument("--emit-category-discrepancies", action="store_true")
+    parser.add_argument("--emit-risk-mappings", action="store_true")
     parser.add_argument("--goldset-path", default=None)
     return parser
 
@@ -655,6 +683,10 @@ def build_main_command(args: argparse.Namespace, resolved: ResolvedSkill) -> lis
         command.append("--llm-fail-closed")
     if args.emit_review_audit:
         command.append("--emit-review-audit")
+    if args.emit_category_discrepancies:
+        command.append("--emit-category-discrepancies")
+    if args.emit_risk_mappings:
+        command.append("--emit-risk-mappings")
     if args.goldset_path:
         command.extend(["--goldset-path", args.goldset_path])
     return command
@@ -843,7 +875,12 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
     run_id = f"run-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     run_dir = Path(args.output_dir) / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
-    writer = BatchResultWriter(run_dir, requested_formats)
+    writer = BatchResultWriter(
+        run_dir,
+        requested_formats,
+        emit_category_discrepancies=args.emit_category_discrepancies,
+        emit_risk_mappings=args.emit_risk_mappings,
+    )
 
     skill_errors: list[dict[str, str]] = []
     written_results = 0
@@ -920,6 +957,8 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
             skill_timeout_seconds=skill_timeout_seconds,
             llm_failure_policy=failure_policy,
             emit_review_audit=args.emit_review_audit,
+            emit_category_discrepancies=args.emit_category_discrepancies,
+            emit_risk_mappings=args.emit_risk_mappings,
             goldset_path=args.goldset_path,
         ),
         skill_errors=skill_errors,

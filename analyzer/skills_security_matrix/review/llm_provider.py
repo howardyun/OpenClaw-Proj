@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from .models import ReviewRequest, ReviewResponse, SkillRiskReviewRequest, SkillRiskReviewResponse
+from .models import (
+    DomainReviewRequest,
+    DomainReviewResponse,
+    ReviewRequest,
+    ReviewResponse,
+    SkillRiskReviewRequest,
+    SkillRiskReviewResponse,
+)
 
 
 class LLMReviewProvider(ABC):
@@ -10,6 +17,16 @@ class LLMReviewProvider(ABC):
 
     @abstractmethod
     def review_category(self, request: ReviewRequest, *, model: str | None, timeout_seconds: int) -> ReviewResponse:
+        raise NotImplementedError
+
+    @abstractmethod
+    def review_domain(
+        self,
+        request: DomainReviewRequest,
+        *,
+        model: str | None,
+        timeout_seconds: int,
+    ) -> DomainReviewResponse:
         raise NotImplementedError
 
     @abstractmethod

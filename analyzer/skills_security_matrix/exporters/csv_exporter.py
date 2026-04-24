@@ -4,11 +4,13 @@ import csv
 from pathlib import Path
 
 from ..models import AnalysisResult
+from .permission_summary import build_permission_summary
 from ..tier_mapping import apply_tier_export, build_exported_category_lookup
 
 
 SKILLS_FIELDNAMES = [
     "skill_id",
+    "domain",
     "root_path",
     "has_skill_md",
     "has_frontmatter",
@@ -18,6 +20,7 @@ SKILLS_FIELDNAMES = [
 ]
 CLASSIFICATIONS_FIELDNAMES = [
     "skill_id",
+    "domain",
     "layer",
     "category_id",
     "category_name",
@@ -26,6 +29,8 @@ CLASSIFICATIONS_FIELDNAMES = [
     "line_start",
     "rule_id",
     "matched_text",
+    "declaration_atomic_ids",
+    "implementation_atomic_ids",
 ]
 RULE_CANDIDATES_FIELDNAMES = [
     "skill_id",
@@ -80,7 +85,12 @@ REVIEW_AUDIT_FIELDNAMES = [
 ]
 
 
-def export_csv_files(output_dir: Path, results: list[AnalysisResult]) -> None:
+def export_csv_files(
+    output_dir: Path,
+    results: list[AnalysisResult],
+    *,
+    emit_category_discrepancies: bool = False,
+) -> None:
     _write_csv(
         output_dir / "skills.csv",
         SKILLS_FIELDNAMES,
@@ -106,11 +116,12 @@ def export_csv_files(output_dir: Path, results: list[AnalysisResult]) -> None:
         CONTROL_DECISIONS_FIELDNAMES,
         control_decision_rows(results),
     )
-    _write_csv(
-        output_dir / "discrepancies.csv",
-        DISCREPANCIES_FIELDNAMES,
-        discrepancy_rows(results),
-    )
+    if emit_category_discrepancies:
+        _write_csv(
+            output_dir / "discrepancies.csv",
+            DISCREPANCIES_FIELDNAMES,
+            discrepancy_rows(results),
+        )
     _write_csv(
         output_dir / "implementation_only_high_risk.csv",
         DISCREPANCIES_FIELDNAMES,
@@ -127,6 +138,7 @@ def skill_rows(result: AnalysisResult) -> list[dict[str, object]]:
     return [
         {
             "skill_id": result.skill_id,
+            "domain": result.domain,
             "root_path": result.root_path,
             "has_skill_md": result.structure_profile.has_skill_md,
             "has_frontmatter": result.structure_profile.has_frontmatter,
@@ -146,6 +158,8 @@ def classification_rows(results: list[AnalysisResult]) -> list[dict[str, object]
 
 def classification_rows_for_result(result: AnalysisResult) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
+    permission_summary = build_permission_summary(result)
+    domain = result.domain
     for layer, classifications in (
         ("declaration", result.declaration_classifications),
         ("implementation", result.implementation_classifications),
@@ -155,6 +169,7 @@ def classification_rows_for_result(result: AnalysisResult) -> list[dict[str, obj
                 rows.append(
                     {
                         "skill_id": result.skill_id,
+                        "domain": domain,
                         "layer": layer,
                         "category_id": apply_tier_export(
                             classification.category_id,
@@ -171,6 +186,8 @@ def classification_rows_for_result(result: AnalysisResult) -> list[dict[str, obj
                         "line_start": evidence.line_start,
                         "rule_id": evidence.rule_id,
                         "matched_text": evidence.matched_text,
+                        "declaration_atomic_ids": ",".join(permission_summary["declaration_atomic_ids"]),
+                        "implementation_atomic_ids": ",".join(permission_summary["implementation_atomic_ids"]),
                     }
                 )
     return rows

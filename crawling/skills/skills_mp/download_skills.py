@@ -12,9 +12,9 @@ import threading
 
 
 # 配置
-DB_PATH = "skillsmp.db"
-OUTPUT_DIR = "skills_output"
-FAILED_JSON = "failed_repos.json"
+DB_PATH = "./skillsmp.db"
+OUTPUT_DIR = "/media/szk/skills_mp"
+FAILED_JSON = "/media/szk/skills_mp/failed_repos.json"
 MAX_WORKERS = 6
 
 lock = threading.Lock()
@@ -96,6 +96,7 @@ def clone_repo(repo: str, tmp_dir: Path) -> Path:
         "-c", "credential.helper=",
         "-c", "core.askPass=",
         "clone",
+        "--depth", "1",
         f"https://github.com/{repo}.git",
         str(target),
     ]

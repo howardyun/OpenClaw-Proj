@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from ..llm_provider import LLMReviewProvider
-from ..models import ReviewRequest, ReviewResponse, StructuredReviewDecision
-from ..models import SkillRiskReviewRequest, SkillRiskReviewResponse, StructuredSkillRiskDecision
+from ..models import DomainReviewRequest, DomainReviewResponse, ReviewRequest, ReviewResponse, StructuredDomainDecision
+from ..models import SkillRiskReviewRequest, SkillRiskReviewResponse, StructuredReviewDecision, StructuredSkillRiskDecision
 
 
 class MockReviewProvider(LLMReviewProvider):
@@ -62,6 +62,37 @@ class MockReviewProvider(LLMReviewProvider):
                 reason="mock skill risk review applied from final_decisions",
                 confidence="medium",
                 confidence_score=0.7 if skill_has_risk == "yes" else 0.6,
+            ),
+            raw_payload={"mock": True, "timeout_seconds": timeout_seconds},
+        )
+
+    def review_domain(
+        self,
+        request: DomainReviewRequest,
+        *,
+        model: str | None,
+        timeout_seconds: int,
+    ) -> DomainReviewResponse:
+        description = request.description.lower()
+        if "schedule" in description or "monitor" in description:
+            domain = "Dom-16"
+        elif "search" in description and ("api" in description or "web" in description):
+            domain = "Dom-3"
+        elif "draft" in description or "content" in description:
+            domain = "Dom-1"
+        else:
+            domain = ""
+
+        return DomainReviewResponse(
+            skill_id=request.skill_id,
+            provider=self.provider_name,
+            model=model,
+            review_status="reviewed",
+            decision=StructuredDomainDecision(
+                domain=domain,
+                reason="mock domain review applied from description keywords",
+                confidence="medium" if domain else "low",
+                confidence_score=0.7 if domain else 0.2,
             ),
             raw_payload={"mock": True, "timeout_seconds": timeout_seconds},
         )

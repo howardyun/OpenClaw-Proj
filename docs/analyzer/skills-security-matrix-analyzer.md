@@ -26,9 +26,9 @@
 
 每次运行都会产出：
 
-- `skills.json` / `skills.csv`：skill 结构画像与基础元数据
+- `skills.json` / `skills.csv`：skill 结构画像与基础元数据，包含基于最小权限集近似匹配推导的单值 `domain`（`Dom-X`）
 - `rule_candidates.json` / `rule_candidates.csv`：离线规则候选及其初始置信度
-- `classifications.json` / `classifications.csv`：最终声明层、实现层决策与证据
+- `classifications.json` / `classifications.csv`：最终声明层、实现层决策与证据，包含与 skill 级一致的 `domain`
 - `discrepancies.json` / `discrepancies.csv`：层间能力漂移与风险映射
 - `risk_mappings.json`：最终类别对应的矩阵风险和控制项
 - `review_audit.json` / `review_audit.csv`：可选 review 轨迹、provider 元数据与失败信息
@@ -43,6 +43,15 @@
 - 每条证据都保留 `source_path`、`layer`、`rule_id`、`line_start`、`matched_text` 等字段，方便手工抽查。
 - 每条证据还会带稳定的 `excerpt_hash` 和 `evidence_fingerprint`，便于 case study、去重和后续人工复核。
 - 当声明或实现证据不足时，输出会保留 `insufficient_*` 状态，而不是强行对齐。
+
+## Domain Semantics
+
+- `domain` 是单值字段，格式固定为 `Dom-X`。
+- 它基于硬编码在分析器中的 `Domain -> 最小权限集` 映射判定，不在运行时读取 Markdown 表格。
+- 判定时优先使用 implementation 层已接受原子能力；若 implementation 为空，则回退到 declaration 层。
+- 匹配采用近似覆盖率而不是严格子集：`score = 命中的最小权限原子数 / 该 Domain 最小权限集大小`。
+- 当前阈值为 `0.4`；低于该阈值时 `domain` 仍为空。
+- 若多个 Domain 都达到阈值，优先选择覆盖率更高者；若并列，则依次比较命中原子数、最小权限集大小，最后按 `Dom` 编号升序稳定取值。
 
 ## Review Modes
 

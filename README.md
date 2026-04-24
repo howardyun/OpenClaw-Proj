@@ -316,13 +316,13 @@ python main.py \
 
 主要输出：
 
-- `skills.json` / `skills.csv`：skill 结构画像与基础元数据
+- `skills.json` / `skills.csv`：skill 结构画像与基础元数据，包含单值 `domain`（`Dom-X`）
 - `atomic_decisions.csv`：原子能力判定结果
 - `control_decisions.csv`：控制语义判定结果
 - `rule_candidates.json` / `rule_candidates.csv`：离线规则候选、证据和初始置信度
-- `classifications.json` / `classifications.csv`：最终声明层、实现层决策，同时保留原子层与控制层兼容输出
-- `discrepancies.json` / `discrepancies.csv`：声明/实现漂移与分类状态
-- `risk_mappings.json`：矩阵风险和控制项映射
+- `classifications.json` / `classifications.csv`：最终声明层、实现层决策，同时保留原子层与控制层兼容输出，并复用 skill 级 `domain`
+- `discrepancies.json` / `discrepancies.csv`：声明/实现漂移与分类状态，需显式传 `--emit-category-discrepancies`
+- `risk_mappings.json`：矩阵风险和控制项映射，需显式传 `--emit-risk-mappings`
 - `review_audit.json` / `review_audit.csv`：review 轨迹、provider 元数据和失败信息
 - `validation.json`：当提供 `--goldset-path` 时输出 gold set 对比结果
 - `cases/<skill-id>.json`：适合 case study 的单 skill 全量视图

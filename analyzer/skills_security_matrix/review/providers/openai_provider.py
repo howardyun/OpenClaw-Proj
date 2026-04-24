@@ -8,14 +8,17 @@ from typing import Any
 
 from ..llm_provider import LLMReviewProvider
 from ..models import (
+    DomainReviewRequest,
+    DomainReviewResponse,
     ReviewRequest,
     ReviewResponse,
     SkillRiskReviewRequest,
     SkillRiskReviewResponse,
+    StructuredDomainDecision,
     StructuredReviewDecision,
     StructuredSkillRiskDecision,
 )
-from .prompting import build_review_system_prompt, build_skill_risk_system_prompt
+from .prompting import build_domain_system_prompt, build_review_system_prompt, build_skill_risk_system_prompt
 
 
 class OpenAIReviewProvider(LLMReviewProvider):
@@ -138,6 +141,68 @@ class OpenAIReviewProvider(LLMReviewProvider):
             review_status="reviewed",
             decision=StructuredSkillRiskDecision(
                 skill_has_risk=str(parsed["skill_has_risk"]),
+                reason=str(parsed["reason"]),
+                confidence=str(parsed["confidence"]),
+                confidence_score=float(parsed["confidence_score"]),
+            ),
+            raw_payload=parsed,
+        )
+
+    def review_domain(
+        self,
+        request: DomainReviewRequest,
+        *,
+        model: str | None,
+        timeout_seconds: int,
+    ) -> DomainReviewResponse:
+        api_key = os.getenv("OPENAI_API_KEY")
+        base_url = os.getenv("OPENAI_API_BASE_URL")
+        if not api_key:
+            return DomainReviewResponse(
+                skill_id=request.skill_id,
+                provider=self.provider_name,
+                model=model,
+                review_status="provider_error",
+                error="OPENAI_API_KEY is not set",
+            )
+
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            return DomainReviewResponse(
+                skill_id=request.skill_id,
+                provider=self.provider_name,
+                model=model,
+                review_status="provider_error",
+                error=f"openai package is not installed: {exc}",
+            )
+
+        try:
+            model_name = model or os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+            client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout_seconds)
+            parsed = _create_structured_chat_completion(
+                client,
+                model_name=model_name,
+                system_prompt=build_domain_system_prompt(),
+                payload=_build_domain_payload(request),
+                schema=_domain_schema(request.allowed_domains),
+            )
+        except Exception as exc:  # pragma: no cover - network/provider defensive path
+            return DomainReviewResponse(
+                skill_id=request.skill_id,
+                provider=self.provider_name,
+                model=model_name if "model_name" in locals() else model,
+                review_status="provider_error",
+                error=str(exc),
+            )
+
+        return DomainReviewResponse(
+            skill_id=request.skill_id,
+            provider=self.provider_name,
+            model=model_name,
+            review_status="reviewed",
+            decision=StructuredDomainDecision(
+                domain=str(parsed["domain"]),
                 reason=str(parsed["reason"]),
                 confidence=str(parsed["confidence"]),
                 confidence_score=float(parsed["confidence_score"]),
@@ -357,6 +422,45 @@ def _build_skill_risk_payload(request: SkillRiskReviewRequest) -> str:
                 }
                 for item in request.final_decisions
             ],
+        },
+        ensure_ascii=False,
+    )
+
+
+def _domain_schema(allowed_domains: list[str]) -> dict[str, object]:
+    return {
+        "name": "skills_domain_review",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "domain": {"type": "string", "enum": ["", *allowed_domains]},
+                "reason": {"type": "string"},
+                "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+                "confidence_score": {"type": "number"},
+            },
+            "required": ["domain", "reason", "confidence", "confidence_score"],
+            "additionalProperties": False,
+        },
+    }
+
+
+def _build_domain_payload(request: DomainReviewRequest) -> str:
+    return json.dumps(
+        {
+            "task": "Classify this skill into exactly one allowed domain id or an empty string using only the description.",
+            "skill_id": request.skill_id,
+            "description": request.description,
+            "allowed_domains": request.allowed_domains,
+            "domain_definitions": request.domain_definitions,
+            "decision_policy": {
+                "empty_string_rule": "Return an empty string when the description is too vague or does not clearly imply one domain.",
+                "forbidden_actions": [
+                    "using evidence outside the supplied description",
+                    "inventing a new domain id",
+                    "returning multiple domains",
+                ],
+            },
         },
         ensure_ascii=False,
     )

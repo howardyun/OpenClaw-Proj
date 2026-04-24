@@ -13,6 +13,7 @@ from .exporters.csv_exporter import export_csv_files
 from .exporters.json_exporter import export_json_files
 from .matrix_loader import load_matrix_definition
 from .models import AnalysisResult, RunConfig, RunSummary
+from .review.domain_reviewer import build_rule_based_domain_adjudication, review_domain
 from .review.llm_provider import ProviderRegistry
 from .review.llm_reviewer import review_candidates
 from .review.skill_risk_reviewer import review_skill_risk
@@ -76,6 +77,16 @@ def build_parser() -> argparse.ArgumentParser:
     failure_policy.add_argument("--llm-fail-open", action="store_true", help="Keep offline decisions when provider calls fail.")
     failure_policy.add_argument("--llm-fail-closed", action="store_true", help="Reject reviewed categories when provider calls fail.")
     parser.add_argument("--emit-review-audit", action="store_true", help="Emit review audit records in outputs and manifest.")
+    parser.add_argument(
+        "--emit-category-discrepancies",
+        action="store_true",
+        help="Emit category_discrepancies in exported JSON and discrepancies.csv/json.",
+    )
+    parser.add_argument(
+        "--emit-risk-mappings",
+        action="store_true",
+        help="Emit risk_mappings in exported JSON and risk_mappings.json.",
+    )
     parser.add_argument("--goldset-path", default=None, help="Optional JSON gold set for validation against final decisions.")
     return parser
 
@@ -131,6 +142,8 @@ def run_analysis(args: argparse.Namespace) -> RunSummary:
             llm_timeout_seconds=args.llm_timeout_seconds,
             llm_failure_policy=failure_policy,
             emit_review_audit=args.emit_review_audit,
+            emit_category_discrepancies=args.emit_category_discrepancies,
+            emit_risk_mappings=args.emit_risk_mappings,
             goldset_path=args.goldset_path,
         ),
         skill_errors=skill_errors,
@@ -140,9 +153,19 @@ def run_analysis(args: argparse.Namespace) -> RunSummary:
         summary.validation_summary = validate_against_goldset(results, expectations)
 
     if "json" in requested_formats:
-        export_json_files(run_dir, results, summary)
+        export_json_files(
+            run_dir,
+            results,
+            summary,
+            emit_category_discrepancies=args.emit_category_discrepancies,
+            emit_risk_mappings=args.emit_risk_mappings,
+        )
     if "csv" in requested_formats:
-        export_csv_files(run_dir, results)
+        export_csv_files(
+            run_dir,
+            results,
+            emit_category_discrepancies=args.emit_category_discrepancies,
+        )
 
     return summary
 
@@ -205,6 +228,18 @@ def _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_regist
         implementation_classifications=implementation_classifications,
         review_audit_records=review_audit_records if args.emit_review_audit or args.llm_review_mode != "off" else [],
     )
+    if args.llm_review_mode != "off":
+        provider = provider_registry.get(args.llm_provider)
+        result.domain, result.domain_adjudication = review_domain(
+            result,
+            skill,
+            provider,
+            model=args.llm_model,
+            timeout_seconds=args.llm_timeout_seconds,
+        )
+    else:
+        result.domain_adjudication = build_rule_based_domain_adjudication(result)
+        result.domain = result.domain_adjudication.domain or ""
     result.skill_level_discrepancy, result.category_discrepancies = compute_discrepancies(
         result,
         matrix_by_id,

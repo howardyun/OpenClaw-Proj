@@ -53,6 +53,34 @@ class SkillRiskReviewRequest:
 
 
 @dataclass(slots=True)
+class DomainReviewRequest:
+    skill_id: str
+    description: str
+    allowed_domains: list[str] = field(default_factory=list)
+    domain_definitions: list[dict[str, str]] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class StructuredDomainDecision:
+    domain: str
+    reason: str
+    confidence: str
+    confidence_score: float
+
+
+@dataclass(slots=True)
+class DomainReviewResponse:
+    skill_id: str
+    provider: str
+    model: str | None
+    review_status: str
+    decision: StructuredDomainDecision | None = None
+    raw_payload: dict[str, object] | None = None
+    error: str | None = None
+    schema_version: str = "skills-domain-review-v1"
+
+
+@dataclass(slots=True)
 class StructuredSkillRiskDecision:
     skill_has_risk: str
     reason: str

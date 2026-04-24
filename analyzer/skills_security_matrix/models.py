@@ -205,6 +205,19 @@ class SkillRiskAdjudication:
 
 
 @dataclass(slots=True)
+class DomainAdjudication:
+    review_status: str
+    provider: str | None = None
+    model: str | None = None
+    domain: str | None = None
+    reason: str | None = None
+    confidence: str | None = None
+    confidence_score: float | None = None
+    fallback_used: bool = False
+    schema_version: str | None = None
+
+
+@dataclass(slots=True)
 class CategoryDiscrepancy:
     category_id: str
     category_name: str
@@ -225,6 +238,7 @@ class AnalysisResult:
     skill_id: str
     root_path: str
     structure_profile: SkillStructureProfile
+    domain: str = ""
     declaration_atomic_decisions: list[AtomicEvidenceDecision] = field(default_factory=list)
     implementation_atomic_decisions: list[AtomicEvidenceDecision] = field(default_factory=list)
     declaration_control_decisions: list[ControlDecision] = field(default_factory=list)
@@ -237,6 +251,7 @@ class AnalysisResult:
     skill_level_discrepancy: str = "insufficient_implementation_evidence"
     category_discrepancies: list[CategoryDiscrepancy] = field(default_factory=list)
     risk_mappings: list[dict[str, Any]] = field(default_factory=list)
+    domain_adjudication: DomainAdjudication | None = None
     skill_risk_adjudication: SkillRiskAdjudication | None = None
     review_audit_records: list[ReviewAuditRecord] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
@@ -261,6 +276,8 @@ class RunConfig:
     skill_timeout_seconds: int = 600
     llm_failure_policy: str = "fail_open"
     emit_review_audit: bool = False
+    emit_category_discrepancies: bool = False
+    emit_risk_mappings: bool = False
     goldset_path: str | None = None
 
 

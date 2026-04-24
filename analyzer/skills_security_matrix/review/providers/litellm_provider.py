@@ -6,14 +6,17 @@ from dataclasses import asdict
 
 from ..llm_provider import LLMReviewProvider
 from ..models import (
+    DomainReviewRequest,
+    DomainReviewResponse,
     ReviewRequest,
     ReviewResponse,
     SkillRiskReviewRequest,
     SkillRiskReviewResponse,
+    StructuredDomainDecision,
     StructuredReviewDecision,
     StructuredSkillRiskDecision,
 )
-from .prompting import build_review_system_prompt, build_skill_risk_system_prompt
+from .prompting import build_domain_system_prompt, build_review_system_prompt, build_skill_risk_system_prompt
 
 
 class LiteLLMReviewProvider(LLMReviewProvider):
@@ -111,6 +114,55 @@ class LiteLLMReviewProvider(LLMReviewProvider):
             model=model,
             review_status="reviewed",
             decision=_skill_risk_decision_from_payload(payload),
+            raw_payload=payload,
+        )
+
+    def review_domain(
+        self,
+        request: DomainReviewRequest,
+        *,
+        model: str | None,
+        timeout_seconds: int,
+    ) -> DomainReviewResponse:
+        try:
+            import litellm  # type: ignore
+        except ImportError as exc:
+            return DomainReviewResponse(
+                skill_id=request.skill_id,
+                provider=self.provider_name,
+                model=model,
+                review_status="provider_error",
+                error=f"LiteLLM is not installed: {exc}",
+            )
+
+        schema = _domain_schema(request.allowed_domains)
+        prompt = _build_domain_prompt(request)
+        try:
+            response = litellm.completion(
+                model=model or os.getenv("LITELLM_MODEL", ""),
+                messages=[
+                    {"role": "system", "content": build_domain_system_prompt()},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_schema", "json_schema": schema},
+                timeout=timeout_seconds,
+            )
+            content = response.choices[0].message.content
+            payload = json.loads(content)
+        except Exception as exc:  # pragma: no cover - network/provider defensive path
+            return DomainReviewResponse(
+                skill_id=request.skill_id,
+                provider=self.provider_name,
+                model=model,
+                review_status="provider_error",
+                error=str(exc),
+            )
+        return DomainReviewResponse(
+            skill_id=request.skill_id,
+            provider=self.provider_name,
+            model=model,
+            review_status="reviewed",
+            decision=_domain_decision_from_payload(payload),
             raw_payload=payload,
         )
 
@@ -259,6 +311,54 @@ def _build_skill_risk_prompt(request: SkillRiskReviewRequest) -> str:
 def _skill_risk_decision_from_payload(payload: dict[str, object]) -> StructuredSkillRiskDecision:
     return StructuredSkillRiskDecision(
         skill_has_risk=str(payload["skill_has_risk"]),
+        reason=str(payload["reason"]),
+        confidence=str(payload["confidence"]),
+        confidence_score=float(payload["confidence_score"]),
+    )
+
+
+def _domain_schema(allowed_domains: list[str]) -> dict[str, object]:
+    return {
+        "name": "skills_domain_review",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "domain": {"type": "string", "enum": ["", *allowed_domains]},
+                "reason": {"type": "string"},
+                "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+                "confidence_score": {"type": "number"},
+            },
+            "required": ["domain", "reason", "confidence", "confidence_score"],
+            "additionalProperties": False,
+        },
+    }
+
+
+def _build_domain_prompt(request: DomainReviewRequest) -> str:
+    return json.dumps(
+        {
+            "task": "Classify this skill into exactly one allowed domain id or an empty string using only the description.",
+            "skill_id": request.skill_id,
+            "description": request.description,
+            "allowed_domains": request.allowed_domains,
+            "domain_definitions": request.domain_definitions,
+            "decision_policy": {
+                "empty_string_rule": "Return an empty string when the description is too vague or does not clearly imply one domain.",
+                "forbidden_actions": [
+                    "using evidence outside the supplied description",
+                    "inventing a new domain id",
+                    "returning multiple domains",
+                ],
+            },
+        },
+        ensure_ascii=False,
+    )
+
+
+def _domain_decision_from_payload(payload: dict[str, object]) -> StructuredDomainDecision:
+    return StructuredDomainDecision(
+        domain=str(payload["domain"]),
         reason=str(payload["reason"]),
         confidence=str(payload["confidence"]),
         confidence_score=float(payload["confidence_score"]),

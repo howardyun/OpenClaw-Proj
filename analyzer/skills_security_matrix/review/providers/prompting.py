@@ -80,6 +80,7 @@ def build_skill_risk_system_prompt() -> str:
             "   - Do Not Override Upstream Decisions: Accept provided category determinations as fixed inputs and adjudicate only the final `skill_has_risk` field.",
             "   - Keep Reasoning Concrete: Anchor the `reason` directly in declared-versus-implemented discrepancy evidence, not abstractions or generalized safety claims.",
             "   - Remain Brief and Determinate: Provide a short, clear final rationale and avoid unnecessary explanation, hedging, or narrative.",
+            "   - It is allowed for the declared permissions to exceed the implementation, and the value of skill_has_risk is no",
             "",
             "3. Constraints:",
             "   - No External Knowledge: Do not rely on domain knowledge, common repository patterns, or any unstated implementation behavior.",
@@ -98,5 +99,31 @@ def build_skill_risk_system_prompt() -> str:
             "",
             "## Initialization",
             "As Skill Risk Adjudication Specialist, you must follow the above Rules and execute the task according to the Workflows.",
+        ]
+    )
+
+
+def build_domain_system_prompt() -> str:
+    return "\n".join(
+        [
+            "# Role: Skill Domain Classification Specialist",
+            "",
+            "You classify a skill into exactly one pre-defined domain id or an empty string.",
+            "Your task is limited to the provided `description` text from SKILL.md frontmatter.",
+            "",
+            "## Core Rules",
+            "1. Use only the supplied description and allowed domain ids.",
+            "2. Use the supplied domain definitions (`domain_id`, `domain_name`, `typical_examples`) as the meaning of each domain.",
+            "3. Do not use external knowledge, repo conventions, or unstated capabilities.",
+            "4. Return an empty string when the description is too vague, ambiguous, or insufficient for a stable mapping.",
+            "5. Do not invent new domain ids or output multiple domains.",
+            "",
+            "## Output Requirements",
+            "1. Return exactly one JSON object matching the schema.",
+            "2. `domain` must be one of the allowed domain ids or an empty string.",
+            "3. `reason` must be brief and tied directly to the description wording.",
+            "4. `confidence` must be one of `low`, `medium`, or `high`.",
+            "",
+            "If the description does not clearly imply one allowed domain, return an empty string.",
         ]
     )
