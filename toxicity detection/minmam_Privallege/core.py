@@ -43,8 +43,6 @@ class PermissionCombinationSpec:
     raw: str = ""
     all_of: List[str] = field(default_factory=list)
     one_of: List[List[str]] = field(default_factory=list)
-    refs: List[str] = field(default_factory=list)
-    placeholders: List[Dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -72,6 +70,7 @@ def normalize_text(text: str) -> str:
         text.replace("<br/>", " ")
         .replace("<br>", " ")
         .replace("，", ",")
+        .replace("、", ",")
         .replace("；", ";")
         .replace("（", "(")
         .replace("）", ")")
@@ -80,11 +79,9 @@ def normalize_text(text: str) -> str:
     )
 
 
-
 def split_examples(text: str) -> List[str]:
     parts = re.split(r"[、,，]\s*", normalize_text(text))
     return [part for part in parts if part]
-
 
 
 def dedupe_keep_order(items: List[Any]) -> List[Any]:
@@ -98,7 +95,6 @@ def dedupe_keep_order(items: List[Any]) -> List[Any]:
     return out
 
 
-
 def sort_atoms(atoms: List[str]) -> List[str]:
     def atom_key(atom: str) -> tuple[str, int]:
         m = re.fullmatch(r"([A-Z])(\d+)", atom)
@@ -109,10 +105,8 @@ def sort_atoms(atoms: List[str]) -> List[str]:
     return sorted(dedupe_keep_order(atoms), key=atom_key)
 
 
-
 def extract_atom_tokens(text: str) -> List[str]:
     return dedupe_keep_order([f"{prefix}{index}" for prefix, index in TOKEN_RE.findall(text)])
-
 
 
 def unwrap_parentheses(text: str) -> str:
@@ -120,7 +114,6 @@ def unwrap_parentheses(text: str) -> str:
     if value.startswith("(") and value.endswith(")"):
         return value[1:-1].strip()
     return value
-
 
 
 def split_top_level_plus(expr: str) -> List[str]:
@@ -147,14 +140,13 @@ def split_top_level_plus(expr: str) -> List[str]:
     return parts
 
 
-# ---------- parsing permission set / combination / constraints ----------
+# ---------- parsing ----------
 
 def parse_permission_set(text: str) -> PermissionSetSpec:
     raw = text.strip()
     normalized = normalize_text(text)
     atoms = extract_atom_tokens(normalized)
     return PermissionSetSpec(raw=raw, atoms=sort_atoms(atoms))
-
 
 
 def parse_permission_combination(expr: str) -> PermissionCombinationSpec:
@@ -166,20 +158,6 @@ def parse_permission_combination(expr: str) -> PermissionCombinationSpec:
     for part in parts:
         item = part.strip()
         if not item:
-            continue
-
-        if "基础功能域最小权限" in item:
-            spec.refs.append("base_domain_minimum_permission_set")
-            continue
-
-        if "目标动作原子" in item:
-            spec.placeholders.append(
-                {
-                    "name": "target_action_atom",
-                    "raw": item,
-                    "examples": extract_atom_tokens(item),
-                }
-            )
             continue
 
         candidate = unwrap_parentheses(item)
@@ -195,10 +173,7 @@ def parse_permission_combination(expr: str) -> PermissionCombinationSpec:
 
     spec.all_of = sort_atoms(spec.all_of)
     spec.one_of = [sort_atoms(group) for group in spec.one_of]
-    spec.refs = dedupe_keep_order(spec.refs)
-    spec.placeholders = dedupe_keep_order(spec.placeholders)
     return spec
-
 
 
 def expand_atom_specs(text: str) -> List[str]:
@@ -235,7 +210,6 @@ def expand_atom_specs(text: str) -> List[str]:
     return sort_atoms(found)
 
 
-
 def parse_atom_constraint(text: str) -> AtomConstraintSpec:
     raw = text.strip()
     atoms = expand_atom_specs(text)
@@ -260,13 +234,11 @@ def parse_markdown_table(markdown: str) -> List[Dict[str, str]]:
     return rows
 
 
-
 def _pick(row: Dict[str, str], *candidates: str) -> str:
     for key in candidates:
         if key in row:
             return row[key]
     raise KeyError(f"缺少字段，候选列名: {candidates}")
-
 
 
 def build_domains_from_markdown(markdown_path: str | Path) -> List[DomainRule]:
@@ -277,7 +249,7 @@ def build_domains_from_markdown(markdown_path: str | Path) -> List[DomainRule]:
     for row in rows:
         domain = DomainRule(
             id=_pick(row, "功能域编号"),
-            name=_pick(row, "功能域 (Domain)"),
+            name=_pick(row, "功能域 (Domain)", "能域 (Domain)", "Domain", "功能域"),
             examples=split_examples(_pick(row, "典型示例")),
             max_tier_whitelist=_pick(row, "允许的最高 Tier (白名单)"),
             minimum_permission_set=parse_permission_set(_pick(row, "最小权限集", "最小权限（原子操作）")),
@@ -290,13 +262,12 @@ def build_domains_from_markdown(markdown_path: str | Path) -> List[DomainRule]:
     return domains
 
 
-
 def dump_domains_to_yaml(domains: List[DomainRule], yaml_path: str | Path) -> None:
     if yaml is None:
         raise RuntimeError("未安装 PyYAML，无法导出 YAML 文件。")
 
     payload = {
-        "version": 2,
+        "version": 4,
         "atom_family_max": ATOM_FAMILY_MAX,
         "domains": [
             {
@@ -317,7 +288,6 @@ def dump_domains_to_yaml(domains: List[DomainRule], yaml_path: str | Path) -> No
         yaml.safe_dump(payload, allow_unicode=True, sort_keys=False),
         encoding="utf-8",
     )
-
 
 
 def load_domains_from_yaml(yaml_path: str | Path) -> List[DomainRule]:
