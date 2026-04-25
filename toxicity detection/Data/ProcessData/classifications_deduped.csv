@@ -1,0 +1,693 @@
+skill_id,domain,layer,category_id,category_name,confidence,source_path,line_start,rule_id,matched_text,declaration_atomic_ids,implementation_atomic_ids
+ably-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+access,Dom-14,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,85,decl.atomic_capability.o4,"### `channel remove <channel_id>`
+1. Delete `channels[channel_id]`
+2. Save with 0o600","A4,O4,Q1,R8",
+accessibility,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,references/A11Y-PATTERNS.md,209,decl.atomic_capability.x3,"function showNotification(message, type = 'polite') {
+  const container = document.getElementById(`${type}-announcer`);
+  container.textContent = '';","A4,G1,I3,Q1,Q2,Q3,R1,R7,X3,X4,X8","A2,A4,G1,Q4,X3"
+accessibility-auditor,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,249,decl.atomic_capability.o4,"<h2 id=""modal-title"">Confirm Action</h2>
+  <p id=""modal-desc"">Are you sure you want to delete this item?</p>","A4,O4,Q1,Q2,Q3,Q4,R1",
+add-image-vision,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,45,decl.atomic_capability.x3,"- Image attachment handling in `src/channels/whatsapp.ts`
+- Image passing to agent in `src/index.ts` and `src/container-runner.ts`
+- Image content block support in `container/agent-runner/src/index.ts`","Q2,R4,R8,X3,X4,X8",
+add-macos-statusbar,Dom-15,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,8,decl.atomic_capability.x3,"Adds a persistent menu bar icon that shows NanoClaw's running status and lets the user
+start, stop, or restart the service — similar to how Docker Desktop appears in the menu bar.","Q1,Q2,X3,X8",
+add-parallel,Dom-1,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,288,decl.atomic_capability.x1,"3. Remove Web Research Tools section from groups/main/CLAUDE.md
+4. Rebuild: `./container/build.sh && npm run build`
+5. Restart: `launchctl kickstart -k gui/$(id -u)/com.nanoclaw` (macOS) or `systemctl --user restart nanoclaw` (Linux)","A3,G1,I3,I4,Q1,Q2,Q4,R1,X1,X3,X7,X8",
+add-pdf-reader,Dom-5,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,95,decl.atomic_capability.x1,Container needs rebuilding. Run `./container/build.sh` and restart the service.,"Q2,R4,R8,X1,X3,X8",
+add-reactions,Dom-10,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,7,decl.atomic_capability.x3,"This skill adds emoji reaction support to NanoClaw's WhatsApp channel: receive and store reactions, send reactions from the container agent via MCP tool, and query reaction history from SQLite.","A7,Q1,Q2,R8,X3,X8",
+adrapid-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+aeon,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,references/datasets_benchmarking.md,27,decl.atomic_capability.o3,"# Bulk download
+from aeon.datasets import download_all_regression","A3,A4,G1,I3,O3,O4,Q1,Q2,Q4,R1,R7,R8,R9,X4","G1,G5,O4,Q4,W3,X7"
+agent-browser,Dom-11,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,61,decl.atomic_capability.o4,State files contain session tokens in plaintext -- add to `.gitignore` and delete when no longer needed. Set `AGENT_BROWSER_ENCRYPTION_KEY` for encryption at rest.,"C5,G1,I3,O4,Q1,Q2,Q3,R1,R7,R8,U1,U3,U4,X1,X3,X4,X7,X8",
+agent-designer,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,163,decl.atomic_capability.x7,"#### Cost Analysis
+- **Token Usage:** Input/output token consumption per task
+- **API Costs:** External service usage and charges","A4,A5,A7,G1,I3,O3,Q2,Q4,R1,R7,X7","A4,A5,A7,G1,G5,I4,Q1,Q2,Q3,Q4,R1,R10,R5,U2,W2,W3,X1,X6,X7"
+agentation-self-driving,Dom-11,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,allowed-tools: Bash(agent-browser:*),"A5,A7,Q1,Q2,R7,R8,X1,X3,X4,X7","A4,G1"
+ai-seo,,declaration,tier_4,Tier 4: 代理协同层,high,references/ai-search-landscape.md,97,decl.atomic_capability.a4,"2. Use numbered lists, definition blocks, and tables extensively
+3. Keep content current — update pages when information changes
+4. For competitive topics, publish comprehensive pieces that cover the query more completely than alternatives","A4,A5,G1,I3,Q1,Q3,Q4,R7,R8,U3","G1,Q3,Q4,R8,S7,X7"
+algolia-performance-tuning,Dom-13,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,1,decl.atomic_capability.q1,"description: |
+  Optimize Algolia search performance: record size, searchable attributes,
+  replica strategy, response caching, and query-time parameter tuning.","O3,Q1",
+analyzer,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,"description: ""Use when synthesizing perf findings into evidence-backed recommendations and decisions.""","G1,R7",
+analyzing-text-sentiment,Dom-7,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,22,decl.atomic_capability.k5,"1. **Text Input**: The skill receives text data as input from the user.
+2. **Sentiment Analysis**: The skill processes the text using a pre-trained sentiment analysis model to determine the sentiment polarity (positive, negative, or neutral).
+3. **Result Output**: The skill provides a sentiment score and classification, indicating the overall sentiment expressed in the text.","G1,K5,Q4,R1,X1","G1,G4,Q4,R10,R9,X1,X6"
+anima-deploy-integration,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(vercel:*), Bash(gcloud:*), Bash(docker:*)","A4,I4,R7,R8,X1,X3,X7,X8",
+anomaly-detection-system,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,"description: |
+  This skill empowers Claude to identify anomalies and outliers within datasets. It leverages the anomaly-detection-system plugin to analyze data, apply appropriate machine learning algorithms, and highlight unusual data points. Use this skill when the user requests anomaly detection, outlier analysis, or identification of unusual patterns in data. Trigger this skill when the user m",G1,
+apify-generate-output-schema,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,346,decl.atomic_capability.x3,"- `{{links.apiRunUrl}}` — API run URL
+- `{{links.containerRunUrl}}` — URL of webserver running inside the run
+- `{{run.defaultDatasetId}}` — ID of the default dataset","G1,G2,G5,Q1,Q2,R1,R7,U1,X3",
+apple-notes-install-auth,Dom-15,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,120,decl.atomic_capability.o4,"| `Notes got an error: AppleEvent timed out` | Notes.app not running | Launch Notes first or add `activate` |
+| `-1743 errAEAppNotAllowed` | Denied by TCC | Reset TCC: `tccutil reset AppleEvents` |
+| `execution error: Notes is not running` | Notes.app closed | Add `tell app ""Notes"" to activate` |","O4,Q1,R1,R7,W2,X1,X8",
+applying-brand-guidelines,Dom-12,declaration,tier_3,Tier 3: 环境管控层,high,apply_brand.py,316,decl.atomic_capability.g2,"Args:
+            document_type: Type of document (draft, confidential, etc.)","G2,Q1,Q3,Q4,R7,R9","G1,G2,Q2,Q3,R10,R5,R8"
+approval-workflow-generator,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*)""","G1,Q3,X1",
+arize-trace,Dom-4,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,74,decl.atomic_capability.o3,"| `--stdout` | false | Print JSON to stdout instead of file |
+| `--all` | false | Unlimited bulk export via Arrow Flight (see below) |","A4,A7,G1,G3,I4,O3,Q1,Q2,Q3,R1,R7,R9,W2,X7,X8","A2,A7,I4,Q4,R6,X2,X4,X7,X8"
+assemblyai-core-workflow-a,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,187,decl.atomic_capability.o4,"// Delete a transcript (GDPR compliance)
+await client.transcripts.delete('transcript-id');","G1,I4,O4,Q1,Q3,Q4,R7,X1",
+assemblyai-core-workflow-b,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Grep","C5,G1,I4,Q1,R1,R7,S2,X1,X4,X7",
+astropy,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,references/fits.md,115,decl.atomic_capability.o4,"# Delete keyword
+del header['OLDKEY']","A3,G1,O4,Q1,Q2,R7,R8,S4,W3,X3,X4","C1,C2,K4,Q2,Q4,R10,R5,S4,W3,X1,X3"
+attio-webhooks-events,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,102,decl.atomic_capability.o4,"const entries = Array.from(processed);
+    entries.slice(0, entries.length - 10_000).forEach((id) => processed.delete(id));
+  }","A4,A7,O4,Q1,Q3,R7,R8,X1,X8",
+auditing-wallet-security,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,3,decl.atomic_capability.o4,"Use when checking wallet security, reviewing approvals, or assessing risk exposure.
+  Trigger with phrases like ""audit wallet"", ""check approvals"", ""security scan"", or ""revoke tokens"".","A7,G1,O4,Q1,Q4,R7,X1,X5,X7","A2,A7,G1,G5,I4,O4,Q2,Q4,R1,R10,R5,U2,W1,X1,X4,X5,X6,X7,X8"
+aws-sdk-java-v2-messaging,Dom-10,declaration,tier_3,Tier 3: 环境管控层,high,references/aws-official-documentation.md,46,decl.atomic_capability.c2,"### Advanced Features
+- **Platform Endpoints** - Mobile push notifications
+- **SMS Publishing** - Send SMS messages","A3,A5,A7,C2,G1,K4,O3,O4,Q1,Q3,R1,R7,R8,X1,X3,X7","A4,A5,A7,G1,G5,I4,O4,U2,X1,X3,X7"
+azure-resource-visualizer,Dom-7,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,92,decl.atomic_capability.x7,"APP -->|""Uses identity""| MI
+    MI -->|""Access secrets""| KV
+    VNET --> SUBNET1","G1,O4,Q1,Q2,Q4,R7,X7,X8","G1,I6"
+background-removal,Dom-12,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"description: ""Remove backgrounds from images with BiRefNet via inference.sh CLI. Model: BiRefNet (high accuracy background removal). Use for: product photos, portraits, e-commerce, transparent PNGs, photo editing. Triggers: remove background, background removal, remove bg, transparent background, cut out image, background remover, rembg, product photo editing, cutout, transparent png, bg removal, ","Q1,R1,R7,R8,X1,X8",
+best-practices,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,216,decl.atomic_capability.x3,"@supports (display: grid) {
+  .container {
+    display: grid;","G1,Q1,R1,R7,S1,S2,S4,X3",
+bgpt-paper-search,Dom-3,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,allowed-tools: Bash,"C5,I4,Q1,R8,X1",
+blip-2,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,165,decl.atomic_capability.o3,### Batch processing,"A3,A5,G1,O3,O4,Q1,Q2,Q4,R1,R7,R8,R9,X4,X7,X8","G1,G5,Q1,Q2,Q4,R5,S1,W1,W3,X1,X4,X5,X6,X7,X8"
+blueprint,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,32,decl.atomic_capability.x8,"1. **Research** — Pre-flight checks (git, gh auth, remote, default branch), then reads project structure, existing plans, and memory files to gather context.
+2. **Design** — Breaks the objective into one-PR-sized steps (3–12 typical). Assigns dependency edges, parallel/serial ordering, model tier (strongest vs default), and rollback strategy per step.","G2,Q1,R8,X8",
+bmad-agent-analyst,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,9,decl.atomic_capability.g1,"You are Mary, the Business Analyst. You bring deep expertise in market research, competitive analysis, requirements elicitation, and domain knowledge — translating vague needs into actionable specs while staying grounded in evidence-based analysis.","G1,R1,R7",G1
+bmad-agent-dev,Dom-13,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,13,decl.atomic_capability.r7,"- Bare paths (e.g. `references/guide.md`) resolve from the skill root.
+- `{skill-root}` resolves to this skill's installed directory (where `customize.toml` lives).","R1,R7",
+bmad-create-story,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,checklist.md,173,decl.atomic_capability.x7,"- **Verbosity problems:** Excessive detail that wastes tokens without adding value
+- **Ambiguity issues:** Vague instructions that could lead to multiple interpretations","G1,G3,I3,Q1,Q2,R1,R5,R7,R9,X7,X8","G1,R1,X1,X8"
+bmad-technical-research,,declaration,tier_3,Tier 3: 环境管控层,high,technical-steps/step-01-init.md,16,decl.atomic_capability.g1,"- 🎯 Show your analysis before taking any action
+- ⚠️ Present [C] continue option after scope confirmation","G1,G3,I3,Q1,W2","A2,C5,G1,G2,I4,Q4,X3,X5,X8"
+brand-voice,Dom-2,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,68,decl.atomic_capability.o4,Delete and rewrite any of these:,"I3,O4,Q3,R7,S3",
+breakdown-epic-arch,Dom-2,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,16,decl.atomic_capability.x3,"- **Self-hosted and SaaS deployment** requirements.
+- **Docker containerization** for all services.
+- **TypeScript/Next.js** stack with App Router.","Q1,R1,R7,X3,X8",
+brief,Dom-2,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,14,decl.atomic_capability.g1,"Produce a complete, editor-ready content brief covering intent analysis,
+competitive SERP review, content outline, E-E-A-T requirements, and SEO targets.","G1,Q1,Q2,Q3,Q4,R7,R8,U1",
+brightdata-core-workflow-b,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Bash(curl:*), Grep","A4,A5,Q1,Q4,R7,R8,X1,X7,X8",
+brightdata-local-search,Dom-3,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,15,decl.atomic_capability.x3,"- [Anthropic API key](https://console.anthropic.com) (for query expansion, optional)
+- Docker (recommended) or Node.js 18+ with pnpm","A5,I4,Q1,R8,X3,X4,X7,X8",
+browser-qa,Dom-11,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,86,decl.atomic_capability.a5,Pair with `/canary-watch` for post-deploy monitoring.,"A5,Q1,Q3,U1",
+browser-use,Dom-11,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,allowed-tools: Bash(browser-use:*),"A5,A7,I4,Q1,Q2,R1,R4,R7,R8,R9,U1,U2,X1,X7,X8","U2,X8"
+building-gitops-workflows,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,52,decl.atomic_capability.o4,"| `Application is OutOfSync but not syncing` | Automated sync disabled or sync window closed | Enable `automated:` in syncPolicy or trigger manual sync with `argocd app sync` |
+| `Resource already exists and is not managed` | Resource created outside of GitOps | Add the `argocd.argoproj.io/managed-by` annotation or delete the conflicting resource |
+| `Sync failed: health check timeout` | Applicati","A4,O4,Q3,R8,X1,X3,X7,X8",
+campaign-analytics,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,"description: Analyzes campaign performance with multi-touch attribution, funnel conversion analysis, and ROI calculation for marketing optimization. Use when analyzing marketing campaigns, ad performance, attribution models, conversion rates, or calculating marketing ROI, ROAS, CPA, and campaign metrics across channels.","G1,I7,Q1,Q2,Q3,Q4,R1,R7,X8","A5,G1,Q2,Q3,Q4,R10,R5,X1"
+centos-linux-triage,Dom-15,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,11,decl.atomic_capability.r1,"- `${input:CentOSVersion}` (optional)
+- `${input:ProblemSummary}`",R1,
+changelog-collect,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,201,decl.atomic_capability.x7,"| 🐞     | 修复 Bug               |
+| 💄     | 样式更新或 token 更新  |
+| 🆕     | 新增特性 / 新增属性    |","G3,Q1,Q2,Q3,R1,R7,R8,X7,X8",
+chart-visualization,Dom-12,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,31,decl.atomic_capability.g1,"- `generate_network_graph`: Complex node-edge relationships.
+    - `generate_fishbone_diagram`: Cause-effect analysis.
+    - `generate_flow_diagram`: Process flow.","G1,I3,Q2,R1,R7,R8","R1,W1"
+chat-ui,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"description: ""Chat UI building blocks for React/Next.js from ui.inference.sh. Components: container, messages, input, typing indicators, avatars. Capabilities: chat interfaces, message lists, input handling, streaming. Use for: building custom chat UIs, messaging interfaces, AI assistants. Triggers: chat ui, chat component, message list, chat input, shadcn chat,  react chat, chat interface, messag","Q1,R1,R7,X1,X3,X7",
+chrome-devtools,Dom-13,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,42,decl.atomic_capability.r7,"- https://developer.chrome.com/docs/devtools
+- https://developer.chrome.com/docs/devtools/ai-assistance","R1,R7,R8,U1,X8",
+clade-data-handling,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,19,decl.atomic_capability.x7,"## Overview
+Handle data responsibly when building with Claude — manage the 200K token context window efficiently, implement conversation trimming strategies, redact PII before sending to the API, and configure data retention settings.","Q3,R1,R7,X7",
+claude-code-sessions,Dom-6,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,11,decl.atomic_capability.o4,"Claude Code records every session as a JSONL file — messages, tool calls, token counts, diffs, tasks. This plugin reads those files and provides two interfaces. Most operations are read-only; delete and cleanup skills can remove session files when explicitly invoked.","I4,O3,O4,Q1,R1,R3,R8,X7,X8",
+cli-anything-inkscape,Dom-12,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,15,decl.atomic_capability.x4,"```bash
+pip install cli-anything-inkscape
+```","I3,Q1,Q2,R6,X4,X8",
+cli-anything-rms,Dom-15,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,26,decl.atomic_capability.o4,"- `devices update <device_id> [--name NAME] [--tag TAG]` — Update device
+- `devices delete <device_id>` — Delete device","O4,Q1,Q3,R8,R9,W2,X4,X7,X8",
+clickhouse-performance-tuning,Dom-13,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,114,decl.atomic_capability.a4,"ALTER TABLE analytics.events
+    ADD PROJECTION events_by_hour (
+        SELECT","A3,A4,G1,Q1,Q2,Q3,R7",
+clickup-core-workflow-b,Dom-14,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,29,decl.atomic_capability.o4,"PUT    /api/v2/space/{space_id}               Update Space
+DELETE /api/v2/space/{space_id}               Delete Space
+```","O4,Q1,Q3,R7,X1,X8",
+clinical-decision-support,Dom-7,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: [Read, Write, Edit, Bash]","G1,Q2,Q4,R7,X1","A2,A5,G1,G2,I4,Q1,Q2,Q3,Q4,R1,R10,R5,R9,U2,X1,X6,X7"
+clip,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,169,decl.atomic_capability.o3,## Batch processing,"O3,Q1,Q4,R8,X4,X8","G5,Q4,R5"
+clustering-algorithm-runner,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,"description: |
+  This skill enables Claude to execute clustering algorithms on datasets. It is used when the user requests to perform clustering, identify groups within data, or analyze data structure. The skill supports algorithms like K-means, DBSCAN, and hierarchical clustering. Claude should use this skill when the user explicitly asks to ""run clustering,"" ""perform a cluster analysis,"" or ""gro","G1,I3,Q2",
+coderabbit-cost-tuning,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Grep, Bash(gh:*)","A5,G1,I3,Q1,Q2,R1,R7,R8,X1,X8",
+coderabbit-incident-runbook,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,61,decl.atomic_capability.o4,"echo ""--- Option A: Remove Required Check ---""
+echo ""gh api repos/$OWNER/$REPO/branches/main/protection --method DELETE""
+echo ""(This removes ALL branch protection. Re-apply after incident.)""","G2,O4,Q2,Q4,R7,R8,X1,X2,X8",
+cohere-data-handling,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,221,decl.atomic_capability.o4,"|------|-----------|--------|
+| API request logs (redacted) | 30 days | Auto-delete |
+| Audit entries | 7 years | Archive to cold storage |","O4,Q3,Q4,R1,R7",
+cohere-webhooks-events,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,244,decl.atomic_capability.o4,"model: 'command-a-03-2025',
+  messages: [{ role: 'user', content: 'How do I reset my password?' }],
+  connectors: [{ id: connector.connector.id }],","A4,C5,I2,O4,Q1,R7,R8,X1,X7,X8",
+commit-helper,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x8,description: Help create git commits and PRs with properly formatted messages and release notes following CockroachDB conventions. Use when committing changes or creating pull requests.,"Q1,R7,X8",
+composio-search-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+computer-use-agents,Dom-11,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,221,decl.atomic_capability.x1,"- keyboard: Type text, press keys
+- bash: Run shell commands
+- text_editor: View and edit files","A5,C3,Q1,R1,R7,U1,U2,X1,X3,X7,X8",
+computer-vision-processor,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,"description: |
+  This skill enables Claude to process and analyze images using computer vision techniques. It's used to perform tasks such as object detection, image classification, and image segmentation. Use this skill when a user requests analysis of an image, asks for identification of objects within an image, or needs help with other computer vision related tasks. Trigger terms include ""analy","G1,Q1,Q4,R1",
+configure-notifications,Dom-10,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1095,decl.atomic_capability.o4,"**Step 3: Method**
+Ask for HTTP method (GET, POST, PUT, PATCH, DELETE). Default: POST.","A4,A5,C2,I4,O4,Q1,Q2,R1,R8,X1,X7,X8",
+connect,Dom-17,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,55,decl.atomic_capability.x4,"```bash
+pip install composio          # Python
+npm install @composio/core    # TypeScript","C3,G2,I3,I4,Q1,Q3,R7,R8,X4,X7",
+content-gap-analysis,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"compatibility: ""Claude Code ≥1.0, skills.sh marketplace, ClawHub marketplace, Vercel Labs skills ecosystem. No system packages required. Optional: MCP network access for SEO tool integrations.""","A5,G1,G2,I4,Q1,Q3,Q4,R1,R7,R8,X1,X5","A5,G1,G2,Q3,Q4,W3"
+content-production,Dom-2,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,53,decl.atomic_capability.g1,### Step 1 — Competitive Content Analysis,"A4,G1,G2,I3,Q1,Q2,Q3,Q4,R1,R7,R8","G1,G2,K4,Q2,Q3,Q4,R10,R5,R8"
+conversion-tools-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+copywriting,Dom-2,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,68,decl.atomic_capability.g2,"Follow these core principles. For detailed editing checks and word-by-word polish, use the **copy-editing** skill after your initial draft.","G2,I3,Q1,Q3,Q4,R1,R8,U1",
+creating-webhook-handlers,Dom-16,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Grep, Glob, Bash(api:webhook-*)","A4,A7,I3,Q1,R7,R8,X1,X7","A4,A7,I4,X7,X8"
+cursor-hello-world,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*)""","G5,I4,Q2,Q3,R1,R7,X1,X4",O4
+cursor-keybindings,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,25,decl.atomic_capability.g5,"| **Inline Edit** | `Cmd+K` | `Ctrl+K` | Edit selected code with AI |
+| **Composer** | `Cmd+I` | `Ctrl+I` | Multi-file AI editing |
+| **Full Composer** | `Cmd+Shift+I` | `Ctrl+Shift+I` | Expanded composer view |","G5,O4,Q1,Q2,R7,U4,X1",O4
+cursor-prod-checklist,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*)""","A3,G2,G5,I4,Q1,Q3,Q4,R1,R5,R7,X1,X7,X8",X8
+customer-persona,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,allowed-tools: Bash(infsh *),"A3,A5,G1,Q1,Q3,Q4,R1,R7,R8,X1,X8",
+customerio-debug-bundle,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Grep, Bash(curl:*), Bash(npx:*)","I4,Q1,Q3,R4,U1,X1,X3,X7,X8","G1,I4,Q3,U1,X7,X8"
+dashboard-layout-planner,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*), Grep""","G1,X1",
+data-analysis,Dom-7,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,104,decl.atomic_capability.g5,"- **CSV files**: Table name is the filename without extension (e.g., `data.csv` → `data`)
+- **Multiple files**: All tables from all files are available in the same query context, enabling cross-file joins
+- **Special characters**: Sheet/file names with spaces or special characters are auto-sanitized (spaces → underscores). Use double quotes for names that start with numbers or contain special char","G1,G5,Q1,Q2,Q4,R1,R4","G1,G3,R10,R5,X1,X6,X8"
+data-analyst,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,"description: |
+  SQL, pandas, and statistical analysis expertise for data exploration and insights.
+  Use when: analyzing data, writing SQL queries, using pandas, performing statistical analysis,","G1,Q1",
+data-quality-auditor,Dom-7,declaration,tier_4,Tier 4: 代理协同层,high,SKILL.md,33,decl.atomic_capability.a5,"2. Define thresholds: acceptable null %, outlier rate, value domain
+3. Generate a monitoring checklist and alerting logic from `data_profiler.py --monitor`
+4. Schedule checks at ingestion cadence","A5,G1,Q1,Q4,R1,R7,R9","A2,A5,G1,Q2,Q4,R10,R5,U2,X1"
+database-health-monitor,Dom-16,declaration,tier_4,Tier 4: 代理协同层,high,SKILL.md,1,decl.atomic_capability.a5,"description: |
+  This skill enables Claude to monitor database health using real-time metrics, predictive alerts, and automated remediation. It's designed for production-grade database health monitoring for PostgreSQL and MySQL, detecting performance degradation, resource exhaustion, and replication issues. Use this skill when the user requests to monitor database health, check database performanc","A4,A5,Q1",
+datacommons-client,Dom-7,declaration,tier_3,Tier 3: 环境管控层,medium,references/getting_started.md,293,decl.atomic_capability.o3,## Example 8: Batch Processing Multiple Queries,"G1,I3,I4,O3,Q1,Q2,R1,R7,R8,S4,X4,X7","A2,G1,I4,R1,S4,U2,W1,X1,X4"
+datanalysis-credit-risk,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,name: datanalysis-credit-risk,"G1,Q1,R1,R7,R8","A5,G1,Q2,Q4,R10,U2,X1"
+dataverse-python-usecase-builder,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,19,decl.atomic_capability.o3,"When user describes a use case, ask or determine:
+- What operations are needed? (Create, Read, Update, Delete, Bulk, Query)
+- How much data? (Record count, file sizes, volume)","A3,A7,G1,G2,O3,O4,Q1,Q2,Q3,Q4",
+deadline-prep,Dom-5,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,35,decl.atomic_capability.x3,"| **Refactors** | Renamed files, structural changes, `refactor` commits |
+| **Config/Setup** | package.json, tsconfig, CI/CD, Docker changes |
+| **Tests** | Test files created or modified |","I3,Q2,R7,X3,X8",
+decision-helper,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,27,decl.atomic_capability.g1,"### 1. **Pros/Cons Analysis**
+Simple comparison of advantages and disadvantages",G1,
+deep-research,Dom-3,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebFetch, WebSearch, TodoWrite, mcp__firecrawl__firecrawl_scrape, mcp__firecrawl__firecrawl_search, mcp__firecrawl__firecrawl_map, mcp__firecrawl__firecrawl_crawl, mcp__firecrawl__firecrawl_extract, mcp__firecrawl__firecrawl_agent, mcp__plugin_claude-code-settings_exa__web_search_exa, mcp__plugin_claude-code-settings_exa__get_code_context_exa","Q2,R1,X1",
+deep-research-notebooklm,Dom-5,declaration,tier_4,Tier 4: 代理协同层,high,SKILL.md,58,decl.atomic_capability.a5,Poll `research_status` until complete. Use the `query` parameter as fallback matching -- task IDs can change between `research_start` and `research_status` calls.,"A2,A5,G1,I3,Q1,R7","G1,G2"
+design-system,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,18,decl.atomic_capability.x3,"- **Layout Components**: `/static/app/components/core/layout/`
+  - `container.tsx` - Base container with all layout props
+  - `flex.tsx` - Flex layout primitive","A2,Q1,R1,X3,X7",
+design-system-starter,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,319,decl.atomic_capability.x3,"- FormField (Label + Input + ErrorMessage)
+- Card (Container + Title + Content + Actions)","A5,I3,Q1,Q2,Q3,R1,R7,R8,X3,X7","A4,A5,G1,O4,R8,X1,X3"
+diagnose-seo,,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,22,decl.atomic_capability.q1,"1. **Crawlability** — Can search engines find and access the pages?
+2. **Indexability** — Are the pages allowed to be indexed?",Q1,
+dictionary-api-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+diffdock,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,17,decl.atomic_capability.o3,"- Support protein structures (PDB files) or sequences (via ESMFold)
+- Process single complexes or batch virtual screening campaigns
+- Generate confidence scores to assess prediction reliability","A5,G1,O3,Q1,Q4,R1,R7,R8,X3,X8","G1,G5,Q1,Q2,Q4,R10,R5,R9,W3,X1,X3,X4,X6,X8"
+doc,Dom-12,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,25,decl.atomic_capability.o4,"## Temp and output conventions
+- Use `tmp/docs/` for intermediate files; delete when done.
+- Write final artifacts under `output/doc/` when working in this repo.","A7,G3,O4,Q1,Q2,R1,R7,X3,X4,X7","A7,G1,G3,Q1,R1,R10,R6,X1,X3,X7,X8"
+docs-search,Dom-5,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,32,decl.atomic_capability.x1,"|---------|-------------|
+| `docs-search.sh <query>` | Semantic documentation search |
+| `docs-search.sh --keyword <term>` | Exact keyword matching |","Q1,R7,R8,X1,X8",
+docx,Dom-12,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,79,decl.atomic_capability.o3,**Batching Strategy**: Group related changes into batches of 3-10 changes. This makes debugging manageable while maintaining efficiency. Test each batch before moving to the next.,"G1,G3,I3,O3,O4,Q1,Q2,Q4,R7,X4","G1,G3,G4,O2,O4,Q4,R1,R10,R5,R9,U2,W3,X1,X3,X4,X6,X8"
+domain-intel,Dom-4,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.o3,"description: Passive domain reconnaissance using Python stdlib. Subdomain discovery, SSL certificate inspection, WHOIS lookups, DNS records, domain availability checks, and bulk multi-domain analysis. No API keys required.","G1,I4,O3,Q1,R8,W1,X1,X8","A5,R1,R10,W1"
+domain-name-brainstormer,Dom-3,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,90,decl.atomic_capability.g1,## Recommendations,"G1,Q4",
+draw-io-diagram-generator,Dom-12,declaration,tier_3,Tier 3: 环境管控层,high,assets/templates/uml-class.drawio,43,decl.atomic_capability.o4,"</mxCell>
+        <mxCell id=""iface1_m4"" value=""+ delete(id: UUID): void""
+                style=""text;html=1;align=left;verticalAlign=top;spacingLeft=5;whiteSpace=wrap;overflow=hidden;rotatable=0;""","I2,I3,I4,O4,Q1,Q2,Q3,R1,R7,R8,R9,X3,X5,X7,X8","G2,I2,O4,Q1,Q4,R1,R8,X1,X3,X7,X8"
+ec2,Dom-15,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,228,decl.atomic_capability.o4,"| `aws ec2 authorize-security-group-ingress` | Add inbound rule |
+| `aws ec2 revoke-security-group-ingress` | Remove inbound rule |
+| `aws ec2 authorize-security-group-egress` | Add outbound rule |","A3,A5,O3,O4,Q1,Q2,R7,U1,X7,X8","A3,A5,G1,K4,O4,W1,X5,X7,X8"
+elevenlabs-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,73,decl.atomic_capability.o3,Use `ELEVENLABS_GET_USER_SUBSCRIPTION_INFO` to verify plan limits and remaining credits before bulk generation.,"I4,O3,Q1,Q2,R1,R7",
+elevenlabs-core-workflow-b,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Bash(curl:*), Grep","I3,R1,R7,X1,X8",
+elevenlabs-stt,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"description: ""ElevenLabs speech-to-text with Scribe models and forced alignment via inference.sh CLI. Models: Scribe v1/v2 (98%+ accuracy, 90+ languages). Capabilities: transcription, speaker diarization, audio event tagging, word-level timestamps, forced alignment, subtitle generation. Use for: meeting transcription, subtitles, podcast transcripts, lip-sync timing, karaoke. Triggers: elevenlabs s","Q1,R1,R8,X1,X8",
+elevenlabs-voice-changer,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"description: ""ElevenLabs voice changer - transform any voice to a different voice while preserving speech content and emotion via inference.sh CLI. Models: eleven_multilingual_sts_v2 (70+ languages), eleven_english_sts_v2. Capabilities: speech-to-speech, voice transformation, accent change, voice disguise. Use for: content creation, voice acting, privacy, dubbing, character voices. Triggers: voice","Q1,R1,R8,X1,X8",
+email-drafter,Dom-9,declaration,tier_2,Tier 2: 交互通信层,medium,SKILL.md,81,decl.atomic_capability.c3,"- **Never send emails** — only draft them as files for the user to review and send manually
+- Always check WorkIQ for prior context with the recipient when available","C3,G1,G2,I3,O1,Q3,Q4",
+email-sequence,Dom-16,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,165,decl.atomic_capability.r7,**For detailed templates**: See [references/sequence-templates.md](references/sequence-templates.md),"A3,Q1,Q3,R1,R7,U4","A2,G1,G2,Q3,Q4,S7,W3,X1"
+email-systems,,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,1,decl.atomic_capability.q3,name: email-systems,"A7,O3,Q3",
+email-template-generator,Dom-10,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*)""","G1,Q3,X1",
+entity-optimizer,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"compatibility: ""Claude Code ≥1.0, skills.sh marketplace, ClawHub marketplace, Vercel Labs skills ecosystem. No system packages required. Optional: MCP network access for SEO tool integrations.""","A5,G1,Q1,R1,R7,R8,X1,X5","A5,G1,I4,K4,Q3,Q4,X7"
+etetoolkit,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,310,decl.atomic_capability.o3,"- **Consensus trees**: Analyze support across multiple trees
+- **Batch comparison**: Compare multiple trees pairwise","A4,G1,I3,O3,O4,Q1,Q4,R1,R7,R9,X4","G1,O4,Q1,Q2,Q4,R10,R5,W3,X4"
+evernote-sdk-patterns,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,2,decl.atomic_capability.o3,"Advanced Evernote SDK patterns and best practices.
+  Use when implementing complex note operations, batch processing,
+  search queries, or optimizing SDK usage.","A7,O3,O4,Q1,Q2,R4,R7,R8","A7,G5,O4,Q1,R10,R4,U2"
+exa-core-workflow-a,Dom-3,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Bash(node:*), Grep","Q1,R7,X1",
+exa-reliability-patterns,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,60,decl.atomic_capability.o4,"const broadOpts = { ...opts };
+  delete broadOpts.startPublishedDate;
+  delete broadOpts.endPublishedDate;","A5,A7,O4,Q1,R7",
+excalidraw-diagram-generator,Dom-12,declaration,tier_3,Tier 3: 环境管控层,high,references/element-types.md,8,decl.atomic_capability.x3,"|------|--------|-------------|--------------|
+| `rectangle` | □ | Boxes, containers, process steps | ✅ Yes |
+| `ellipse` | ○ | Emphasis, terminals, states | ✅ Yes |","G3,I3,Q1,Q3,Q4,R1,R7,X3,X7","Q4,R1,R5,R9,X1,X6"
+excel-analysis,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,name: Excel Analysis,"G1,G5,Q1,Q2,R10",
+experiment-designer,Dom-7,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,50,decl.atomic_capability.a5,"- Avoid repeated peeking without proper method
+- Monitor guardrails continuously","A3,A5,G1,Q2,Q3,Q4,R7",Q3
+exploratory-data-analysis,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,249,decl.atomic_capability.g5,"3. **Cache format info:** If analyzing multiple files of the same type, reuse the format information","A4,G1,G3,G5,K2,O3,O4,Q1,Q2,Q3,Q4,R1,R7,R9,S1,S3,S4,U1,W3,X3,X4,X8","A5,C4,G1,G2,G5,K4,O4,Q1,Q2,Q3,Q4,R1,R10,R5,S1,S3,S4,U1,U2,X3,X4,X6,X8"
+external-context,Dom-3,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,20,decl.atomic_capability.x7,"```
+/oh-my-claudecode:external-context What are the best practices for JWT token rotation in Node.js?
+/oh-my-claudecode:external-context Compare Prisma vs Drizzle ORM for PostgreSQL","Q1,R1,R7,R8,X7",
+fact-checker,,declaration,tier_4,Tier 4: 代理协同层,high,SKILL.md,112,decl.atomic_capability.a5,## Common Patterns to Watch For,"A5,G1,Q1",
+figma-multi-env-setup,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(gcloud:*), Bash(vault:*)","A4,R7,R8,X1,X7",
+file-organizer,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,119,decl.atomic_capability.o4,"- Work vs. Personal
+   - Active vs. Archive
+   - Project-specific","A2,G1,O4,Q1,Q4,R7",
+fillout-forms-automation,Dom-11,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+finta-webhooks-events,Dom-16,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,1,decl.atomic_capability.a4,name: finta-webhooks-events,"A3,A4,C3,Q1,Q3,R8",
+firecrawl-performance-tuning,Dom-4,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.o3,"description: |
+  Optimize Firecrawl scraping performance with caching, batch scraping, and format selection.
+  Use when experiencing slow scrapes, optimizing credit usage per page,","O3,Q1,R7,R8,U1",
+fireflies-data-handling,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,172,decl.atomic_capability.o4,"summaryDays: number;          // Keep summary after transcript deleted
+  deleteAfterDays: number;      // Delete everything
+}","O4,Q1,Q3,R7",
+fitness-nutrition,Dom-3,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,208,decl.atomic_capability.o3,"Use the helper scripts in `scripts/` for batch operations,
+or run inline for single calculations:","A3,I4,O3,Q1,Q4,R1,R7,X4,X8","I4,Q1,Q4,R1,W1,X7"
+flow-interview,,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,18,decl.atomic_capability.r7,"- **Beads ID** (e.g., `gno-42`, `bd-123`, `app-12`): Fetch with `bd show`, write back with `bd update`
+- **File path** (e.g., `docs/spec.md`, `SPEC.md`): Read file, interview about contents, write refined version back
+- **Empty**: Prompt for target","A7,Q1,Q2,Q4,R1,R7","A7,I4"
+fluidsim,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,28,decl.atomic_capability.x4,"# Basic installation
+uv uv pip install fluidsim","G1,G3,I4,Q1,Q2,Q4,R7,X4,X7","G1,Q4,R5,X4,X6,X7"
+flutter-expert,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,59,decl.atomic_capability.x3,"- **MobX**: Reactive state management with observables
+- **Redux**: Predictable state containers for complex apps
+- Custom state management solutions and hybrid approaches","C5,G1,Q1,Q4,R7,R8,S3,W2,X3,X7",
+flyio-debug-bundle,Dom-8,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,18,decl.atomic_capability.o4,"Collect machine state, app health, volume status, deploy history, network connectivity, and platform diagnostics into a single archive for Fly.io support tickets. This bundle captures everything needed to troubleshoot stuck deployments, machine boot failures, volume corruption, and edge networking problems.","O4,Q1,Q3,X1,X7,X8",
+flyio-local-dev-loop,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(fly:*), Bash(docker:*), Grep","A5,R7,X1,X3,X8",
+forecast-generator,Dom-7,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*), Grep""","G1,X1",
+forecasting-time-series-data,Dom-7,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Grep, Glob, Bash(cmd:*)","G1,Q2,R1,X1","G1,X1"
+form-cro,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,408,decl.atomic_capability.x3,"- Auto-focus first field on page load
+- Test form container styling (card vs. minimal)","G1,Q1,Q2,Q3,Q4,R1,R8,X3","Q3,Q4"
+freeze,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: - Bash
+  - Read","G4,R1,R6,R7,X1,X8","R1,X8"
+gamma-performance-tuning,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,19,decl.atomic_capability.o3,"Optimize Gamma API integration performance. Gamma's generate-poll-retrieve pattern means most latency is in generation time (10-60s), not API call overhead. Optimize by: reducing poll overhead, parallelizing batch operations, caching results, and choosing the right generation parameters.","A5,A7,O3,R8","G5,I4,R1"
+gh-fix-ci,Dom-13,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,56,decl.atomic_capability.a2,"- Use the `plan` skill to draft a concise plan and request approval.
+7. Implement after approval.
+   - Apply the approved plan, summarize diffs/tests, and ask about opening a PR.","A2,G2,Q4,R8",
+gif-search,Dom-4,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,31,decl.atomic_capability.x7,"- `curl` and `jq` (both standard on macOS/Linux)
+- `TENOR_API_KEY` environment variable","I4,Q1,X7,X8",
+github-issue-query,Dom-7,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,1,decl.atomic_capability.r8,name: github-issue-query,"Q1,Q2,R8,X8","Q2,X8"
+github-pr-query,Dom-6,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,1,decl.atomic_capability.r8,name: github-pr-query,"Q1,Q2,R8,X8","G2,Q2,X8"
+google-admin-automation,Dom-14,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,122,decl.atomic_capability.o4,"- **Admin privileges required**: All tools require the authenticated user to have Google Workspace administrator privileges. Non-admin accounts will receive permission errors.
+- **Delete is permanent**: `GOOGLE_ADMIN_DELETE_USER` permanently removes a user account. This action cannot be undone.
+- **user_key accepts email or ID**: The `user_key` parameter accepts both the user's primary email addre","I4,O3,O4,Q1,Q2,Q3,R7,X7",
+google-cloud-vision-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+google_maps-automation,Dom-3,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,74,decl.atomic_capability.o3,"3. Pass data between steps using tool responses
+4. Use `RUBE_REMOTE_WORKBENCH` for bulk operations or data processing","A7,I4,O3,Q1,R1,R7,X7",
+googlebigquery-automation,Dom-7,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,20,decl.atomic_capability.i4,"## Setup
+**Get Rube MCP**: Add `https://rube.app/mcp` as an MCP server in your client configuration. No API keys needed — just add the endpoint and it works.","I4,Q1,Q2,R7",
+googlecalendar-automation,Dom-14,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,Q3,R1,R7,X7",
+googledrive-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+grammarly-common-errors,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Grep, Bash(curl:*)","A5,A7,R7,X1,X7,X8",
+granola-hello-world,Dom-8,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,105,decl.atomic_capability.k1,"|-------|-------|-----|
+| No transcript generated | Wrong audio device selected | Check System Settings > Sound > Input matches your meeting audio |
+| Meeting not detected | Calendar event missing video link | Add Zoom/Meet/Teams link to event, or manually start recording |","G2,I3,K1,Q1,Q2,Q3,Q4,R1,R2,R7,R8,S2,X1",
+granola-performance-tuning,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,31,decl.atomic_capability.g1,**Hardware recommendations (by priority):**,"G1,K1,Q1,Q3,R1,R7,S2,S6","G1,G5,K4,R8,S2"
+graphhopper-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+groq-core-workflow-b,Dom-8,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Grep","O3,R1,R7,X1,X7",
+groq-observability,Dom-16,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x7,"description: |
+  Set up observability for Groq integrations: latency histograms, token throughput,
+  rate limit gauges, cost tracking, and Prometheus alerts.","A3,A5,A7,R1,R7,X7",
+gsd-milestone-summary,Dom-5,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,54,decl.atomic_capability.o4,"**Current/in-progress milestone** (no archive yet):
+```","G1,I3,O4,Q1,Q2,Q4,R1,R5,R7,X1,X8",
+gsd-note,Dom-14,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,20,decl.atomic_capability.x1,"Runs inline — no Task, no AskUserQuestion, no Bash.
+</objective>","Q1,X1",
+gsd-ui-review,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,2,decl.atomic_capability.x1,"- Write
+  - Bash
+  - Glob","A4,Q1,R1,R7,U1,X1",
+gsd-validate-phase,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,3,decl.atomic_capability.x1,"- Edit
+  - Bash
+  - Glob","A7,G1,Q1,Q4,R1,R7,X1,X8",
+gstack-openclaw-ceo-review,Dom-1,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,128,decl.atomic_capability.o3,Ask the user about each issue ONE AT A TIME. Do NOT batch.,"G1,O3,Q1,Q4,R1,X7",
+guard,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: - Bash
+  - Read","Q1,R1,R6,R7,X1,X8",
+gws-chat,Dom-10,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,32,decl.atomic_capability.o4,"- `create` — Creates a custom emoji. Custom emojis are only available for Google Workspace accounts, and the administrator must turn custom emojis on for the organization. For more information, see [Learn about custom emojis in Google Chat](https://support.google.com/chat/answer/12800149) and [Manage custom emoji permissions](https://support.google.com/a/answer/12850085).
+  - `delete` — Deletes a ","O4,Q1,Q2,Q3,R4",
+gws-docs,Dom-12,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,1,decl.atomic_capability.r7,name: gws-docs,R7,
+gws-gmail-send,Dom-10,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,38,decl.atomic_capability.g2,"| `--dry-run` | — | — | Show the request that would be sent without executing it |
+| `--draft` | — | — | Save as draft instead of sending |","G2,Q3,R4,R8",
+gws-gmail-watch,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,37,decl.atomic_capability.o4,"| `--once` | — | — | Pull once and exit |
+| `--cleanup` | — | — | Delete created Pub/Sub resources on exit |
+| `--output-dir` | — | — | Write each message to a separate JSON file in this directory |","A5,O3,O4,Q1,Q3,R8",
+handling-api-errors,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Grep, Glob, Bash(api:error-*)","I3,Q3,R7,X1","A7,I4,Q1,R10,X8"
+healthcare-cdss-patterns,Dom-1,declaration,tier_2,Tier 2: 交互通信层,medium,SKILL.md,94,decl.atomic_capability.c3,"dose: number,
+  route: 'oral' | 'iv' | 'im' | 'sc' | 'topical',
+  patientWeight?: number,","C3,G1,Q4,R1",
+heygen-automation,Dom-14,declaration,tier_4,Tier 4: 代理协同层,high,SKILL.md,74,decl.atomic_capability.a5,"### 5. Check Video Processing Status
+Poll the processing status and retrieve metadata for a video being generated.","A5,Q1,R1,R7",
+hook-development,Dom-16,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,405,decl.atomic_capability.o4,"```json
+""matcher"": ""mcp__.*__delete.*""  // All MCP delete tools
+```","A4,A5,C2,G1,G3,I3,O4,Q1,Q4,R1,R6,R7,R8,X1,X5,X7,X8","A2,A5,G1,G2,G3,O4,Q4,R1,R6,R8,X1,X7,X8"
+hypogenic,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,435,decl.atomic_capability.x1,"**Issue:** GROBID PDF processing fails
+**Solution:** Ensure GROBID service is running (`bash ./modules/run_grobid.sh`) and PDFs are valid research papers","G1,G3,I4,Q1,Q2,Q4,R1,R7,R8,X1,X4,X7,X8","G5,I4,Q4"
+ideogram-core-workflow-b,Dom-12,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Bash(curl:*), Grep","G1,R1,X1,X8",
+ignisign-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+image-manipulation-image-magick,Dom-12,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,47,decl.atomic_capability.g5,"- Filter and process specific file types
+- Apply transformations to multiple files","G5,O3,Q1,Q2,R1,X1,X4",
+information-security-manager-iso27001,,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,237,decl.atomic_capability.a5,"| Medium | 10-14 | Treatment plan within 90 days |
+| Low | 5-9 | Accept or monitor |
+| Minimal | 1-4 | Accept |","A5,G1,G3,Q2,Q4,R1,R7,U1","A2,A5,C2,G1,G2,I6,O4,Q3,Q4,R10,R5,R8,U1,X3,X6,X7"
+instantly-automation,Dom-14,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.o3,"description: ""Automate Instantly cold email outreach -- manage campaigns, sending accounts, lead lists, bulk lead imports, and campaign analytics -- using natural language through the Composio MCP integration.""","A3,I4,O3,Q1,Q3,R1,R7,R9",
+internal-comms,Dom-9,declaration,tier_3,Tier 3: 环境管控层,medium,examples/3p-updates.md,34,decl.atomic_capability.g2,"2. **Gather information**: Use available tools or ask the user directly
+3. **Draft the update**: Follow the strict formatting guidelines
+4. **Review**: Ensure it's concise (30-60 seconds to read) and data-driven","G2,I3,Q3,Q4,R1,R7,R8","A2,G1,G2,Q3,Q4,R8"
+invoice-organizer,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,301,decl.atomic_capability.o4,### Example 3: Multi-Year Archive,"A2,G1,O3,O4,Q1,Q3,R4,R8,U1",
+ios-hig-design,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,references/keyboard-input.md,63,decl.atomic_capability.c2,"| New password | `.newPassword` | Password generation |
+| One-time code | `.oneTimeCode` | SMS autofill |","A4,A5,C1,C2,I3,K1,K6,O3,O4,Q1,Q2,Q3,Q4,R1,R7,S1,S2,S5,S6,U3,W1,X7,X8","A2,C1,G2,G5,I4,I6,K1,O4,Q3,R1,R5,S1,S2,S6,U2,W3,X1"
+it-operations,,declaration,tier_3,Tier 3: 环境管控层,high,reference/automation.md,609,decl.atomic_capability.o3,"logger.info(f""Bulk creating users from {users_file}"")","A3,A4,A5,C3,G1,G3,I2,I3,I4,K3,K5,O3,O4,Q1,Q2,Q3,Q4,R1,R7,R8,U1,U4,X1,X3,X4,X7,X8","A2,A3,A4,A5,C2,C3,G1,G3,G4,G5,I4,I6,K3,K4,O4,Q1,Q2,Q3,Q4,R10,R4,R5,R6,R8,S7,U1,W1,W2,W3,X1,X3,X4,X5,X6,X7,X8"
+juicebox-install-auth,Dom-15,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Bash(pip:*), Grep","A7,I4,Q1,R7,X1,X4",
+klaviyo-deploy-integration,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(vercel:*), Bash(fly:*), Bash(gcloud:*)","A4,I4,Q3,R7,X1,X3,X7,X8",
+klingai-camera-control,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Grep","G1,I3,R1,S1,X1","I4,R1,S1,W1,X5,X7"
+klingai-ci-integration,Dom-16,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Grep","A5,I4,O3,R1,R7,R8,X1,X4,X7","A3,C2,G5,I4,K4,R1,R5,R8,W1,W3,X4,X5,X6,X7,X8"
+klingai-usage-analytics,Dom-7,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Grep","A3,G1,Q2,R1,X1","A7,G1,Q2,R1,R5,X6"
+landing-page-design,Dom-2,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,allowed-tools: Bash(infsh *),"A5,Q1,Q3,Q4,R1,R7,R8,U1,X1,X8",
+langchain-core-workflow-b,Dom-16,declaration,tier_1,Tier 1: 资源感知层,medium,SKILL.md,235,decl.atomic_capability.r7,"- [Agents Guide](https://js.langchain.com/docs/concepts/agents/)
+- [Tool Calling](https://js.langchain.com/docs/concepts/tool_calling/)","R1,R7,X4",
+latex-posters,Dom-12,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: [Read, Write, Edit, Bash]","A3,G1,G2,I3,O3,Q1,Q2,Q3,Q4,R7,R8,R9,X1,X3,X8","A2,G1,G2,G5,K3,K4,Q3,Q4,X1,X3,X4"
+linear-rate-limits,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,170,decl.atomic_capability.o3,"### Step 5: Batch Mutations
+Combine multiple mutations into one GraphQL request.","A5,A7,I4,O3,O4,Q1,R1,X7,X8","A7,G5,O4,Q3"
+linktree-cost-tuning,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,27,decl.atomic_capability.o3,"| Profile API reads | Repeated fetches of link tree structure | Cache profile data with 5-min TTL; structure changes rarely |
+| Webhook deliveries | Events pushed per link interaction | Filter low-value events; batch webhook processing |","A3,A4,A5,O3,Q1,Q2",
+linktree-debug-bundle,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Bash(curl:*), Grep","A4,A7,G2,I4,R7,X1,X7,X8",
+literature-review,Dom-3,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: [Read, Write, Edit, Bash]","G1,G3,I4,O4,Q1,Q2,Q3,Q4,R7,R8,R9,X1,X3,X4","G1,K3,O4,Q2,Q3,Q4,R1,R10,R5,W3,W4,X1,X3,X4,X5,X6,X8"
+llamaindex,Dom-5,declaration,tier_3,Tier 3: 环境管控层,high,references/query_engines.md,308,decl.atomic_capability.o4,### Reset conversation,"A5,I4,O4,Q1,Q2,R1,R2,R7,R8,W1,X4,X7","A5,G1,O4,Q1,R1,R5,R8,X4"
+llava,Dom-8,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,234,decl.atomic_capability.o3,"7. **max_new_tokens 512-1024** - For detailed responses
+8. **Batch processing** - Process multiple images sequentially","G1,O3,Q1,Q4,R1,R8,X4,X7,X8","A5,G5,Q4,R5,X6"
+llm-patterns,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,191,decl.atomic_capability.o4,"""support_ticket"": {
+    ""input"": ""I can't reset my password"",
+    ""expected_category"": ""support"",","A5,O4,Q3,Q4,R1,R8,X7",
+lm-evaluation-harness,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,80,decl.atomic_capability.o3,"--device cuda:0 \
+  --batch_size auto  # Auto-detect optimal batch size
+```","A5,A7,G1,G3,I4,O3,Q1,Q2,Q3,Q4,R1,R7,R8,X3,X4,X7,X8","A7,G1,G5,I4,Q2,Q3,Q4,S7,X1,X2,X3,X5,X8"
+local-tts,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Bash(python3:*), Bash(file:*), Bash(ls:*)","I4,O3,Q3,Q4,R1,R8,X1,X4",
+mailcheck-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+makepad-2.0-events,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,59,decl.atomic_capability.o4,"// Inline delete with closure capturing loop variable
+delete.on_click: || delete_todo(i)","A4,O4,Q1,Q2,Q3,R1,S1,U3,U4,X3,X8","G1,G2,G5,O4,U2,U4,W3,X1,X8"
+makepad-2.0-splash,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,216,decl.atomic_capability.x3,"1. **Always set `height: Fit` on containers** -- default `height: Fill` causes invisible UI (0px height)
+2. **Use `width: Fill` on the root container** -- never fixed pixel width at the top level","A5,C5,I3,Q1,R1,R7,S2,X3,X7,X8","A5,G1,G3,G5,I4,O4,Q1,R1,U2,U3,X1,X3,X8"
+manim-video,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,26,decl.atomic_capability.x1,"Run `scripts/setup.sh` to verify all dependencies. Requires: Python 3.10+, Manim Community Edition v0.20+ (`pip install manim`), LaTeX (`texlive-full` on Linux, `mactex` on macOS), and ffmpeg. Reference docs tested against Manim CE v0.20.1.","A4,A5,C3,G1,G2,I3,O4,Q1,Q2,R1,R7,S1,U1,X1,X4,X8","A4,C1,G1,G2,I3,K3,O4,Q2,Q4,S1,U1,U2,X1,X4,X8"
+markdown-converter,Dom-12,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,13,decl.atomic_capability.r1,"# Convert to stdout
+uvx markitdown input.pdf","G1,G3,Q1,R1",
+markitdown,Dom-12,declaration,tier_3,Tier 3: 环境管控层,high,scripts/batch_convert.py,2,decl.atomic_capability.g5,"""""""
+Batch convert multiple files to Markdown using MarkItDown.","A5,G1,G3,G5,I4,O3,O4,Q1,Q2,Q3,R1,R4,R7,R8,S1,W1,X1,X3,X4,X7,X8","G1,G4,G5,I4,K3,O4,Q1,Q2,Q4,R1,R10,R4,R5,R9,S1,W3,X3,X4,X6,X7,X8"
+math-olympiad,Dom-1,declaration,tier_3,Tier 3: 环境管控层,medium,references/presentation_prompts.md,37,decl.atomic_capability.o4,"> a debris field: sanity checks, dead ends backed out of, ""note that X (we won't
+> use this)"". Delete them. If a paragraph can be removed and the proof still
+> compiles in the reader's head, remove it.","A5,A7,I3,O3,O4,Q1,Q2,Q4,R1,R7,X1,X5","A2,G1,G2,O4,Q4,X1"
+matlab,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,280,decl.atomic_capability.o3,### Pattern 3: Batch Processing,"G1,G5,I3,O3,O4,Q1,Q2,Q4,R1,R7,R9,U3,X1,X2,X4,X7,X8","A4,C2,G2,G5,K3,O4,Q1,Q2,Q4,R10,R5,W1,X1,X4,X5,X6,X8"
+mcp-builder,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,reference/node_mcp_server.md,443,decl.atomic_capability.o4,"endpoint: string,
+  method: ""GET"" | ""POST"" | ""PUT"" | ""DELETE"" = ""GET"",
+  data?: any,","A5,C5,G1,G2,G3,I3,I4,O4,Q1,Q2,Q3,Q4,R1,R7,R8,X4,X7,X8","A4,C2,C5,G1,G4,I1,I2,I4,O4,Q1,Q2,Q4,R1,R10,R5,R8,U2,W1,W2,W3,X1,X4,X5,X6,X8"
+mdr-745-specialist,,declaration,tier_3,Tier 3: 环境管控层,medium,references/mdr-classification-guide.md,285,decl.atomic_capability.o3,"3. Evaluate QMS maturity (Annex IX capability)
+4. Consider production volume (batch vs. mass)
+5. Assess Notified Body capacity and timeline","A5,C3,G1,O3,Q1,Q2,Q3,Q4,R1,R7","A2,A5,C2,G1,G5,Q3,Q4,R10"
+medchem,Dom-1,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,115,decl.atomic_capability.o3,"# Batch filtering with parallelization
+results = alert_filter(","O3,Q1,Q2,Q4,R1,R7,R8,X4","G1,G5,Q2,Q4,R10,R5,X4,X6"
+meeting,Dom-2,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Agent, Write, Bash","G1,I3,Q1,Q4,R1,R7,X1,X7",
+meeting-analyzer,Dom-5,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,"description: Analyzes meeting transcripts and recordings to surface behavioral patterns, communication anti-patterns, and actionable coaching feedback. Use this skill whenever the user uploads or points to meeting transcripts (.txt, .md, .vtt, .srt, .docx), asks about their communication habits, wants feedback on how they run meetings, requests speaking ratio analysis, mentions filler words or con","G1,Q2,Q3,Q4,R1,R7,R8",
+meeting-insights-analyzer,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,28,decl.atomic_capability.g1,"2. **Communication Analysis**: Evaluates communication effectiveness:
+   - Clarity and directness","A4,G1,I3,O3,R7",
+meeting-minutes,Dom-9,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,43,decl.atomic_capability.g2,"- If possible, send draft to meeting organizer or a designated reviewer for quick verification (within 24 hours).
+- Publish final minutes to the agreed channel (shared drive, repo, ticket, or email) and optionally create tasks in the team's tracker.","G2,I3,Q1,Q2,Q3,Q4,R1,R4,R7,R8",
+memento-flashcards,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,43,decl.atomic_capability.o4,"- Generate a quiz from a YouTube video transcript
+- Import, export, inspect, or delete flashcard data","A5,A7,G3,I4,O4,Q1,Q4,R1,X4","G3,G5,O4,Q2,R10,R5,R6,U2,W1,X1,X4,X6,X7"
+meta-tags-optimizer,Dom-2,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"compatibility: ""Claude Code ≥1.0, skills.sh marketplace, ClawHub marketplace, Vercel Labs skills ecosystem. No system packages required. Optional: MCP network access for SEO tool integrations.""","A5,G1,Q1,Q4,R1,R7,R8,X1,X5","A4,A5,G1,G2,Q4,R8,X7"
+metric-calculator,Dom-1,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*), Grep""","G1,X1",
+microsoft-clarity-automation,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,56,decl.atomic_capability.g1,### 2. Device Performance Analysis,"G1,Q2,R1,R7",
+mindtickle-ci-integration,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,17,decl.atomic_capability.x7,"Configure CI pipelines that validate MindTickle sales enablement API integrations using a two-tier testing strategy. Unit tests mock the MindTickle REST client to verify course enrollment, quiz scoring, and user progress logic without consuming API calls. Integration tests run on main-branch merges with a real Bearer token and company ID to confirm course listing, user search, and completion track","I4,Q1,R7,R8,X7",
+miro-debug-bundle,Dom-4,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Bash(curl:*), Bash(tar:*), Bash(jq:*), Grep","A7,Q1,Q3,R7,W2,X1,X7,X8",
+mistral_ai-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,74,decl.atomic_capability.o3,"3. Pass data between steps using tool responses
+4. Use `RUBE_REMOTE_WORKBENCH` for bulk operations or data processing","A7,I4,O3,Q1,R1,R7,X7",
+mixpanel-automation,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,110,decl.atomic_capability.g5,"- `session_id`: Session ID for consistent pagination (from first response)
+- For batch update: array of profile updates with `$distinct_id` and property operations","G1,G5,I4,O3,Q1,Q2,R7",
+model-merging,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,references/methods.md,26,decl.atomic_capability.o4,### Step 1: TRIM (Reset Small Changes),"O3,O4,Q1,R1,R7,R8,R9,X4,X7,X8","G1,G5,O4,Q2,R1,X4,X8"
+morph-ppt,Dom-12,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,138,decl.atomic_capability.o4,"- Examples: `name=!!scene-ring`, `name=!!scene-dot`, `name=!!actor-feature-box`
+   - Behavior: Modify position/size/color across slides — do NOT delete
+   - **Exit strategy — two trigger scenarios**:","G1,I3,K6,O3,O4,Q1,Q4,R7,U1,X1,X7,X8","A5,C1,G1,G2,G5,I2,O4,Q1,Q3,Q4,R8,S7,U1,X1,X7,X8"
+msg91-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+multimodal-segment-anything,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,112,decl.atomic_capability.o3,"image = Image.open(""image.jpg"")
+input_points = [[[450, 600]]]  # Batch of points","O3,Q1,Q2,R1,R6,R7,R8,R9,X4,X8","G1,G5,Q2,R1,R5,R9,U2,W3,X1,X2,X4,X6,X8"
+my-pull-requests,Dom-6,declaration,tier_1,Tier 1: 资源感知层,medium,SKILL.md,5,decl.atomic_capability.r8,Search the current repo (using #githubRepo for the repo info) and list any pull requests you find (using #list_pull_requests) that are assigned to me.,"Q1,Q4,R8",
+navan-debug-bundle,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Bash(curl:*), Bash(jq:*), Bash(tar:*), Bash(mkdir:*), Bash(date:*), Grep","A7,I4,Q3,R8,W2,X1,X7,X8","G1,I1,I2,W2,X7,X8"
+navan-observability,Dom-16,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(curl:*), Grep, Glob","A5,A7,Q1,Q4,R7,W2,X1,X7,X8","I1,I2,I3,Q4"
+nlp-text-analyzer,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,"description: |
+  This skill enables Claude to perform natural language processing and text analysis using the nlp-text-analyzer plugin. It should be used when the user requests analysis of text, including sentiment analysis, keyword extraction, topic modeling, or other NLP tasks. The skill is triggered by requests involving ""analyze text"", ""sentiment analysis"", ""keyword extraction"", ""topic modelin","A4,G1,Q1",
+notebooklm,Dom-1,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,225,decl.atomic_capability.o4,"nlm alias get <name>                   # Resolve alias to UUID
+nlm alias delete <name>                # Remove alias
+```","A2,A5,G1,G4,I3,O3,O4,Q1,Q3,R7,R8,X1,X2,X4,X7,X8","A2,G1,O4,W3,X8"
+notion-ci-integration,Dom-16,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,245,decl.atomic_capability.g5,#### Python Batch Update Script for CI,"A4,A7,G5,O3,O4,Q1,Q2,R7,R8,X1,X7,X8","A4,I3,O4,R8,X2,X7,X8"
+obsidian-incident-runbook,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,201,decl.atomic_capability.o4,"Resolution: Open both files in Obsidian, manually merge content into the original, delete the conflict file.","I3,K5,O4,Q1,R7,R9,X1,X8","G1,I6,O4,X8"
+office-hours,Dom-9,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,349,decl.atomic_capability.o3,"**Todo-list discipline.** When working through a multi-step plan, mark each task
+complete individually as you finish it. Do not batch-complete at the end. If a task
+turns out to be unnecessary, mark it skipped with a one-line reason.","A2,A3,A4,A5,A7,G1,G2,G3,I3,I4,K6,O3,O4,Q1,Q2,Q3,Q4,R1,R2,R3,R5,R7,R8,U1,X1,X3,X7,X8",
+officecli-pitch-deck,Dom-12,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,156,decl.atomic_capability.o3,"**Phase 3: Build** -- Create file, set metadata, then `officecli open` for resident mode. Build slide by slide using batch mode (heredoc syntax for 4+ elements). Apply chart/table recipes from Sections D/E. Add speaker notes after each slide. `officecli close` before QA.","A5,I2,I3,O3,O4,Q1,Q2,Q3,R8,R9,U1,X1,X7,X8","A2,A5,G1,G2,G3,G5,I2,O4,Q3,Q4,R8,U1,X1,X8"
+oma-translator,Dom-1,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,48,decl.atomic_capability.o3,"If context is insufficient to make a confident decision, ask the user. Prefer one targeted question over a batch of questions.","A5,G1,I3,O3,Q4,R1,R7,X1,X8","G1,G5,Q4"
+on-page-seo-auditor,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,192,decl.atomic_capability.c4,"**With ~~SEO tool + ~~web crawler connected:**
+Claude can automatically pull page HTML via ~~web crawler, fetch keyword search volume and difficulty from ~~SEO tool, retrieve click-through rate data from ~~search console, and download competitor pages for comparison. This enables fully automated audits with live data.","C4,G1,O3,Q1,Q2,Q4,R1,R7,R8,X1,X5","G1,G5,Q4,U1,X1,X7"
+onesignal-rest-api-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+openalex-database,Dom-3,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,169,decl.atomic_capability.o3,### 8. Batch Lookups,"A5,A7,G1,I4,O3,Q1,Q2,Q3,Q4,R7,R9,X4","A3,A5,A7,G1,G5,Q4,R10,R5,W1,W2,X5,X6"
+openevidence-data-handling,,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,106,decl.atomic_capability.i4,"| PHI detected in stored query | De-identification regex missed a pattern | Add pattern to `deidentifyPHI`, re-scan stored queries |
+| API 403 on query submission | BAA not on file or expired API credentials | Verify BAA status, rotate API key |
+| Evidence response contains patient name | Upstream model hallucinated PHI | Post-process all responses through de-identification before display |","I4,O3,Q1,Q4,R7,R9",
+openevidence-observability,Dom-16,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,17,decl.atomic_capability.a5,"OpenEvidence delivers clinical evidence queries where response accuracy and freshness have direct patient safety implications. Monitor query response times to ensure clinicians get timely answers, track evidence freshness to catch stale citations, and audit every query for compliance. Observability must also verify citation accuracy and maintain complete audit logs for regulatory requirements (HIP","A3,A5,Q1",Q1
+openrouter-fallback-config,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash, Grep","Q1,Q2,R1,R7,X1,X8","A7,I4,R1,R5,X7,X8"
+openrouter-model-availability,Dom-16,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash, Grep","A3,A5,Q1,Q2,R1,R7,X1,X7,X8","A5,A7,I4,Q2,R1,W1,X5,X7,X8"
+opentrons-integration,Dom-15,declaration,tier_3,Tier 3: 环境管控层,medium,references/api_reference.md,66,decl.atomic_capability.o4,"| `return_tip(home_after=True)` | Return tip to rack | InstrumentContext |
+| `reset_tipracks()` | Reset tip tracking | None |","I3,O4,Q1,Q3,R7,R9,S7,X3","G1,O4,R5,X1"
+ops-daemon,Dom-15,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"description: Check claude-ops background daemon end-to-end and auto-fix common issues. Detects stale plist paths after plugin upgrades, missing service commands, dead processes, corrupt health files, and bash version mismatches.","A3,O3,Q1,R1,X1,X8",
+ops-inbox,Dom-17,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,190,decl.atomic_capability.o3,"- **HANDLED** — conversation concluded, can be archived
+- **FYI** — newsletters, notifications, automated messages (bulk archive)","A3,A4,A5,C3,G2,O3,O4,Q1,Q3,Q4,R1,R2,R7,R8,X1,X7,X8","G3,I4,K3,Q3,Q4,R8,X1,X4,X7,X8"
+ops-marketing,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: - Bash
+  - Read","A3,A5,G1,G2,I3,I4,O3,Q1,Q2,Q3,Q4,R1,R9,W2,X1,X3,X7,X8",
+ops-speedup,Dom-15,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,172,decl.atomic_capability.o4,"• Unload launch agents: [list]
+  • Docker volume prune (may delete unmounted volumes): [N] MB
+  • Stale node_modules (>14 days): [list of paths]","G1,I3,O3,O4,Q1,X1,X3,X8",
+ops-whatsapp-biz,Dom-10,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,108,decl.atomic_capability.o3,**Cost note**: Always display approximate cost before sending. Utility templates: ~$0.005/msg; Marketing: ~$0.025/msg (US rates — varies by country). Show AskUserQuestion to confirm before bulk sends > 10 recipients.,"A5,I4,O3,Q1,Q2,R1,X1,X7,X8",
+p-image,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"description: ""Generate images with Pruna P-Image models via inference.sh CLI. Models: P-Image, P-Image-LoRA, P-Image-Edit, P-Image-Edit-LoRA. Capabilities: text-to-image, image editing, LoRA styles, multi-image compositing, fast inference. Pruna optimizes models for speed without quality loss. Triggers: pruna, p-image, pruna image, fast image generation, optimized flux, pruna ai, p image, fast ai ","O3,Q1,R1,R7,R8,X1,X8",
+package-search,Dom-3,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Bash, Read, Glob, Grep, Edit, Write","A4,G1,Q1,Q2,Q4,R8,X1,X4,X7,X8",
+paddleocr-text-recognition,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,44,decl.atomic_capability.x1,Scripts declare their dependencies inline ([PEP 723](https://peps.python.org/pep-0723/)). No separate install step is needed — [uv](https://docs.astral.sh/uv/) resolves dependencies automatically:,"A3,A7,G3,I3,Q1,Q2,Q4,R1,R2,R7,R8,U1,X1,X5,X7","G2,G3,G4,I4,R10,R5,R6,U2,W1,W2,X1,X4,X5,X6,X7,X8"
+page-cro,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,9,decl.atomic_capability.g1,You are a conversion rate optimization expert. Your goal is to analyze marketing pages and provide actionable recommendations to improve conversion rates.,"G1,Q1,Q3,Q4,R7,U1","G1,G2,Q3,Q4,U1,W3"
+pagerduty-automation,Dom-14,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,22,decl.atomic_capability.i4,**Get Rube MCP**: Add `https://rube.app/mcp` as an MCP server in your client configuration. No API keys needed — just add the endpoint and it works.,"A7,I3,I4,O3,Q1,Q3,R7",
+palantir-debug-bundle,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Bash(grep:*), Bash(curl:*), Bash(tar:*), Grep","G1,I4,Q3,R7,X1,X7,X8",
+palantir-install-auth,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Bash(pip:*), Grep","I4,Q1,Q2,R7,R8,X1,X4,X7",
+payhip-automation,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+paywall-upgrade-cro,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,174,decl.atomic_capability.o4,"[Upgrade to Pro]    [Delete a project]
+```","G1,G2,I3,O4,Q1,Q3,Q4,R1,U1",
+pdf,Dom-12,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,227,decl.atomic_capability.x4,"```python
+# Requires: pip install pytesseract pdf2image
+import pytesseract","R1,R9,X4","G1,G5,K3,Q2,R1,R10,R5,R9,X1,X4,X6,X7"
+pdf-text-replace,Dom-1,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,72,decl.atomic_capability.x3,"The script requires the `pypdf` library, which is included in the container requirements.","G5,O3,Q1,R1,X3","R1,R5,X6"
+penpot-uiux-design,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,158,decl.atomic_capability.o4,"- Flex children array order is REVERSED for `dir=""column""` or `dir=""row""`
+- After `text.resize()`, reset `growType` to `""auto-width""` or `""auto-height""`","A4,C5,G1,G2,I3,O4,Q1,Q2,Q3,R1,R7,R8,S1,S4,X3,X4,X5,X7,X8","A2,C5,G1,G2,K5,O4,Q4,S1,W3,X1,X3,X4,X5,X8"
+performing-regression-analysis,Dom-7,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Grep, Glob, Bash(cmd:*)","G1,R1,X1","G1,Q2,Q4,R10,R5,U2,X1,X6"
+perplexity-debug-bundle,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Bash(grep:*), Bash(curl:*), Bash(tar:*), Grep","I4,Q1,Q3,R7,X1,X7,X8",
+perplexity-search,Dom-3,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,97,decl.atomic_capability.o3,"- Simple fact lookups → `sonar`
+- Cost-sensitive bulk queries → `sonar`","A3,A5,A7,G1,I3,I4,O3,O4,Q1,Q3,R1,R7,R8,X4,X7,X8","A5,A7,G1,G5,I4,O4,Q3,Q4,R1,R5,X4,X6,X7"
+persona-it-admin,Dom-15,declaration,tier_4,Tier 4: 代理协同层,high,SKILL.md,1,decl.atomic_capability.a5,"description: ""Administer IT — monitor security and configure Workspace.""","A5,O3,Q3,R8",
+pipeline-monitoring-setup,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*), Grep""","G1,X1",
+pitch-deck-visuals,Dom-5,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,allowed-tools: Bash(infsh *),"Q1,Q3,R1,R8,U1,X1,X8",
+plan-writing,,declaration,tier_2,Tier 2: 交互通信层,medium,SKILL.md,104,decl.atomic_capability.u2,"|----------|----------|
+| ""Verify the component works correctly"" | ""Run `npm run dev`, click button, see toast"" |
+| ""Test the API"" | ""curl localhost:3000/api/users returns 200"" |","G5,R7,U2,X8",
+planning-with-files,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,templates/findings.md,16,decl.atomic_capability.o4,"- List all tasks
+    - Delete tasks
+    - Python implementation","A4,A7,C3,G1,G3,O4,Q1,Q2,Q3,R1,R6,R7,R9,U1,W4,X1,X7,X8","A4,A7,G1,G4,O4,Q4,R1,R10,R5,R6,R9,U1,X1,X6,X7,X8"
+platerecognizer-automation,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+playwright-skill,Dom-4,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,280,decl.atomic_capability.x2,"For quick one-off tasks, you can execute code inline without creating files:","A5,A7,G3,Q1,Q2,Q3,R1,R7,R8,S4,U1,U2,X2,X3,X4,X7","A7,G1,G3,I3,Q1,R10,S4,U1,U2,U4,W3,X1,X2,X3,X4,X7"
+playwriter,Dom-11,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,80,decl.atomic_capability.x7,"- Announce destructive UI actions before running them.
+- When capturing logs, redact sensitive tokens/user data in summaries.","Q1,Q4,X7,X8","R1,X8"
+podium-core-workflow-a,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Bash(curl:*), Grep","A4,Q3,R7,X1,X7,X8",
+podium-hello-world,Dom-10,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Bash(curl:*), Grep","Q1,Q3,R7,W2,X1,X7,X8",
+popup-cro,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,20,decl.atomic_capability.g1,"Before providing recommendations, understand:","G1,Q1,Q3,Q4,R7","G1,G2,Q4,W3"
+posthog-rate-limits,Dom-5,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,19,decl.atomic_capability.o3,"PostHog rate limits apply to private API endpoints authenticated with a personal API key (`phx_...`). Public capture endpoints (`/capture/`, `/batch/`, `/decide/`) are **not** rate limited. Understanding which endpoints have limits is critical to avoiding 429 errors.","A5,A7,I4,O3,O4,Q1,R7,R8",
+power-bi-report-design-consultation,Dom-9,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,198,decl.atomic_capability.o4,"✅ Clear visual indication of applied filters
+✅ Reset/clear all options","G1,O4,Q1,Q2,Q4,R1",
+presentation-slide-outliner,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*), Grep""","G1,X1",
+processing-computer-vision-tasks,Dom-8,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Grep, Glob, Bash(cmd:*)","G1,Q1,Q4,R1,X1","G1,G4,Q4,R10,R9,X1,X6"
+product-manager-toolkit,,declaration,tier_2,Tier 2: 交互通信层,high,SKILL.md,214,decl.atomic_capability.c2,"User Dashboard Redesign,5000,high,high,l,Complete redesign
+Mobile Push Notifications,10000,massive,medium,m,Add push support
+Dark Mode,8000,medium,high,s,Dark theme option","A3,A5,C2,G1,G2,I3,Q2,Q3,Q4,R1,R7,R8","A2,C2,G1,G2,I4,Q2,Q3,Q4,R1,R10,R5,R8,X5,X6"
+professional-communication,Dom-9,declaration,tier_3,Tier 3: 环境管控层,medium,references/email-templates.md,273,decl.atomic_capability.o4,"1. **Personalize** - Don't send templates verbatim; adapt to context and relationship
+2. **Delete irrelevant sections** - If you don't have blockers, don't include a blockers section
+3. **Match formality to relationship** - Adjust tone based on how well you know the recipient","A3,A4,A5,C5,G1,G2,I3,O4,Q1,Q3,Q4,R7,R8,W2,X3,X8","A2,A4,C5,G1,G2,I4,O4,Q3,Q4,R8,W2,X3,X5"
+pushbullet-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+pydicom,Dom-11,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,29,decl.atomic_capability.x4,"```bash
+uv pip install pydicom
+uv pip install pillow  # For image format conversion","G1,I3,Q1,R1,R7,R8,X4","Q4,R10,R5,U2,X4,X6"
+pyopenms,Dom-1,declaration,tier_3,Tier 3: 环境管控层,high,references/data_structures.md,10,decl.atomic_capability.x3,Container for complete LC-MS experiment data (spectra and chromatograms).,"G1,G3,Q1,Q2,Q4,R1,R7,R8,R9,X3,X4","G1,Q2,Q4,R10,U2,X3"
+python-expert,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,AGENTS.md,194,decl.atomic_capability.x2,"List comprehensions are more concise, readable to experienced Pythonistas, and generally faster than equivalent `for` loops because they are optimized in the CPython interpreter.","G1,Q1,Q3,R1,R7,X2,X3","G1,I4,Q4,R5,X6"
+qdrant,Dom-5,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,34,decl.atomic_capability.o3,"- **Chroma**: Simpler setup, embedded use cases
+- **FAISS**: Maximum raw speed, research/batch processing
+- **Pinecone**: Fully managed, zero ops preferred","A7,G1,K5,O3,Q1,Q4,R1,R7,R8,R9,W2,X3,X4,X7,X8","A5,G5,I4,Q1,Q4,W1,W3,X1,X3,X4,X5,X8"
+quality-manager-qmr,,declaration,tier_4,Tier 4: 代理协同层,high,SKILL.md,171,decl.atomic_capability.a5,"### Quality Key Performance Indicators (KPIs)
+Monitor comprehensive quality performance metrics ensuring quality excellence and regulatory compliance.","A5,G1,Q4,R7",O4
+rag-qdrant,Dom-5,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,34,decl.atomic_capability.o3,"- **Chroma**: Simpler setup, embedded use cases
+- **FAISS**: Maximum raw speed, research/batch processing
+- **Pinecone**: Fully managed, zero ops preferred","A7,G1,K5,O3,Q1,Q4,R1,R7,R8,R9,W2,X3,X4,X7,X8","A5,G5,I4,Q1,Q4,W1,W3,X1,X3,X4,X5,X8"
+recallai-automation,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+recap,Dom-7,declaration,tier_1,Tier 1: 资源感知层,medium,SKILL.md,18,decl.atomic_capability.q1,"2. **Fetch summary data.** Call the `query` MCP tool with `compare: ""prior_period""`:
+   ```json","A4,I3,Q1",
+recipe-forward-labeled-emails,Dom-14,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,1,decl.atomic_capability.r8,"description: ""Find Gmail messages with a specific label and forward them to another address.""","Q1,Q3,R8",
+recipe-label-and-archive-emails,Dom-14,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.o4,name: recipe-label-and-archive-emails,"O4,Q1,Q3,R8",
+recipe-send-team-announcement,Dom-10,declaration,tier_2,Tier 2: 交互通信层,medium,SKILL.md,24,decl.atomic_capability.c3,"1. Send email: `gws gmail +send --to team@company.com --subject 'Important Update' --body 'Please review the attached policy changes.'`
+2. Post in Chat: `gws chat +send --space spaces/TEAM_SPACE --text '📢 Important Update: Please check your email for policy changes.'`","C3,Q3,R8",
+red-team,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,179,decl.atomic_capability.x1,"| Credential Access | LSASS memory access triggers EDR | Use LSASS-less techniques (DCSync, Kerberoasting) where possible |
+| Execution | PowerShell command-line logging | Use AMSI bypass or alternative execution methods in scope |
+| Lateral Movement | NTLM lateral movement generates event 4624 type 3 | Use Kerberos where possible; avoid NTLM over the network |","A3,A4,G1,I3,Q1,Q3,Q4,R7,X1,X3,X5,X8","A2,G1,I4,Q1,Q2,Q3,Q4,R10,R4,X7"
+regression-analysis-tool,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,name: performing-regression-analysis,G1,
+remote-browser,Dom-11,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,89,decl.atomic_capability.o4,"browser-use python --vars                 # Show defined variables
+browser-use python --reset                # Clear namespace","A7,I3,O4,Q1,Q2,R1,R4,R8,U1,U2,X1",
+remove-bg-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+replit-load-scale,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npx:*), Bash(curl:*)","G1,Q2,R7,R8,X1,X3,X8",
+research-grants,Dom-2,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,allowed-tools: Read Write Edit Bash,"A4,A5,G1,G2,G3,I3,I4,O3,Q1,Q2,Q3,Q4,R1,R4,R7,R8,S4,X1,X7,X8","A2,A4,A5,G1,G2,G5,I4,K4,O4,Q1,Q3,Q4,R1,R10,R4,R5,S4,U1,U2,W1,W3,X1,X4,X5,X6,X7,X8"
+research-ops,Dom-3,declaration,tier_4,Tier 4: 代理协同层,high,SKILL.md,27,decl.atomic_capability.a5,"- the user already supplied evidence and wants it factored into a fresh recommendation
+- the task may be recurring enough that it should become a monitor instead of a one-off lookup","A5,G1,Q1,Q4,R7",
+retellai-enterprise-rbac,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Bash(curl:*), Grep","A7,I4,Q1,R7,X1,X8","I4,X8"
+retention-calculator,Dom-7,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*), Grep""","G1,X1",
+review-docs,Dom-13,declaration,tier_1,Tier 1: 资源感知层,medium,SKILL.md,33,decl.atomic_capability.q1,Files: [list],"Q1,R1,R7",
+risk-assessment-creator,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*)""","G1,X1",
+risk-management-specialist,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,254,decl.atomic_capability.k4,"| 1 | Inherent Safety | Eliminate hazard, fail-safe design | Highest |
+| 2 | Protective Measures | Guards, alarms, automatic shutdown | High |
+| 3 | Information | Warnings, training, IFU | Lower |","A5,G1,I3,K4,Q1,Q2,Q3,Q4,R1,R7","A2,A5,G1,Q2,Q3,Q4,R10,R5,U2"
+salesforce-advanced-troubleshooting,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,122,decl.atomic_capability.o3,"// 1. Multiple processes update the same record simultaneously
+// 2. Bulk operations trigger cascading updates via triggers/flows
+// 3. Parent record locked by child DML (implicit lock)","A5,G1,O3,O4,Q1,Q2,R1,R7,W2,X1,X8",
+scanning-accessibility,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Grep, Glob, Bash(test:a11y-*)","G1,I3,Q3,R1,R7,R8,X1","G1,Q3,Q4,U4"
+scanning-input-validation-practices,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Grep, Glob, Bash(security:*), Bash(scan:*), Bash(audit:*)""","G1,I3,Q1,Q4,R1,X1,X5","G1,I4,R1,R5,R9,X1,X2,X7,X8"
+scanpy,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,263,decl.atomic_capability.o3,### Batch Correction,"G1,G3,O3,Q1,Q2,R1,R7","G1,G5,Q2,Q4,R5"
+scientific-writing,Dom-1,declaration,tier_3,Tier 3: 环境管控层,high,references/writing_principles.md,107,decl.atomic_capability.o4,"| ""in order to"" | ""to"" |
+| ""it is important to note that"" | [delete] |
+| ""a total of 50 participants"" | ""50 participants"" |","A5,G1,G2,I3,O3,O4,Q1,Q2,Q3,Q4,R1,R7,R8,R9,U1,X1","A2,A5,C1,G1,G2,G5,I4,O4,Q1,Q3,Q4,R1,R10,R5,R8,U1,U2,W1,W3,X1,X4,X5,X6,X7,X8"
+scrape,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x7,description: Scrape any webpage as clean markdown via Bright Data Web Unlocker API. Bypasses bot detection and CAPTCHA. Requires BRIGHTDATA_API_KEY and BRIGHTDATA_UNLOCKER_ZONE environment variables.,"I4,W1,X7,X8","G1,I4,X8"
+scrape-do-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+scrapling,Dom-4,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,131,decl.atomic_capability.o4,### POST / PUT / DELETE,"O3,O4,Q1,R8,S3,X4,X8",
+screenshot-feature-extractor,,declaration,tier_3,Tier 3: 环境管控层,medium,references/output-format.md,41,decl.atomic_capability.x7,"### Bad (包含技术实现 - 避免)
+- [ ] 使用 JWT Token 实现登录态管理
+- [ ] 集成 WebSocket 实现实时通信","C5,G1,G3,O3,Q1,R7,U1,X7","C5,G1,X5"
+search-to-slack,Dom-16,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(curl:*), Glob, Grep, WebSearch, WebFetch","A3,A4,G1,I3,Q1,R8,X1,X8",
+securitytrails-automation,Dom-16,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+segment-anything,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,115,decl.atomic_capability.o3,"image = Image.open(""image.jpg"")
+input_points = [[[450, 600]]]  # Batch of points","O3,Q1,Q2,R1,R6,R7,R8,R9,X4,X8","G1,G5,Q2,R1,R5,R9,U2,W3,X1,X2,X4,X6,X8"
+semrush-automation,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,48,decl.atomic_capability.o3,### 2. Keyword Overview and Batch Analysis,"A3,G1,O3,Q1,Q4,R1,R7",
+sendbird-automation,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+senior-computer-vision,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,114,decl.atomic_capability.o3,"--epochs 100 \
+    --batch 16 \
+    --imgsz 640 \","A3,G1,I3,O3,Q1,Q2,Q4,R1,R7,R8,R9,S1,X7","C1,G1,G2,G5,Q1,Q2,Q4,R1,R10,R5,R9,S1,S7,U2,X1,X4,X6"
+sentry-advanced-troubleshooting,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Grep, Bash(node:*), Bash(npm:*), Bash(npx:*), Bash(curl:*), Bash(sentry-cli:*), Bash(dig:*)","A5,Q1,R7,X1,X4,X8","Q1,Q4,U2,X1,X7,X8"
+sentry-javascript-bugs,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,references/api-response-handling.md,68,decl.atomic_capability.o4,"- [ ] Does the API client handle 200 responses with empty bodies?
+- [ ] Are mutation endpoints (PUT, POST, DELETE) handling 402, 409, 422 status codes?
+- [ ] Is `UndefinedResponseBodyError` caught and handled gracefully?","I3,O4,Q1,Q4,R1,R7,X1,X7","O4,X1"
+seo,Dom-16,declaration,tier_4,Tier 4: 代理协同层,high,SKILL.md,491,decl.atomic_capability.a5,"- [ ] Update sitemap when content changes
+- [ ] Monitor ranking changes
+- [ ] Check for broken links","A3,A5,G1,Q1,Q3,R7",
+seo-optimizer,Dom-1,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,"description: Search Engine Optimization specialist for content strategy, technical SEO, keyword research, and ranking improvements. Use when optimizing website content, improving search rankings, conducting keyword analysis, or implementing SEO best practices. Expert in on-page SEO, meta tags, schema markup, and Core Web Vitals.","G1,Q1,Q2,Q4,R1",
+serpapi-deploy-integration,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(vercel:*), Bash(fly:*), Bash(gcloud:*)","A4,I4,Q1,R7,X1,X7",
+serpapi-prod-checklist,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Bash(curl:*), Grep","A7,I4,O4,Q1,X1,X7,X8",
+serpapi-sdk-patterns,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,19,decl.atomic_capability.o4,"Production patterns for SerpApi: typed result interfaces, response caching (critical since each search costs credits), multi-engine abstraction, and async search with the Searches Archive API.","O4,Q1,R8",
+shadcn-ui,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,74,decl.atomic_capability.o4,"<Button variant=""default"">Default</Button>
+<Button variant=""destructive"" size=""sm"">Delete</Button>
+<Button variant=""outline"" disabled>Loading...</Button>","O4,Q1,Q2,Q3,R1,R7,X1,X3,X4,X8","G1,G2,I4,K2,O4,Q3,Q4,R1,W1,W3,X1,X3,X4,X7,X8"
+ship-learn-next,Dom-9,declaration,tier_1,Tier 1: 资源感知层,medium,SKILL.md,54,decl.atomic_capability.q1,"- Summarize everything (focus on actionable parts)
+- List theory without application
+- Include ""nice to know"" vs ""need to practice""","A5,Q1,Q3,Q4",
+shopify-rate-limits,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,83,decl.atomic_capability.o3,### Queue-Based Bulk Operations,"A7,G1,I3,O3,Q1,R7,X7,X8","A7,X8"
+skill-creator,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,65,decl.atomic_capability.o3,"The skill creator is liable to be used by people across a wide range of familiarity with coding jargon. If you haven't heard (and how could you, it's only very recently that it started), there's a trend now where the power of Claude is inspiring plumbers to open up their terminals, parents and grandparents to google ""how to install npm"". On the other hand, the bulk of users are probably fairly com","A4,G1,G2,G3,I3,O3,O4,Q1,Q2,Q3,Q4,R1,R2,R7,R9,X1,X6,X7,X8","A5,G1,G3,G4,I4,Q1,Q2,Q3,Q4,R1,R10,R5,R9,U2,X1,X3,X6,X7,X8"
+skill-share,Dom-7,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,28,decl.atomic_capability.r7,"- Creates properly structured skill directories with SKILL.md
+- Generates standardized scripts/, references/, and assets/ directories
+- Auto-generates YAML frontmatter with required metadata","G1,R7,R8",
+skyvern,Dom-11,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x4,"description: ""AI-powered browser automation — navigate sites, fill forms, extract structured data, log in with stored credentials, and build reusable multi-step workflows using natural language. Install: pip install skyvern && skyvern setup""","C2,I4,Q3,R7,R8,U1,U2,X4",
+smtp-penetration-testing,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,12,decl.atomic_capability.g1,"Conduct comprehensive security assessments of SMTP (Simple Mail Transfer Protocol) servers to identify vulnerabilities including open relays, user enumeration, weak authentication, and misconfiguration. This skill covers banner grabbing, user enumeration techniques, relay testing, brute force attacks, and security hardening recommendations.","G1,Q1,Q3,R1,R8,R9",
+speak-core-workflow-b,Dom-8,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Grep","A3,A7,G1,Q1,R1,R7,S2,X1","G1,Q1,R10"
+speak-data-handling,Dom-14,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Bash(curl:*), Grep","A7,I4,R7,X1,X8","A3,G1,K4,O4,Q1"
+speech-to-text,Dom-8,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"description: ""Transcribe audio to text with ElevenLabs Scribe and Whisper models via inference.sh CLI. Models: ElevenLabs Scribe v2 (98%+ accuracy, diarization), Fast Whisper Large V3, Whisper V3 Large. Capabilities: transcription, translation, multi-language, timestamps, speaker diarization, audio event tagging. Use for: meeting transcription, subtitles, podcast transcripts, voice notes. Triggers","Q1,R1,R7,R8,X1,X8",
+ssh-key-manager,Dom-15,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*), Grep""","G1,X1,X3,X8",
+sslmate-cert-spotter-api-automation,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+statistical-significance-calculator,Dom-1,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*), Grep""","G1,X1",
+statsmodels,Dom-7,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,299,decl.atomic_capability.o4,"- Normality tests (Jarque-Bera, Omnibus, Anderson-Darling, Lilliefors)
+- Specification tests (RESET, Harvey-Collier)","G1,I3,O4,Q1,Q2,Q4,R7,R9","G1,O4,Q2,Q4,U2"
+strategic-alignment,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,"description: ""Cascades strategy from boardroom to individual contributor. Detects and fixes misalignment between company goals and team execution. Covers strategy articulation, cascade mapping, orphan goal detection, silo identification, communication gap analysis, and realignment protocols. Use when teams are pulling in different directions, OKRs don't connect, departments optimize locally at com","A3,A4,G1,G2,I3,Q1,Q3,Q4,R1,R7,R9","G1,G2,Q2,Q3,Q4,R1,R10,R5"
+sympy,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,references/matrices-linear-algebra.md,100,decl.atomic_capability.o4,"# Delete row
+M = M.row_del(0)","G1,I3,O3,O4,Q1,Q2,Q4,R1,R7,R8,X2","G1,Q4,R10,R5,X1,X6"
+system-info,Dom-8,implementation,tier_1,Tier 1: 资源感知层,high,scripts/get_system_info.py,14,impl.atomic_capability.s7,"info = {
+        ""os"": platform.system(),
+        ""os_version"": platform.version(),",Q1,"R1,R10,S7"
+systematic-literature-review,Dom-3,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,98,decl.atomic_capability.o3,"Instead, you MUST call the `task` tool to spawn subagents. The reason: extracting 10-50 papers in your own context consumes too many tokens and degrades synthesis quality in Phase 4. Each subagent runs in an isolated context with only its batch of papers, producing cleaner extractions.","A7,G1,I3,O3,Q1,Q2,Q4,R1,R7,X1,X7","G1,G5,K4,Q1,R10,W1,X2,X5"
+team-frontend,,declaration,tier_3,Tier 3: 环境管控层,high,roles/developer/role.md,66,decl.atomic_capability.o3,"| <= 2 components | Direct inline Edit/Write |
+| 3-5 components | Single batch implementation |
+| > 5 components | Group by module, implement per batch |","A5,G1,G3,I3,O3,O4,Q1,Q2,Q4,R1,X1,X7,X8","A5,G1,G5,O4,Q1,Q2,Q4,X1,X8"
+team-review,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,167,decl.atomic_capability.o4,"// Compare with tasks.json active_agents
+// Reset orphaned tasks (in_progress but agent gone) to pending
+```","A5,A7,G1,G2,O3,O4,Q1,Q2,R1,R7,X1,X8","A2,A5,A7,G1,G2,G3,G5,I4,O4,Q1,Q4,R1,X1,X8"
+team-ui-polish,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,193,decl.atomic_capability.o4,"// Compare with tasks.json active tasks
+// Reset orphaned tasks (in_progress but agent gone) to pending
+```","A5,A7,G1,G2,I3,O4,Q1,Q2,Q4,R1,S3,U1,X1,X3,X7,X8","A5,A7,C2,G1,G2,O4,Q1,Q4,S3,U1,X1,X3,X8"
+team-visual-a11y,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,290,decl.atomic_capability.o4,"// Compare with tasks.json active tasks
+// Reset orphaned tasks (in_progress but agent gone) to pending
+```","A5,A7,G1,I3,K1,K6,O4,Q1,Q2,Q3,Q4,R1,R9,U1,X1,X3,X8","A2,A4,A5,A7,G1,K1,O4,Q1,Q4,R1,R10,U1,X3,X8"
+technical-seo-checker,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,179,decl.atomic_capability.o3,### Site-Wide / Bulk Audit (5+ URLs),"A5,G1,O3,Q1,Q4,R1,R7,R8,U1,X1,X5","A2,A4,A5,A7,C2,G1,G2,O4,Q4,R6,S4,S7,X1,X3,X5,X7,X8"
+technical-writer,Dom-2,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,222,decl.atomic_capability.x1,"# or
+chmod +x script.sh
+```","G3,I3,Q1,R7,R8,U1,X1,X4,X8",
+telegram-automation,Dom-10,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,94,decl.atomic_capability.o4,### 4. Edit and Delete Messages,"I4,O3,O4,Q1,Q2,R2,R7,X7",
+telephony,Dom-10,declaration,tier_2,Tier 2: 交互通信层,high,SKILL.md,1,decl.atomic_capability.c2,"description: Give Hermes phone capabilities without core tool changes. Provision and persist a Twilio number, send and receive SMS/MMS, make direct calls, and place AI-driven outbound calls through Bland.ai or Vapi.","A3,A4,A5,C2,G1,I4,Q1,Q3,R7,W2,X4,X7","A4,C2,G1,G4,I4,Q4,R10,R5,R6,W1,X1,X6,X7"
+test-organization-helper,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*), Grep""","G1,X1",
+test-report-generator,Dom-1,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.g1,"description: |
+  This skill generates comprehensive test reports with coverage metrics, trends, and stakeholder-friendly formats (HTML, PDF, JSON). It aggregates test results from various frameworks, calculates key metrics (coverage, pass rate, duration), and performs trend analysis. Use this skill when the user requests a test report, coverage analysis, failure analysis, or historical comparisons","G1,Q2",
+test-retry-config,Dom-13,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*), Grep""","A7,G1,X1",
+tripadvisor-content-api-automation,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+twilio-communications,Dom-1,declaration,tier_2,Tier 2: 交互通信层,high,SKILL.md,1,decl.atomic_capability.c2,"description: ""Build communication features with Twilio: SMS messaging, voice calls, WhatsApp Business API, and user verification (2FA). Covers the full spectrum from simple notifications to complex IVR systems and multi-channel authentication. Critical focus on compliance, rate limits, and error handling. Use when: twilio, send SMS, text message, voice call, phone verification.""","A4,A7,C2,I3,O3,O4,Q3,R1",
+twoFactor,Dom-13,declaration,tier_2,Tier 2: 交互通信层,medium,SKILL.md,1,decl.atomic_capability.c2,"description: Configure TOTP authenticator apps, send OTP codes via email/SMS, manage backup codes, handle trusted devices, and implement 2FA sign-in flows using Better Auth's twoFactor plugin. Use when users need MFA, multi-factor authentication, authenticator setup, or login security with Better Auth.","C2,Q3,X7,X8",
+unfreeze,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: - Bash
+  - Read","R7,X1,X8",
+unpause-subs,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,27,decl.atomic_capability.o4,"If the project config file only contains `{""settings"": {""enabled"": false}}` and nothing else, delete it entirely (clean state).",O4,
+updown-io-automation,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+vercel-webhooks-events,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(curl:*)","A4,A7,Q2,Q3,R7,R8,X1,X7,X8","A4,A7,X7,X8"
+vestaboard-automation,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+vibe-prd,Dom-9,declaration,tier_1,Tier 1: 资源感知层,high,SKILL.md,28,decl.atomic_capability.r7,"1. Look for `docs/research-*.md` (or `*.txt` for backward compatibility) in the project
+2. If found, read it and reference insights during Q&A","A3,G1,Q1,R7",
+video-editing,Dom-12,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,72,decl.atomic_capability.o3,### Batch cut from edit decision list,"I3,O3,Q1,Q2,R1,R7,S1,U1",
+viral-generator-builder,,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,155,decl.atomic_capability.a3,"- Compare with friends feature
+- Daily/weekly changing results
+```","A3,R1,U1",
+weathermap-automation,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,77,decl.atomic_capability.x7,"- **Session reuse**: Reuse session IDs within a workflow. Generate new ones for new workflows
+- **Pagination**: Check responses for pagination tokens and continue fetching until complete","I4,O3,Q1,R1,R7,X7",
+web-design-guidelines,,declaration,tier_1,Tier 1: 资源感知层,medium,SKILL.md,25,decl.atomic_capability.r8,"```
+https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md
+```","R1,R8",X8
+web-quality-audit,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,17,decl.atomic_capability.g1,"2. Categorize findings by severity (Critical, High, Medium, Low)
+3. Provide specific, actionable recommendations
+4. Include code examples for fixes","G1,Q1,R7",
+webflow-hello-world,,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Bash(npx:*)","A7,G2,Q1,X1,X7",
+webhook-sender-creator,,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: ""Read, Write, Edit, Bash(cmd:*), Grep""","A4,G1,X1",
+whisper,Dom-8,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,175,decl.atomic_capability.o3,## Batch processing,"A5,A7,G1,I3,O3,Q1,R1,R7,R8,X4","Q4,R1"
+wiki,Dom-5,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,40,decl.atomic_capability.o4,"### List / Read / Delete
+```","O4,Q1,R7,X8",
+windows-privilege-escalation,Dom-15,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,12,decl.atomic_capability.x7,"Provide systematic methodologies for discovering and exploiting privilege escalation vulnerabilities on Windows systems during penetration testing engagements. This skill covers system enumeration, credential harvesting, service exploitation, token impersonation, kernel exploits, and various misconfigurations that enable escalation from standard user to Administrator or SYSTEM privileges.","A3,A5,G1,I3,Q1,Q2,R6,R9,X7",
+windsurf-data-handling,Dom-15,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,62,decl.atomic_capability.x7,"# ===== SECRETS =====
+.env","I4,Q3,R7,X7,X8",
+windsurf-license-management,Dom-14,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,33,decl.atomic_capability.a5,"4. **Optimize Subscription**
+5. **Monitor and Report**","A5,G1,R7","A5,G1,Q4"
+windsurf-usage-analytics,Dom-7,declaration,tier_4,Tier 4: 代理协同层,medium,SKILL.md,33,decl.atomic_capability.a5,"4. **Define Baselines**
+5. **Monitor and Optimize**","A5,G1,R7","A5,G1,Q4"
+workhuman-core-workflow-b,Dom-17,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,1,decl.atomic_capability.x1,"allowed-tools: Read, Write, Edit, Bash(npm:*), Grep","Q1,R8,X1,X7",
+writing-skills,Dom-13,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,26,decl.atomic_capability.o4,"# 6. Delete the test skill (optional)
+hogli unsync:skill -- --name <skill-name>","O4,Q1,R1,R7,R8",
+xlsx,Dom-12,declaration,tier_3,Tier 3: 环境管控层,medium,SKILL.md,228,decl.atomic_capability.o4,"sheet.insert_rows(2)  # Insert row at position 2
+sheet.delete_cols(3)  # Delete column 3","G1,O3,O4,Q1,R7,R9","O4,R1,R10,R5,R6,S7,X1,X6,X8"
+youtube-content,Dom-4,declaration,tier_3,Tier 3: 环境管控层,high,SKILL.md,16,decl.atomic_capability.x4,"```bash
+pip install youtube-transcript-api
+```","A5,A7,Q1,Q2,Q4,X4","Q1,R10,W1,X4"
