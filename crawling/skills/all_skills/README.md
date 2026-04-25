@@ -1,4 +1,4 @@
-all_skills.db是四个网站数据的汇总
+all_skills.db是四个网站数据的汇总，repo_url标0的数据代表没有对应的github地址
 
 因为clawhub网站有单独的下载方式，所以文件download_all_skill_02.py用于单独下载网站clawhub的数据。
 
