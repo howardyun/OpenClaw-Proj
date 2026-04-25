@@ -1,0 +1,9 @@
+all_skills.db是四个网站数据的汇总
+
+因为clawhub网站有单独的下载方式，所以文件download_all_skill_02.py用于单独下载网站clawhub的数据。
+
+download_all_skill_01.py的下载逻辑如下：
+以仓库为单位进行下载，清除除skill文件夹以外的数据，再清除数据库中未被记录的skill文件夹，完成后在下载文件夹用.clean文件标记。
+如果出现空文件夹说明数据库中记录的skill名称与github仓库中的实际skill名不相同。
+
+两个下载脚本的临时文件夹都为D:\tmp，且都会检查下载文件夹，避免重复下载
