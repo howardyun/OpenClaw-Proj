@@ -1,4 +1,4 @@
-version: 2
+version: 4
 atom_family_max:
   R: 10
   Q: 4
@@ -31,8 +31,6 @@ domains:
     - G1
     - R1
     one_of: []
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: R3-R10, Q1-Q4, S1-S7, W1-W4, U1-U4, C1-C5, X1-X8, G2-G5, O1-O5, K1-K6, A3-A7,
       I1-I7
@@ -137,8 +135,6 @@ domains:
     - R1
     - R2
     one_of: []
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: R3-R10, W1-W4, U1-U4, C1-C5, X1-X8, G3-G5, O1-O5, K1-K6, A3-A7, I1-I7
     atoms:
@@ -217,7 +213,7 @@ domains:
   - 搜文章
   max_tier_whitelist: Tier 2 (通信)
   minimum_permission_set:
-    raw: R1 ，W1，W2，Q1，G1
+    raw: R1，W1，W2，Q1，G1
     atoms:
     - G1
     - Q1
@@ -225,7 +221,7 @@ domains:
     - W1
     - W2
   minimum_permission_combinations:
-    raw: R1 + (W1 或 W2) + Q1 + G1<br/>
+    raw: R1 + (W1 或 W2) + Q1 + G1
     all_of:
     - G1
     - Q1
@@ -233,8 +229,6 @@ domains:
     one_of:
     - - W1
       - W2
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: R3-R10, S1-S7, U1-U4, C1-C5, X1-X8, G3-G5, O1-O5, K1-K6, A3-A7, I1-I7
     atoms:
@@ -313,7 +307,7 @@ domains:
   - 拉 API 数据
   max_tier_whitelist: Tier 2 (通信)
   minimum_permission_set:
-    raw: R1 ，W2，W3，Q1
+    raw: R1，W2，W3，Q1
     atoms:
     - Q1
     - R1
@@ -327,8 +321,6 @@ domains:
     one_of:
     - - W2
       - W3
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: R3-R10, S1-S7, U1-U4, C1-C5, O1-O5, K1-K6, A3-A7, I1-I7
     atoms:
@@ -397,7 +389,7 @@ domains:
   - 读连接器内容后总结
   max_tier_whitelist: Tier 1 (资源感知)
   minimum_permission_set:
-    raw: R1，R4， R7，R8，Q1，G1
+    raw: R1，R4，R7，R8，Q1，G1
     atoms:
     - G1
     - Q1
@@ -415,8 +407,6 @@ domains:
     - - R4
       - R7
       - R8
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: W1-W4, U1-U4, C1-C5, X1-X8, G3-G5, O1-O5, K1-K6, A3-A7, I2-I7
     atoms:
@@ -506,8 +496,6 @@ domains:
       - R7
       - R8
       - R9
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: W1-W4, U1-U4, C1-C5, X1-X8, G2-G5, O1-O5, K1-K6, A3-A7, I2-I7
     atoms:
@@ -591,8 +579,6 @@ domains:
     one_of:
     - - R7
       - R8
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: W1-W4, U1-U4, C1-C5, X1-X8, G3-G5, O1-O5, K1-K6, A3-A7, I2-I7
     atoms:
@@ -677,8 +663,6 @@ domains:
       - S2
       - S4
       - S7
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: W1-W4, U1-U4, C1-C5, X1-X8, O1-O5, K1-K6, A3-A7, I1-I7
     atoms:
@@ -744,7 +728,7 @@ domains:
   - 纪要整理
   max_tier_whitelist: Tier 1 + Tier 2
   minimum_permission_set:
-    raw: R1，R4，R7，R8，Q3，G2 ，O1
+    raw: R1，R4，R7，R8，Q3，G2，O1
     atoms:
     - G2
     - O1
@@ -764,8 +748,6 @@ domains:
       - R4
       - R7
       - R8
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: X1-X8, K1-K6, A3-A7, I2-I7, O2-O5
     atoms:
@@ -833,8 +815,6 @@ domains:
     - - C2
       - C3
       - O1
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: X1-X8, K1-K6, A3-A7, I2-I7, O3-O5
     atoms:
@@ -895,8 +875,6 @@ domains:
     - R1
     - U2
     one_of: []
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: X1-X8, K1-K6, A3-A7, I2-I7, C4-C5
     atoms:
@@ -959,8 +937,6 @@ domains:
       - R5
     - - G3
       - G4
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: W1-W4, U1-U4, C1-C5, O2-O5, K1-K6, A3-A7, I2-I7
     atoms:
@@ -1014,7 +990,7 @@ domains:
   - repo 改写
   max_tier_whitelist: Tier 1 + Tier 3
   minimum_permission_set:
-    raw: R1 + R5 + (X1 或 X2 或 X8) + X6
+    raw: R1，R5，X1，X2，X8，X6
     atoms:
     - R1
     - R5
@@ -1032,8 +1008,6 @@ domains:
     - - X1
       - X2
       - X8
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: W1-W4, U1-U4, C1-C5, K1-K6, A3-A7, I2-I7, O2-O5
     atoms:
@@ -1104,8 +1078,6 @@ domains:
     one_of:
     - - Q3
       - R8
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: W1-W4, U1-U4, C1-C5, X1-X8, K1-K6, A3-A7, I2-I7, O3-O5
     atoms:
@@ -1168,7 +1140,7 @@ domains:
   - 杀进程
   max_tier_whitelist: Tier 3 (环境管控)
   minimum_permission_set:
-    raw: R1，K1，K2、K3，K5
+    raw: R1，K1，K2，K3，K5
     atoms:
     - K1
     - K2
@@ -1184,8 +1156,6 @@ domains:
       - K2
       - K3
       - K5
-    refs: []
-    placeholders: []
   forbidden_atoms:
     raw: W1-W4, U1-U4, C1-C5, O1-O5, A3-A7, I2-I7
     atoms:
@@ -1235,21 +1205,22 @@ domains:
   - 持续监控后自动处理
   max_tier_whitelist: Tier 4 (代理协同)
   minimum_permission_set:
-    raw: A3，A4，A5
+    raw: R1，G1，A3，A4，A5
     atoms:
     - A3
     - A4
     - A5
+    - G1
+    - R1
   minimum_permission_combinations:
-    raw: 基础功能域最小权限 + (A3 或 A4 或 A5)
-    all_of: []
+    raw: R1 + G1 + (A3 或 A4 或 A5)
+    all_of:
+    - G1
+    - R1
     one_of:
     - - A3
       - A4
       - A5
-    refs:
-    - base_domain_minimum_permission_set
-    placeholders: []
   forbidden_atoms:
     raw: I4/I6 默认禁；K1-K6 仅在明确限定场景允许
     atoms:
@@ -1278,28 +1249,30 @@ domains:
   - A 系统读 B 系统写
   max_tier_whitelist: Tier 4 (代理协同)
   minimum_permission_set:
-    raw: I2，I3，O2，C3，U2
+    raw: R1，R8，Q3，G2，O2，C3，U2，I2，I3
     atoms:
     - C3
+    - G2
     - I2
     - I3
     - O2
+    - Q3
+    - R1
+    - R8
     - U2
   minimum_permission_combinations:
-    raw: 基础功能域最小权限 + (I2 或 I3) + 目标动作原子（如 O2/C3/U2）
-    all_of: []
+    raw: R1 + (R8 或 Q3) + G2 + (O2 或 C3 或 U2) + (I2 或 I3)
+    all_of:
+    - G2
+    - R1
     one_of:
+    - - Q3
+      - R8
+    - - C3
+      - O2
+      - U2
     - - I2
       - I3
-    refs:
-    - base_domain_minimum_permission_set
-    placeholders:
-    - name: target_action_atom
-      raw: 目标动作原子(如 O2/C3/U2)
-      examples:
-      - O2
-      - C3
-      - U2
   forbidden_atoms:
     raw: I4/I6 默认禁；K1-K6, O4 默认高危
     atoms:

@@ -3,9 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from core import load_domains_from_yaml, sort_atoms
+from core import load_domains_from_yaml
 
 
 class DomainQueryService:
@@ -37,52 +37,7 @@ class DomainQueryService:
             raise KeyError(f"功能域不唯一，请更精确指定: {names}")
         return candidates[0]
 
-    def _resolve_combination(
-        self,
-        domain_key: str,
-        *,
-        base_domain: Optional[str] = None,
-        target_action_atom: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        domain = self.find_domain(domain_key)
-        combo = domain.minimum_permission_combinations
-
-        result: Dict[str, Any] = {
-            "raw": combo.raw,
-            "all_of": list(combo.all_of),
-            "one_of": [list(group) for group in combo.one_of],
-            "refs": list(combo.refs),
-            "placeholders": [dict(item) for item in combo.placeholders],
-        }
-
-        if "base_domain_minimum_permission_set" in result["refs"]:
-            if not base_domain:
-                raise ValueError(f"{domain.id}:{domain.name} 需要提供 --base-domain 才能解析组合模板。")
-            base = self.find_domain(base_domain)
-            result["all_of"] = sort_atoms(base.minimum_permission_set.atoms + result["all_of"])
-            result["resolved_from_base_domain"] = {
-                "domain_id": base.id,
-                "domain_name": base.name,
-                "minimum_permission_set": base.minimum_permission_set.atoms,
-            }
-
-        for placeholder in result["placeholders"]:
-            if placeholder.get("name") == "target_action_atom":
-                placeholder["resolved_to"] = target_action_atom
-                if target_action_atom:
-                    result["all_of"] = sort_atoms(result["all_of"] + [target_action_atom])
-
-        result["all_of"] = sort_atoms(result["all_of"])
-        result["one_of"] = [sort_atoms(group) for group in result["one_of"]]
-        return result
-
-    def get_domain_info(
-        self,
-        domain_key: str,
-        *,
-        base_domain: Optional[str] = None,
-        target_action_atom: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    def get_domain_info(self, domain_key: str) -> Dict[str, Any]:
         domain = self.find_domain(domain_key)
         return {
             "domain_id": domain.id,
@@ -93,11 +48,11 @@ class DomainQueryService:
                 "raw": domain.minimum_permission_set.raw,
                 "atoms": domain.minimum_permission_set.atoms,
             },
-            "minimum_permission_combinations": self._resolve_combination(
-                domain_key,
-                base_domain=base_domain,
-                target_action_atom=target_action_atom,
-            ),
+            "minimum_permission_combinations": {
+                "raw": domain.minimum_permission_combinations.raw,
+                "all_of": domain.minimum_permission_combinations.all_of,
+                "one_of": domain.minimum_permission_combinations.one_of,
+            },
             "forbidden_atoms": {
                 "raw": domain.forbidden_atoms.raw,
                 "atoms": domain.forbidden_atoms.atoms,
@@ -109,34 +64,63 @@ class DomainQueryService:
         }
 
 
+# ---- helper functions ----
+def get_domain_privilege(query_domain: str, yaml: str = "./domains.yaml") -> Dict[str, Any]:
+    service = DomainQueryService(yaml)
+    return service.get_domain_info(query_domain)
 
+
+def get_domains_mini_privilege(query_domain: str, yaml: str = "./domains.yaml") -> List[str]:
+    result = get_domain_privilege(query_domain, yaml)
+    return result["minimum_permission_set"]["atoms"]
+
+
+def get_domains_minimum_combination(query_domain: str, yaml: str = "./domains.yaml") -> Dict[str, Any]:
+    result = get_domain_privilege(query_domain, yaml)
+    return result["minimum_permission_combinations"]
+
+
+def get_domains_forbidden_atoms(query_domain: str, yaml: str = "./domains.yaml") -> List[str]:
+    result = get_domain_privilege(query_domain, yaml)
+    return result["forbidden_atoms"]["atoms"]
+
+
+def get_domains_out_of_scope_atoms(query_domain: str, yaml: str = "./domains.yaml") -> List[str]:
+    result = get_domain_privilege(query_domain, yaml)
+    return result["out_of_scope_atoms"]["atoms"]
+
+
+# ---- CLI ----
 def main() -> None:
     parser = argparse.ArgumentParser(description="根据 domain id/name 查询功能域内容")
     parser.add_argument("--yaml", required=True, help="YAML 模板路径")
     parser.add_argument("--domain", required=True, help="功能域编号或名称，例如 Dom-3")
-    parser.add_argument("--base-domain", help="模板域依赖的基础功能域，例如 Dom-10")
-    parser.add_argument("--target-action-atom", help="模板中的目标动作原子，例如 O2/C3/U2")
+    parser.add_argument(
+        "--field",
+        default="all",
+        choices=["all", "minimum_set", "minimum_combination", "forbidden", "out_of_scope"],
+        help="输出字段，默认 all",
+    )
     args = parser.parse_args()
 
-    service = DomainQueryService(args.yaml)
-    result = service.get_domain_info(
-        args.domain,
-        base_domain=args.base_domain,
-        target_action_atom=args.target_action_atom,
-    )
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    result = get_domain_privilege(args.domain, args.yaml)
 
+    if args.field == "all":
+        output: Any = result
+    elif args.field == "minimum_set":
+        output = result["minimum_permission_set"]
+    elif args.field == "minimum_combination":
+        output = result["minimum_permission_combinations"]
+    elif args.field == "forbidden":
+        output = result["forbidden_atoms"]
+    else:
+        output = result["out_of_scope_atoms"]
 
-def get_domains_mini_privilege(query_domain,yaml='./domains.yaml',):
-    service = DomainQueryService(yaml)
-    result = service.get_domain_info(
-        query_domain
-    )
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-    # result = json.dumps(result, ensure_ascii=False, indent=2)
-    # print(result['minimum_permission_set']['atoms'])
-    return result['minimum_permission_set']['atoms']
+    print(json.dumps(output, ensure_ascii=False, indent=2))
+
 
 if __name__ == "__main__":
-    x = get_domains_mini_privilege('Dom-3')
+    # 本地调试示例：
+    x = get_domains_mini_privilege('Dom-17')
     print(x)
+    # main()

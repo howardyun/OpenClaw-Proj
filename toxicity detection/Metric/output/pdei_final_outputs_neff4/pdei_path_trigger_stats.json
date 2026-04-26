@@ -1,0 +1,127 @@
+{
+  "path_A": {
+    "trigger_rate": 0.1484375,
+    "trigger_count": 57,
+    "avg_pdei_when_triggered": 3580.5947368421057,
+    "top_cases": [
+      {
+        "name": "office-hours",
+        "domain": "Dom-9",
+        "source_plat": "skillsmp",
+        "pdei_score": 12299.51
+      },
+      {
+        "name": "it-operations",
+        "domain": "Dom-15",
+        "source_plat": "skill.sh",
+        "pdei_score": 12191.92
+      },
+      {
+        "name": "exploratory-data-analysis",
+        "domain": "Dom-7",
+        "source_plat": "skillsmp",
+        "pdei_score": 7361.51
+      }
+    ]
+  },
+  "path_B": {
+    "trigger_rate": 0.7083333333333334,
+    "trigger_count": 272,
+    "avg_pdei_when_triggered": 1454.0357352941176,
+    "top_cases": [
+      {
+        "name": "office-hours",
+        "domain": "Dom-9",
+        "source_plat": "skillsmp",
+        "pdei_score": 12299.51
+      },
+      {
+        "name": "it-operations",
+        "domain": "Dom-15",
+        "source_plat": "skill.sh",
+        "pdei_score": 12191.92
+      },
+      {
+        "name": "exploratory-data-analysis",
+        "domain": "Dom-7",
+        "source_plat": "skillsmp",
+        "pdei_score": 7361.51
+      }
+    ]
+  },
+  "path_C": {
+    "trigger_rate": 0.13020833333333334,
+    "trigger_count": 50,
+    "avg_pdei_when_triggered": 3936.8114,
+    "top_cases": [
+      {
+        "name": "office-hours",
+        "domain": "Dom-9",
+        "source_plat": "skillsmp",
+        "pdei_score": 12299.51
+      },
+      {
+        "name": "it-operations",
+        "domain": "Dom-15",
+        "source_plat": "skill.sh",
+        "pdei_score": 12191.92
+      },
+      {
+        "name": "exploratory-data-analysis",
+        "domain": "Dom-7",
+        "source_plat": "skillsmp",
+        "pdei_score": 7361.51
+      }
+    ]
+  },
+  "path_D": {
+    "trigger_rate": 0.12239583333333333,
+    "trigger_count": 47,
+    "avg_pdei_when_triggered": 4179.528510638298,
+    "top_cases": [
+      {
+        "name": "office-hours",
+        "domain": "Dom-9",
+        "source_plat": "skillsmp",
+        "pdei_score": 12299.51
+      },
+      {
+        "name": "it-operations",
+        "domain": "Dom-15",
+        "source_plat": "skill.sh",
+        "pdei_score": 12191.92
+      },
+      {
+        "name": "exploratory-data-analysis",
+        "domain": "Dom-7",
+        "source_plat": "skillsmp",
+        "pdei_score": 7361.51
+      }
+    ]
+  },
+  "path_E": {
+    "trigger_rate": 0.5572916666666666,
+    "trigger_count": 214,
+    "avg_pdei_when_triggered": 1788.545046728972,
+    "top_cases": [
+      {
+        "name": "office-hours",
+        "domain": "Dom-9",
+        "source_plat": "skillsmp",
+        "pdei_score": 12299.51
+      },
+      {
+        "name": "it-operations",
+        "domain": "Dom-15",
+        "source_plat": "skill.sh",
+        "pdei_score": 12191.92
+      },
+      {
+        "name": "exploratory-data-analysis",
+        "domain": "Dom-7",
+        "source_plat": "skillsmp",
+        "pdei_score": 7361.51
+      }
+    ]
+  }
+}

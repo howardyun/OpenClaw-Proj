@@ -12,16 +12,21 @@ import threading
 
 
 # 配置
-DB_PATH = "./skillsmp.db"
-OUTPUT_DIR = "/media/szk/skills_mp"
-FAILED_JSON = "/media/szk/skills_mp/failed_repos.json"
+
+DB_PATH = "skillsmp.db"
+OUTPUT_DIR = "skills_output"
+FAILED_JSON = "failed_repos.json"
 MAX_WORKERS = 6
+
+TMP_ROOT = Path(r"D:\tmp")   # 临时目录
 
 lock = threading.Lock()
 progress = 0
 
 
-# 提取 repo
+
+# repo 提取
+
 def extract_repo_from_url(url: str) -> str | None:
     if not url:
         return None
@@ -29,14 +34,15 @@ def extract_repo_from_url(url: str) -> str | None:
     return m.group(1) if m else None
 
 
-# 读取 repo（数据库）
+
+# 读取 repo
+
 def load_repos(db_path: Path) -> Set[str]:
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-
     cur.execute("SELECT github_url FROM skills")
 
-    repos: Set[str] = set()
+    repos = set()
     for (url,) in cur.fetchall():
         repo = extract_repo_from_url(url)
         if repo:
@@ -46,7 +52,28 @@ def load_repos(db_path: Path) -> Set[str]:
     return repos
 
 
-# 读取失败 repo
+
+# repo -> skill 映射
+
+def load_skill_names(db_path: Path) -> Dict[str, Set[str]]:
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT github_url, name FROM skills")
+
+    repo_skills: Dict[str, Set[str]] = {}
+
+    for url, name in cur.fetchall():
+        repo = extract_repo_from_url(url)
+        if repo:
+            repo_skills.setdefault(repo, set()).add(name)
+
+    conn.close()
+    return repo_skills
+
+
+
+# failed
+
 def load_failed() -> Dict[str, str]:
     if not Path(FAILED_JSON).exists():
         return {}
@@ -54,40 +81,38 @@ def load_failed() -> Dict[str, str]:
     with open(FAILED_JSON, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    return {item["repo"]: item.get("error", "") for item in data}
+    return {x["repo"]: x.get("error", "") for x in data}
 
 
-# 原子写入
 def save_failed_atomic(failed_dict: Dict[str, str]):
-    tmp_file = FAILED_JSON + ".tmp"
+    tmp = FAILED_JSON + ".tmp"
     data = [{"repo": k, "error": v} for k, v in failed_dict.items()]
 
-    with open(tmp_file, "w", encoding="utf-8") as f:
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-    os.replace(tmp_file, FAILED_JSON)
+    os.replace(tmp, FAILED_JSON)
+
 
 
 # 已完成 repo
+
 def load_done_repos(output_dir: Path) -> Set[str]:
-    done_repos = set()
+    done = set()
 
     if not output_dir.exists():
-        return done_repos
+        return done
 
-    for repo_dir in output_dir.iterdir():
-        if not repo_dir.is_dir():
-            continue
+    for d in output_dir.iterdir():
+        if d.is_dir() and (d / ".done").exists():
+            done.add(d.name.replace("__", "/"))
 
-        done_flag = repo_dir / ".done"
-        if done_flag.exists():
-            repo = repo_dir.name.replace("__", "/")
-            done_repos.add(repo)
-
-    return done_repos
+    return done
 
 
-# clone repo（禁用交互）
+
+# git clone
+
 def clone_repo(repo: str, tmp_dir: Path) -> Path:
     target = tmp_dir / repo.replace("/", "__")
 
@@ -104,18 +129,13 @@ def clone_repo(repo: str, tmp_dir: Path) -> Path:
     env = os.environ.copy()
     env["GIT_TERMINAL_PROMPT"] = "0"
 
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        env=env
-    )
+    r = subprocess.run(cmd, capture_output=True, env=env)
 
-    if result.returncode != 0:
-        err = result.stderr.decode(errors="ignore").lower()
+    if r.returncode != 0:
+        err = r.stderr.decode(errors="ignore").lower()
 
         if "authentication" in err or "permission denied" in err:
             raise RuntimeError("PRIVATE_OR_NO_PERMISSION")
-
         if "not found" in err:
             raise RuntimeError("REPO_NOT_FOUND")
 
@@ -124,124 +144,145 @@ def clone_repo(repo: str, tmp_dir: Path) -> Path:
     return target
 
 
-# 找 skill
+
+# 找 SKILL.md
+
 def find_skill_folders(repo_dir: Path):
     for root, _, files in os.walk(repo_dir):
         if "SKILL.md" in files:
             yield Path(root)
 
 
+
 # 提取 skill
-def extract_skills(repo_dir: Path, output_dir: Path, repo: str):
+
+def extract_skills(repo_dir: Path, out_dir: Path, repo: str):
     skill_dirs = list(find_skill_folders(repo_dir))
     if not skill_dirs:
         return False
 
-    repo_out = output_dir / repo.replace("/", "__")
+    repo_out = out_dir / repo.replace("/", "__")
     repo_out.mkdir(parents=True, exist_ok=True)
 
-    for skill_dir in skill_dirs:
-        skill_name = skill_dir.name
-        target = repo_out / skill_name
+    for s in skill_dirs:
+        name = s.name
+        target = repo_out / name
 
         if target.exists():
             shutil.rmtree(target, ignore_errors=True)
 
-        shutil.copytree(skill_dir, target)
+        shutil.copytree(s, target)
 
     return True
 
 
-# 单任务（每个 repo 独立临时目录 立即释放）
-def process_repo(repo: str, out_dir: Path,
-                 total: int, failed_dict: Dict[str, str]):
+
+# 清理无效 skill
+
+def cleanup_skills(repo: str, out_dir: Path, repo_skill_map: Dict[str, Set[str]]):
+    repo_out = out_dir / repo.replace("/", "__")
+
+    if not repo_out.exists():
+        return
+
+    valid = repo_skill_map.get(repo, set())
+
+    for d in repo_out.iterdir():
+        if not d.is_dir():
+            continue
+
+        if d.name in [".done", ".cleaned"]:
+            continue
+
+        if d.name not in valid:
+            shutil.rmtree(d, ignore_errors=True)
+
+
+
+# 单 repo
+
+def process_repo(repo: str, out_dir: Path, total: int,
+                 failed_dict: Dict[str, str],
+                 repo_skill_map: Dict[str, Set[str]]):
+
     global progress
 
     tmp_dir = None
 
     try:
-        # 每个 repo 独立临时目录
-        tmp_dir = Path(tempfile.mkdtemp())
+        tmp_dir = TMP_ROOT / repo.replace("/", "__")
+        tmp_dir.mkdir(parents=True, exist_ok=True)
 
         repo_path = clone_repo(repo, tmp_dir)
         extract_skills(repo_path, out_dir, repo)
 
         repo_out = out_dir / repo.replace("/", "__")
         repo_out.mkdir(parents=True, exist_ok=True)
-        (repo_out / ".done").touch()
+
+        done_flag = repo_out / ".done"
+        cleaned_flag = repo_out / ".cleaned"
+
+
+        # done
+
+        done_flag.touch()
+
+
+        # cleanup only once
+
+        if not cleaned_flag.exists():
+            cleanup_skills(repo, out_dir, repo_skill_map)
+            cleaned_flag.touch()
 
         with lock:
             progress += 1
             print(f"[{progress}/{total}] [OK] {repo}")
 
-            if repo in failed_dict:
-                del failed_dict[repo]
-                save_failed_atomic(failed_dict)
+            failed_dict.pop(repo, None)
+            save_failed_atomic(failed_dict)
 
     except Exception as e:
-        err_msg = str(e)
-
         with lock:
             progress += 1
-
-            if err_msg == "PRIVATE_OR_NO_PERMISSION":
-                print(f"[{progress}/{total}] [SKIP_PRIVATE] {repo}")
-                failed_dict.pop(repo, None)
-                save_failed_atomic(failed_dict)
-                return
-
-            if err_msg == "REPO_NOT_FOUND":
-                print(f"[{progress}/{total}] [NOT_FOUND] {repo}")
-                failed_dict.pop(repo, None)
-                save_failed_atomic(failed_dict)
-                return
-
-            print(f"[{progress}/{total}] [FAIL] {repo}")
-            failed_dict[repo] = err_msg
+            print(f"[{progress}/{total}] [FAIL] {repo}: {e}")
+            failed_dict[repo] = str(e)
             save_failed_atomic(failed_dict)
 
     finally:
-        # 每个 repo 处理完立即删除临时目录
         if tmp_dir and tmp_dir.exists():
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
-# 主函数
+
+# main
+
 def main():
     db_repos = load_repos(Path(DB_PATH))
     failed_dict = load_failed()
+    repo_skill_map = load_skill_names(Path(DB_PATH))
 
     out_dir = Path(OUTPUT_DIR)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    done_repos = load_done_repos(out_dir)
+    done = load_done_repos(out_dir)
 
-    all_repos = set(db_repos) | set(failed_dict.keys())
-    repos = list(all_repos - done_repos)
+    repos = list((set(db_repos) | set(failed_dict.keys())) - done)
 
     total = len(repos)
 
-    print(f"\nTOTAL TASKS: {total}")
-    print(f"ALREADY DONE: {len(done_repos)}")
-    print(f"FAILED RETRY: {len(failed_dict)}")
-    print(f"MAX WORKERS: {MAX_WORKERS}")
-    print("\n=== START ===\n")
+    print(f"TOTAL: {total}")
+    print("START")
 
-    if total == 0:
-        print("Nothing to do.")
-        return
-
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
         futures = [
-            executor.submit(process_repo, repo, out_dir, total, failed_dict)
-            for repo in repos
+            ex.submit(process_repo, r, out_dir, total, failed_dict, repo_skill_map)
+            for r in repos
         ]
 
         for _ in as_completed(futures):
             pass
 
-    print(f"\nFAILED LEFT: {len(failed_dict)}")
-    print("ALL DONE")
+    print("DONE")
 
 
 if __name__ == "__main__":

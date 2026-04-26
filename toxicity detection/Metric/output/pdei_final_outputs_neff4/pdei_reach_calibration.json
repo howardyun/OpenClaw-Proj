@@ -1,0 +1,13 @@
+{
+  "beta0": 0.0,
+  "beta1": 1.0,
+  "beta2": 1.0,
+  "alpha1_star": 2.0,
+  "alpha2_fork": 2.0,
+  "global_platform_median": 24196.0,
+  "platform_medians": {
+    "skill.sh": 5562.0,
+    "skillsdirectory": 36905.0,
+    "skillsmp": 38042.0
+  }
+}
