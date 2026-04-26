@@ -10,7 +10,7 @@ import sqlite3
 import subprocess
 import sys
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -260,6 +260,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=min(32, (os.cpu_count() or 1) + 4),
         help="Number of concurrent workers used for batch analysis.",
     )
+    parser.add_argument(
+        "--max-buffered-results",
+        type=int,
+        default=None,
+        help=(
+            "Maximum number of in-flight plus completed-but-not-yet-written batch results. "
+            "Defaults to max(workers * 4, workers)."
+        ),
+    )
     parser.add_argument("--include-hidden", action="store_true")
     parser.add_argument("--matrix-path", default="analyzer/security matrix.md")
     parser.add_argument("--fail-on-unknown-matrix", action="store_true")
@@ -273,7 +282,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--skill-timeout-seconds",
         type=int,
-        default=600,
+        default=400,
         help="Per-skill timeout used only in batch mode.",
     )
     parser.add_argument("--llm-fail-open", action="store_true")
@@ -865,6 +874,14 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
     if skill_timeout_seconds < 1:
         print("[error] --skill-timeout-seconds must be >= 1", file=sys.stderr)
         return 2
+    max_buffered_results = (
+        args.max_buffered_results
+        if args.max_buffered_results is not None
+        else max(args.workers * 4, args.workers)
+    )
+    if max_buffered_results < args.workers:
+        print("[error] --max-buffered-results must be >= --workers", file=sys.stderr)
+        return 2
 
     load_environment()
     requested_formats = [value.strip() for value in args.format.split(",") if value.strip()]
@@ -886,48 +903,75 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
     written_results = 0
     pending_outcomes: dict[int, tuple[str, AnalysisResult | dict[str, str]]] = {}
     next_index_to_write = 0
+    next_index_to_submit = 0
     progress = None
     if tqdm is not None:
         progress = tqdm(total=len(records), desc="Analyzing skills", unit="skill")
 
+    def submit_next(executor: ThreadPoolExecutor, in_flight: dict[Future, tuple[int, SkillRecord]]) -> None:
+        nonlocal next_index_to_submit
+        record = records[next_index_to_submit]
+        future = executor.submit(
+            analyze_record,
+            record,
+            repos_root,
+            matrix_by_id,
+            args,
+            failure_policy,
+        )
+        in_flight[future] = (next_index_to_submit, record)
+        next_index_to_submit += 1
+
+    def write_ready_results() -> None:
+        nonlocal next_index_to_write, written_results
+        while next_index_to_write in pending_outcomes:
+            outcome_type, payload = pending_outcomes.pop(next_index_to_write)
+            if outcome_type == "result":
+                writer.write_result(payload)
+                written_results += 1
+            else:
+                skill_errors.append(payload)
+            next_index_to_write += 1
+
     try:
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
-            future_map = {
-                executor.submit(
-                    analyze_record,
-                    record,
-                    repos_root,
-                    matrix_by_id,
-                    args,
-                    failure_policy,
-                ): (index, record)
-                for index, record in enumerate(records)
-            }
+            in_flight: dict[Future, tuple[int, SkillRecord]] = {}
 
-            for future in as_completed(future_map):
-                index, record = future_map[future]
-                try:
-                    pending_outcomes[index] = future.result()
-                except Exception as exc:  # pragma: no cover - defensive batch isolation
-                    pending_outcomes[index] = (
-                        "error",
-                        {"skill_id": record.skill_id, "error_type": "analysis_error", "error": str(exc)},
-                    )
+            while (
+                next_index_to_submit < len(records)
+                and len(in_flight) < args.workers
+                and len(in_flight) + len(pending_outcomes) < max_buffered_results
+            ):
+                submit_next(executor, in_flight)
 
-                while next_index_to_write in pending_outcomes:
-                    outcome_type, payload = pending_outcomes.pop(next_index_to_write)
-                    if outcome_type == "result":
-                        writer.write_result(payload)
-                        written_results += 1
-                    else:
-                        skill_errors.append(payload)
-                    next_index_to_write += 1
+            while in_flight:
+                completed, _ = wait(in_flight, return_when=FIRST_COMPLETED)
+
+                for future in completed:
+                    index, record = in_flight.pop(future)
+                    try:
+                        pending_outcomes[index] = future.result()
+                    except Exception as exc:  # pragma: no cover - defensive batch isolation
+                        pending_outcomes[index] = (
+                            "error",
+                            {"skill_id": record.skill_id, "error_type": "analysis_error", "error": str(exc)},
+                        )
+
+                write_ready_results()
 
                 if progress is not None:
-                    progress.update(1)
+                    progress.update(len(completed))
                     progress.set_postfix_str(
-                        f"ok={written_results} err={len(skill_errors)} buffered={len(pending_outcomes)}"
+                        f"ok={written_results} err={len(skill_errors)} "
+                        f"buffered={len(pending_outcomes)} inflight={len(in_flight)}"
                     )
+
+                while (
+                    next_index_to_submit < len(records)
+                    and len(in_flight) < args.workers
+                    and len(in_flight) + len(pending_outcomes) < max_buffered_results
+                ):
+                    submit_next(executor, in_flight)
     finally:
         if progress is not None:
             progress.close()
@@ -955,6 +999,7 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
             llm_fallback_max_categories=args.llm_fallback_max_categories,
             llm_timeout_seconds=args.llm_timeout_seconds,
             skill_timeout_seconds=skill_timeout_seconds,
+            max_buffered_results=max_buffered_results,
             llm_failure_policy=failure_policy,
             emit_review_audit=args.emit_review_audit,
             emit_category_discrepancies=args.emit_category_discrepancies,

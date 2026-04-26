@@ -274,6 +274,7 @@ class RunConfig:
     llm_fallback_max_categories: int = 0
     llm_timeout_seconds: int = 30
     skill_timeout_seconds: int = 600
+    max_buffered_results: int | None = None
     llm_failure_policy: str = "fail_open"
     emit_review_audit: bool = False
     emit_category_discrepancies: bool = False
