@@ -228,21 +228,25 @@ class BatchResultWriter:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Resolve skills.sh skill paths from the DB and run the analyzer."
+        description="Resolve skill paths from a skills.sh/all_skills SQLite DB and run the analyzer."
     )
     parser.add_argument(
         "--db",
         default=None,
-        help="Optional path to the skills.sh SQLite DB. Required only when resolving skills via DB metadata.",
+        help=(
+            "Optional path to the skills SQLite DB. Supports the legacy skills table and the "
+            "new all_skills(name, repo_url, ...) table. Required only when resolving skills via DB metadata."
+        ),
     )
     parser.add_argument("--repos-root", default="skills/skill_sh_test", help="Root directory of downloaded repos.")
     parser.add_argument(
         "--skill-id",
         default=None,
         help=(
-            "Optional target identifier. With --db, this is a skills.sh skill_id "
-            "(e.g. aahl/skills/mcp-vods). Without --db, this is a local skill slug matched "
-            "against directories under --repos-root."
+            "Optional target identifier. With --db, this is a legacy skills.sh skill_id "
+            "(e.g. aahl/skills/mcp-vods), a synthesized all_skills id "
+            "(e.g. aahl/skills/mcp-vods), or an all_skills name when unambiguous. "
+            "Without --db, this is a local skill slug matched against directories under --repos-root."
         ),
     )
     parser.add_argument(
@@ -294,14 +298,90 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _sqlite_table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
+    rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return {row["name"] for row in rows}
+
+
+def _db_table_kind(conn: sqlite3.Connection) -> str:
+    tables = {
+        row["name"]
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+    }
+    if "skills" in tables:
+        columns = _sqlite_table_columns(conn, "skills")
+        if {"skill_id", "source", "source_url"}.issubset(columns):
+            return "legacy_skills"
+    if "all_skills" in tables:
+        columns = _sqlite_table_columns(conn, "all_skills")
+        if {"name", "repo_url"}.issubset(columns):
+            return "all_skills"
+    raise ValueError(
+        "Unsupported DB schema. Expected legacy table skills(skill_id, source, source_url) "
+        "or new table all_skills(name, repo_url, ...)."
+    )
+
+
+def _record_from_all_skills_row(row: sqlite3.Row) -> SkillRecord:
+    name = row["name"]
+    repo_url = row["repo_url"]
+    repo = extract_github_repo(None, repo_url)
+    skill_id = f"{repo}/{name}" if repo else name
+    return SkillRecord(skill_id=skill_id, source=repo, source_url=repo_url)
+
+
+def _all_skills_match(row: sqlite3.Row, target_id: str) -> bool:
+    record = _record_from_all_skills_row(row)
+    return target_id in {
+        record.skill_id,
+        row["name"],
+        f"{row['repo_url'].rstrip('/')}/{row['name']}" if row["repo_url"] else "",
+    }
+
+
 def load_skill_record(db_path: Path, skill_id: str) -> SkillRecord:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
-        row = conn.execute(
-            "SELECT skill_id, source, source_url FROM skills WHERE skill_id = ? LIMIT 1",
-            (skill_id,),
-        ).fetchone()
+        table_kind = _db_table_kind(conn)
+        if table_kind == "legacy_skills":
+            row = conn.execute(
+                "SELECT skill_id, source, source_url FROM skills WHERE skill_id = ? LIMIT 1",
+                (skill_id,),
+            ).fetchone()
+            if row is not None:
+                return SkillRecord(skill_id=row["skill_id"], source=row["source"], source_url=row["source_url"])
+
+        else:
+            rows = conn.execute(
+                """
+                SELECT rowid, name, repo_url
+                FROM all_skills
+                WHERE name = ?
+                   OR (? LIKE '%' || '/' || name AND repo_url IS NOT NULL AND repo_url != '')
+                   OR (repo_url IS NOT NULL AND repo_url != '' AND repo_url || '/' || name = ?)
+                ORDER BY rowid ASC
+                """,
+                (skill_id, skill_id, skill_id),
+            ).fetchall()
+            matches = [row for row in rows if _all_skills_match(row, skill_id)]
+            if len(matches) == 1:
+                return _record_from_all_skills_row(matches[0])
+            if len(matches) > 1:
+                candidates = [_record_from_all_skills_row(row).skill_id for row in matches[:10]]
+                raise ResolutionError(
+                    "skill_ambiguous",
+                    f"Multiple DB rows matched skill identifier: {skill_id}. "
+                    f"Use a synthesized id such as one of: {', '.join(candidates)}",
+                    skill_id=skill_id,
+                    repo=None,
+                    repo_root=None,
+                    source=None,
+                    source_url=None,
+                )
+            row = None
     finally:
         conn.close()
     if row is None:
@@ -314,21 +394,37 @@ def load_skill_record(db_path: Path, skill_id: str) -> SkillRecord:
             source=None,
             source_url=None,
         )
-    return SkillRecord(skill_id=row["skill_id"], source=row["source"], source_url=row["source_url"])
 
 
 def load_skill_records(db_path: Path, limit: int | None = None) -> list[SkillRecord]:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
-        query = "SELECT skill_id, source, source_url FROM skills ORDER BY id ASC"
+        table_kind = _db_table_kind(conn)
+        if table_kind == "legacy_skills":
+            query = "SELECT skill_id, source, source_url FROM skills ORDER BY id ASC"
+            if limit is not None:
+                rows = conn.execute(f"{query} LIMIT ?", (limit,)).fetchall()
+            else:
+                rows = conn.execute(query).fetchall()
+            return [SkillRecord(skill_id=row["skill_id"], source=row["source"], source_url=row["source_url"]) for row in rows]
+
+        query = """
+            SELECT rowid, name, repo_url
+            FROM all_skills
+            WHERE name IS NOT NULL
+              AND name != ''
+              AND repo_url IS NOT NULL
+              AND repo_url != ''
+            ORDER BY rowid ASC
+        """
         if limit is not None:
             rows = conn.execute(f"{query} LIMIT ?", (limit,)).fetchall()
         else:
             rows = conn.execute(query).fetchall()
+        return [_record_from_all_skills_row(row) for row in rows]
     finally:
         conn.close()
-    return [SkillRecord(skill_id=row["skill_id"], source=row["source"], source_url=row["source_url"]) for row in rows]
 
 
 def _iter_local_skill_dirs(repos_root: Path, include_hidden: bool = False) -> list[Path]:
@@ -493,6 +589,15 @@ def resolve_skill(
         )
 
     slug_variants = build_skill_slug_variants(record, repo)
+    direct_candidate = find_direct_skill_candidate(repo_root, slug_variants, include_hidden=include_hidden)
+    if direct_candidate is not None:
+        return ResolvedSkill(
+            skill_dir=direct_candidate,
+            repo=repo,
+            repo_root=repo_root,
+            slug=slug_variants[0],
+        )
+
     repo_index = (
         repo_index_cache.get(repo_root, include_hidden=include_hidden)
         if repo_index_cache is not None
@@ -598,6 +703,16 @@ def build_repo_skill_index(repo_root: Path, include_hidden: bool = False) -> Rep
             name: tuple(paths) for name, paths in candidate_dirs_by_normalized_name.items()
         },
     )
+
+
+def find_direct_skill_candidate(repo_root: Path, slugs: list[str], include_hidden: bool = False) -> Path | None:
+    for slug in slugs:
+        for candidate in (repo_root / "skills" / slug, repo_root / slug):
+            if not include_hidden and path_has_ignored_part(candidate.relative_to(repo_root)):
+                continue
+            if (candidate / "SKILL.md").is_file():
+                return candidate
+    return None
 
 
 def find_skill_candidates(repo_index: RepoSkillIndex, slugs: list[str]) -> list[Path]:
@@ -1067,10 +1182,4 @@ def print_resolution_error(exc: ResolutionError) -> None:
 
 
 if __name__ == "__main__":
-    import time
-
-    start = time.time()
     raise SystemExit(main())
-    end = time.time()
-
-    print("运行时间：", end - start, "秒")

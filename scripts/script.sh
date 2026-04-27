@@ -1,0 +1,4 @@
+#!/bin/bash
+python scripts/run_single_skill_from_skills_sh.py  --repos-root /media/szk/skills_directory    --output-dir /media/szk/result/skills_directory   --workers 8   --format csv --llm-review-mode review --llm-provider openai
+python scripts/run_single_skill_from_skills_sh.py  --repos-root /media/szk/skill_sh    --output-dir /media/szk/result/skill_sh   --workers 8   --format csv --llm-review-mode review --llm-provider openai  
+python scripts/run_single_skill_from_skills_sh.py  --repos-root /media/szk/clawhub    --output-dir /media/szk/result/clawhub   --workers 8   --format json,csv --llm-review-mode review --llm-provider openai
