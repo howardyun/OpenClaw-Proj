@@ -17,6 +17,7 @@ from .review.domain_reviewer import build_rule_based_domain_adjudication, review
 from .review.llm_provider import ProviderRegistry
 from .review.llm_reviewer import review_candidates
 from .review.skill_risk_reviewer import review_skill_risk
+from .review.skill_description import extract_skill_description
 from .review.providers.litellm_provider import LiteLLMReviewProvider
 from .review.providers.mock_provider import MockReviewProvider
 from .review.providers.openai_provider import OpenAIReviewProvider
@@ -170,7 +171,7 @@ def run_analysis(args: argparse.Namespace) -> RunSummary:
     return summary
 
 
-def _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_registry: ProviderRegistry, failure_policy: str):
+def analyze_skill_offline(skill, matrix_definition, matrix_by_id, args) -> AnalysisResult:
     declaration_evidence = extract_declaration_evidence(skill)
     implementation_evidence = extract_implementation_evidence(skill)
     declaration_atomic_decisions = build_atomic_decisions(
@@ -189,9 +190,49 @@ def _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_regist
     implementation_candidates = build_rule_candidates(implementation_atomic_decisions, layer="implementation", matrix_by_id=matrix_by_id)
     rule_candidates = declaration_candidates + implementation_candidates
     final_decisions = finalize_rule_candidates(rule_candidates)
+    declaration_classifications = decisions_to_classifications(final_decisions, layer="declaration")
+    implementation_classifications = decisions_to_classifications(final_decisions, layer="implementation")
+    result = AnalysisResult(
+        skill_id=skill.skill_id,
+        root_path=str(skill.root_path),
+        structure_profile=skill.structure,
+        declaration_atomic_decisions=declaration_atomic_decisions,
+        implementation_atomic_decisions=implementation_atomic_decisions,
+        declaration_control_decisions=declaration_control_decisions,
+        implementation_control_decisions=implementation_control_decisions,
+        rule_candidates=rule_candidates,
+        final_decisions=final_decisions,
+        declaration_classifications=declaration_classifications,
+        implementation_classifications=implementation_classifications,
+    )
+    result.domain_adjudication = build_rule_based_domain_adjudication(result)
+    result.domain = result.domain_adjudication.domain or ""
+    result.skill_level_discrepancy, result.category_discrepancies = compute_discrepancies(
+        result,
+        matrix_by_id,
+        matrix_definition.capability_mappings,
+        matrix_definition.control_semantics,
+    )
+    result.risk_mappings = build_risk_mappings(result, matrix_by_id)
+    result.skill_has_risk = determine_skill_has_risk(result, matrix_by_id)
+    return result
+
+
+def apply_llm_review(
+    result: AnalysisResult,
+    skill,
+    matrix_definition,
+    matrix_by_id,
+    args,
+    provider_registry: ProviderRegistry,
+    failure_policy: str,
+    *,
+    skill_description: str | None = None,
+) -> AnalysisResult:
+    final_decisions = finalize_rule_candidates(result.rule_candidates)
     review_requests = build_review_requests(
-        skill.skill_id,
-        rule_candidates,
+        result.skill_id,
+        result.rule_candidates,
         matrix_by_id,
         ReviewPolicyConfig(
             mode=args.llm_review_mode,
@@ -214,20 +255,10 @@ def _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_regist
         )
     declaration_classifications = decisions_to_classifications(final_decisions, layer="declaration")
     implementation_classifications = decisions_to_classifications(final_decisions, layer="implementation")
-    result = AnalysisResult(
-        skill_id=skill.skill_id,
-        root_path=str(skill.root_path),
-        structure_profile=skill.structure,
-        declaration_atomic_decisions=declaration_atomic_decisions,
-        implementation_atomic_decisions=implementation_atomic_decisions,
-        declaration_control_decisions=declaration_control_decisions,
-        implementation_control_decisions=implementation_control_decisions,
-        rule_candidates=rule_candidates,
-        final_decisions=final_decisions,
-        declaration_classifications=declaration_classifications,
-        implementation_classifications=implementation_classifications,
-        review_audit_records=review_audit_records if args.emit_review_audit or args.llm_review_mode != "off" else [],
-    )
+    result.final_decisions = final_decisions
+    result.declaration_classifications = declaration_classifications
+    result.implementation_classifications = implementation_classifications
+    result.review_audit_records = review_audit_records if args.emit_review_audit or args.llm_review_mode != "off" else []
     if args.llm_review_mode != "off":
         provider = provider_registry.get(args.llm_provider)
         result.domain, result.domain_adjudication = review_domain(
@@ -236,6 +267,7 @@ def _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_regist
             provider,
             model=args.llm_model,
             timeout_seconds=args.llm_timeout_seconds,
+            description=skill_description,
         )
     else:
         result.domain_adjudication = build_rule_based_domain_adjudication(result)
@@ -258,10 +290,20 @@ def _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_regist
             model=args.llm_model,
             timeout_seconds=args.llm_timeout_seconds,
             fallback_skill_has_risk=fallback_skill_has_risk,
+            description=skill_description,
         )
     else:
         result.skill_has_risk = fallback_skill_has_risk
     return result
+
+
+def skill_description_for_artifact(skill) -> str:
+    return extract_skill_description(skill)
+
+
+def _analyze_skill(skill, matrix_definition, matrix_by_id, args, provider_registry: ProviderRegistry, failure_policy: str):
+    result = analyze_skill_offline(skill, matrix_definition, matrix_by_id, args)
+    return apply_llm_review(result, skill, matrix_definition, matrix_by_id, args, provider_registry, failure_policy)
 
 
 def main(argv: list[str] | None = None) -> int:

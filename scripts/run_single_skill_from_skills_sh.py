@@ -11,7 +11,7 @@ import subprocess
 import sys
 from collections import defaultdict
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import datetime
 from pathlib import Path
 from threading import Event, Lock
@@ -26,7 +26,13 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from analyzer.env import load_environment
-from analyzer.skills_security_matrix.cli import _analyze_skill, _build_provider_registry
+from analyzer.skills_security_matrix.cli import (
+    _analyze_skill,
+    _build_provider_registry,
+    analyze_skill_offline,
+    apply_llm_review,
+    skill_description_for_artifact,
+)
 from analyzer.skills_security_matrix.exporters.csv_exporter import (
     CLASSIFICATIONS_FIELDNAMES,
     DISCREPANCIES_FIELDNAMES,
@@ -49,7 +55,24 @@ from analyzer.skills_security_matrix.exporters.json_exporter import (
     skill_record,
 )
 from analyzer.skills_security_matrix.matrix_loader import load_matrix_definition, parse_matrix_file
-from analyzer.skills_security_matrix.models import AnalysisResult, RunConfig, RunSummary, dataclass_to_dict
+from analyzer.skills_security_matrix.models import (
+    AnalysisResult,
+    AtomicEvidenceDecision,
+    CategoryClassification,
+    CategoryDiscrepancy,
+    ControlDecision,
+    DomainAdjudication,
+    EvidenceItem,
+    FinalCategoryDecision,
+    ReviewAuditRecord,
+    RuleCandidate,
+    RunConfig,
+    RunSummary,
+    SkillArtifact,
+    SkillRiskAdjudication,
+    SkillStructureProfile,
+    dataclass_to_dict,
+)
 from analyzer.skills_security_matrix.skill_discovery import discover_skills
 from crawling.skills.skills_sh.download_skills import extract_github_repo
 
@@ -265,10 +288,36 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--case-study-skill", default=None)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument(
+        "--pipeline-stage",
+        default="full",
+        choices=["full", "prepare", "review"],
+        help=(
+            "Batch pipeline stage. full preserves the existing end-to-end behavior; "
+            "prepare writes offline intermediate results; review consumes them and runs LLM post-processing."
+        ),
+    )
+    parser.add_argument(
+        "--intermediate-dir",
+        default=None,
+        help="Directory for offline intermediate JSONL files. Defaults to <run-dir>/intermediate in prepare/full.",
+    )
+    parser.add_argument(
         "--workers",
         type=int,
         default=min(32, (os.cpu_count() or 1) + 4),
         help="Number of concurrent workers used for batch analysis.",
+    )
+    parser.add_argument(
+        "--scan-workers",
+        type=int,
+        default=None,
+        help="Number of concurrent workers used for HDD-bound prepare scanning. Defaults to --workers.",
+    )
+    parser.add_argument(
+        "--llm-workers",
+        type=int,
+        default=None,
+        help="Number of concurrent workers used for review-stage LLM calls. Defaults to --workers.",
     )
     parser.add_argument(
         "--max-buffered-results",
@@ -278,6 +327,11 @@ def build_parser() -> argparse.ArgumentParser:
             "Maximum number of in-flight plus completed-but-not-yet-written batch results. "
             "Defaults to max(workers * 4, workers)."
         ),
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Skip indexes already present in the relevant intermediate JSONL file.",
     )
     parser.add_argument("--include-hidden", action="store_true")
     parser.add_argument("--matrix-path", default="analyzer/security matrix.md")
@@ -771,6 +825,181 @@ def _safe_filename(value: str) -> str:
     return value.replace("/", "__")
 
 
+def _jsonl_path(intermediate_dir: Path, stem: str) -> Path:
+    return intermediate_dir / f"{stem}.jsonl"
+
+
+def _create_run_dir(output_dir: Path) -> tuple[str, Path]:
+    base_run_id = f"run-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    for suffix in range(1000):
+        run_id = base_run_id if suffix == 0 else f"{base_run_id}-{suffix:03d}"
+        run_dir = output_dir / run_id
+        try:
+            run_dir.mkdir(parents=True, exist_ok=False)
+            return run_id, run_dir
+        except FileExistsError:
+            continue
+    raise RuntimeError(f"Unable to create unique run directory under {output_dir}")
+
+
+def _append_jsonl_record(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False))
+        handle.write("\n")
+        handle.flush()
+
+
+def _iter_jsonl_records(path: Path) -> list[dict[str, object]]:
+    if not path.is_file():
+        return []
+    records: list[dict[str, object]] = []
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if line:
+                records.append(json.loads(line))
+    return records
+
+
+def _completed_indexes(path: Path) -> set[int]:
+    completed: set[int] = set()
+    for row in _iter_jsonl_records(path):
+        index = row.get("index")
+        if isinstance(index, int):
+            completed.add(index)
+    return completed
+
+
+def _record_payload(record: SkillRecord) -> dict[str, object]:
+    return dataclass_to_dict(record)
+
+
+def _resolved_payload(resolved: ResolvedSkill | None) -> dict[str, object] | None:
+    if resolved is None:
+        return None
+    return {
+        "skill_dir": str(resolved.skill_dir),
+        "repo": resolved.repo,
+        "repo_root": str(resolved.repo_root),
+        "slug": resolved.slug,
+    }
+
+
+def _hydrate_dataclass(cls, payload: dict[str, object]):
+    if payload is None:
+        return None
+    field_names = {field.name for field in fields(cls)}
+    return cls(**{name: payload[name] for name in field_names if name in payload})
+
+
+def _hydrate_evidence_items(items: list[dict[str, object]]) -> list[EvidenceItem]:
+    return [_hydrate_dataclass(EvidenceItem, item) for item in items]
+
+
+def _hydrate_atomic_decisions(items: list[dict[str, object]]) -> list[AtomicEvidenceDecision]:
+    decisions: list[AtomicEvidenceDecision] = []
+    for item in items:
+        payload = dict(item)
+        payload["supporting_evidence"] = _hydrate_evidence_items(payload.get("supporting_evidence", []))
+        payload["conflicting_evidence"] = _hydrate_evidence_items(payload.get("conflicting_evidence", []))
+        decisions.append(_hydrate_dataclass(AtomicEvidenceDecision, payload))
+    return decisions
+
+
+def _hydrate_control_decisions(items: list[dict[str, object]]) -> list[ControlDecision]:
+    decisions: list[ControlDecision] = []
+    for item in items:
+        payload = dict(item)
+        payload["evidence"] = _hydrate_evidence_items(payload.get("evidence", []))
+        decisions.append(_hydrate_dataclass(ControlDecision, payload))
+    return decisions
+
+
+def _hydrate_rule_candidates(items: list[dict[str, object]]) -> list[RuleCandidate]:
+    candidates: list[RuleCandidate] = []
+    for item in items:
+        payload = dict(item)
+        payload["supporting_evidence"] = _hydrate_evidence_items(payload.get("supporting_evidence", []))
+        payload["conflicting_evidence"] = _hydrate_evidence_items(payload.get("conflicting_evidence", []))
+        candidates.append(_hydrate_dataclass(RuleCandidate, payload))
+    return candidates
+
+
+def _hydrate_final_decisions(items: list[dict[str, object]]) -> list[FinalCategoryDecision]:
+    decisions: list[FinalCategoryDecision] = []
+    for item in items:
+        payload = dict(item)
+        payload["supporting_evidence"] = _hydrate_evidence_items(payload.get("supporting_evidence", []))
+        payload["conflicting_evidence"] = _hydrate_evidence_items(payload.get("conflicting_evidence", []))
+        decisions.append(_hydrate_dataclass(FinalCategoryDecision, payload))
+    return decisions
+
+
+def _hydrate_classifications(items: list[dict[str, object]]) -> list[CategoryClassification]:
+    classifications: list[CategoryClassification] = []
+    for item in items:
+        payload = dict(item)
+        payload["evidence"] = _hydrate_evidence_items(payload.get("evidence", []))
+        classifications.append(_hydrate_dataclass(CategoryClassification, payload))
+    return classifications
+
+
+def _hydrate_analysis_result(payload: dict[str, object]) -> AnalysisResult:
+    hydrated = dict(payload)
+    hydrated["structure_profile"] = _hydrate_dataclass(SkillStructureProfile, hydrated["structure_profile"])
+    hydrated["declaration_atomic_decisions"] = _hydrate_atomic_decisions(
+        hydrated.get("declaration_atomic_decisions", [])
+    )
+    hydrated["implementation_atomic_decisions"] = _hydrate_atomic_decisions(
+        hydrated.get("implementation_atomic_decisions", [])
+    )
+    hydrated["declaration_control_decisions"] = _hydrate_control_decisions(
+        hydrated.get("declaration_control_decisions", [])
+    )
+    hydrated["implementation_control_decisions"] = _hydrate_control_decisions(
+        hydrated.get("implementation_control_decisions", [])
+    )
+    hydrated["rule_candidates"] = _hydrate_rule_candidates(hydrated.get("rule_candidates", []))
+    hydrated["final_decisions"] = _hydrate_final_decisions(hydrated.get("final_decisions", []))
+    hydrated["declaration_classifications"] = _hydrate_classifications(
+        hydrated.get("declaration_classifications", [])
+    )
+    hydrated["implementation_classifications"] = _hydrate_classifications(
+        hydrated.get("implementation_classifications", [])
+    )
+    hydrated["category_discrepancies"] = [
+        _hydrate_dataclass(CategoryDiscrepancy, item) for item in hydrated.get("category_discrepancies", [])
+    ]
+    hydrated["domain_adjudication"] = _hydrate_dataclass(DomainAdjudication, hydrated.get("domain_adjudication"))
+    hydrated["skill_risk_adjudication"] = _hydrate_dataclass(
+        SkillRiskAdjudication,
+        hydrated.get("skill_risk_adjudication"),
+    )
+    hydrated["review_audit_records"] = [
+        _hydrate_dataclass(ReviewAuditRecord, item) for item in hydrated.get("review_audit_records", [])
+    ]
+    field_names = {field.name for field in fields(AnalysisResult)}
+    return AnalysisResult(**{name: hydrated[name] for name in field_names if name in hydrated})
+
+
+def intermediate_success_payload(
+    index: int,
+    record: SkillRecord,
+    resolved: ResolvedSkill | None,
+    result: AnalysisResult,
+    skill_description: str,
+) -> dict[str, object]:
+    return {
+        "schema_version": "skills-security-matrix-offline-result-v1",
+        "index": index,
+        "record": _record_payload(record),
+        "resolved": _resolved_payload(resolved),
+        "skill_context": {"description": skill_description},
+        "analysis_result": dataclass_to_dict(result),
+    }
+
+
 def candidate_rank(path: Path, repo_root: Path, slug: str) -> tuple[int, int, int]:
     relative = path.relative_to(repo_root)
     parts = relative.parts
@@ -971,6 +1200,8 @@ def _analyze_record_impl(
     failure_policy: str,
     repo_index_cache: RepoSkillIndexCache,
     resolved: ResolvedSkill | None = None,
+    *,
+    offline_only: bool = False,
 ):
     if resolved is None and args.db:
         resolved = resolve_skill(
@@ -984,6 +1215,12 @@ def _analyze_record_impl(
     artifact = discover_skills(resolved.skill_dir, include_hidden=args.include_hidden, limit=1)[0]
     artifact.skill_id = record.skill_id
     matrix_definition = load_matrix_definition(Path(args.matrix_path))
+    if offline_only:
+        return (
+            analyze_skill_offline(artifact, matrix_definition, matrix_by_id, args),
+            skill_description_for_artifact(artifact),
+            resolved,
+        )
     return _analyze_skill(artifact, matrix_definition, matrix_by_id, args, provider_registry, failure_policy)
 
 
@@ -995,6 +1232,7 @@ def _analyze_record_child(
     args: argparse.Namespace,
     failure_policy: str,
     resolved: ResolvedSkill | None = None,
+    offline_only: bool = False,
 ) -> None:
     try:
         load_environment()
@@ -1008,8 +1246,13 @@ def _analyze_record_child(
             failure_policy,
             RepoSkillIndexCache(),
             resolved,
+            offline_only=offline_only,
         )
-        conn.send(("result", result))
+        if offline_only:
+            result, skill_description, resolved_skill = result
+            conn.send(("offline_result", result, skill_description, resolved_skill))
+        else:
+            conn.send(("result", result))
     except ResolutionError as exc:
         conn.send(
             (
@@ -1036,7 +1279,9 @@ def analyze_record(
     args: argparse.Namespace,
     failure_policy: str,
     resolved: ResolvedSkill | None = None,
-) -> tuple[str, AnalysisResult | dict[str, str]]:
+    *,
+    offline_only: bool = False,
+) -> tuple:
     safe_args = _to_namespace(args)
     skill_timeout_seconds = getattr(args, "skill_timeout_seconds", 600)
     start_method = "fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn"
@@ -1052,6 +1297,7 @@ def analyze_record(
             safe_args,
             failure_policy,
             resolved,
+            offline_only,
         ),
     )
     process.start()
@@ -1103,7 +1349,326 @@ def _to_namespace(args: argparse.Namespace) -> argparse.Namespace:
     return argparse.Namespace(**values)
 
 
+def review_intermediate_record(
+    row: dict[str, object],
+    matrix_definition,
+    matrix_by_id,
+    args: argparse.Namespace,
+    provider_registry,
+    failure_policy: str,
+) -> AnalysisResult:
+    result = _hydrate_analysis_result(row["analysis_result"])
+    skill_context = row.get("skill_context") or {}
+    description = skill_context.get("description", "") if isinstance(skill_context, dict) else ""
+    skill = SkillArtifact(
+        skill_id=result.skill_id,
+        root_path=Path(result.root_path),
+        structure=result.structure_profile,
+        file_paths=[],
+        source_files=[],
+    )
+    return apply_llm_review(
+        result,
+        skill,
+        matrix_definition,
+        matrix_by_id,
+        args,
+        provider_registry,
+        failure_policy,
+        skill_description=str(description or ""),
+    )
+
+
+def run_prepare_stage(args: argparse.Namespace, records: list[SkillRecord]) -> int:
+    scan_workers_arg = getattr(args, "scan_workers", None)
+    scan_workers = scan_workers_arg if scan_workers_arg is not None else args.workers
+    if scan_workers < 1:
+        print("[error] --scan-workers must be >= 1", file=sys.stderr)
+        return 2
+    skill_timeout_seconds = getattr(args, "skill_timeout_seconds", 600)
+    if skill_timeout_seconds < 1:
+        print("[error] --skill-timeout-seconds must be >= 1", file=sys.stderr)
+        return 2
+
+    matrix_categories = parse_matrix_file(Path(args.matrix_path))
+    matrix_by_id = {category.category_id: category for category in matrix_categories}
+    failure_policy = "fail_closed" if args.llm_fail_closed else "fail_open"
+    repos_root = Path(args.repos_root)
+    run_id, run_dir = _create_run_dir(Path(args.output_dir))
+    intermediate_dir_arg = getattr(args, "intermediate_dir", None)
+    intermediate_dir = Path(intermediate_dir_arg) if intermediate_dir_arg else run_dir / "intermediate"
+    intermediate_dir.mkdir(parents=True, exist_ok=True)
+    offline_results_path = _jsonl_path(intermediate_dir, "offline_results")
+    offline_errors_path = _jsonl_path(intermediate_dir, "offline_errors")
+    if not getattr(args, "resume", False):
+        offline_results_path.write_text("", encoding="utf-8")
+        offline_errors_path.write_text("", encoding="utf-8")
+
+    completed = _completed_indexes(offline_results_path) | _completed_indexes(offline_errors_path)
+    if args.db:
+        analysis_records, pre_resolve_errors = pre_resolve_db_records(
+            records,
+            repos_root,
+            include_hidden=args.include_hidden,
+        )
+        for index, (_outcome_type, payload) in sorted(pre_resolve_errors.items()):
+            if index in completed:
+                continue
+            _append_jsonl_record(offline_errors_path, {"index": index, **payload})
+            completed.add(index)
+    else:
+        analysis_records = {index: AnalysisRecord(record=record) for index, record in enumerate(records)}
+
+    analysis_indices = [index for index in sorted(analysis_records) if index not in completed]
+    progress = None
+    if tqdm is not None:
+        progress = tqdm(total=len(records), initial=len(completed), desc="Preparing skills", unit="skill")
+
+    def submit_next(executor: ThreadPoolExecutor, in_flight: dict[Future, tuple[int, AnalysisRecord]], cursor: int) -> int:
+        index = analysis_indices[cursor]
+        analysis_record = analysis_records[index]
+        future = executor.submit(
+            analyze_record,
+            analysis_record.record,
+            repos_root,
+            matrix_by_id,
+            args,
+            failure_policy,
+            analysis_record.resolved,
+            offline_only=True,
+        )
+        in_flight[future] = (index, analysis_record)
+        return cursor + 1
+
+    prepared = len(_completed_indexes(offline_results_path))
+    errors = len(_completed_indexes(offline_errors_path))
+    next_to_submit = 0
+    try:
+        with ThreadPoolExecutor(max_workers=scan_workers) as executor:
+            in_flight: dict[Future, tuple[int, AnalysisRecord]] = {}
+            while next_to_submit < len(analysis_indices) and len(in_flight) < scan_workers:
+                next_to_submit = submit_next(executor, in_flight, next_to_submit)
+
+            while in_flight:
+                done, _ = wait(in_flight, return_when=FIRST_COMPLETED)
+                for future in done:
+                    index, analysis_record = in_flight.pop(future)
+                    try:
+                        outcome = future.result()
+                    except Exception as exc:  # pragma: no cover - defensive batch isolation
+                        outcome = (
+                            "error",
+                            {
+                                "skill_id": analysis_record.record.skill_id,
+                                "error_type": "analysis_error",
+                                "error": str(exc),
+                            },
+                        )
+
+                    if outcome[0] == "offline_result":
+                        _outcome_type, result, skill_description, resolved = outcome
+                        _append_jsonl_record(
+                            offline_results_path,
+                            intermediate_success_payload(
+                                index,
+                                analysis_record.record,
+                                resolved,
+                                result,
+                                skill_description,
+                            ),
+                        )
+                        prepared += 1
+                    else:
+                        _outcome_type, payload = outcome
+                        _append_jsonl_record(offline_errors_path, {"index": index, **payload})
+                        errors += 1
+
+                if progress is not None:
+                    progress.update(len(done))
+                    progress.set_postfix_str(f"prepared={prepared} err={errors} inflight={len(in_flight)}")
+
+                while next_to_submit < len(analysis_indices) and len(in_flight) < scan_workers:
+                    next_to_submit = submit_next(executor, in_flight, next_to_submit)
+    finally:
+        if progress is not None:
+            progress.close()
+
+    summary = {
+        "run_id": run_id,
+        "output_dir": str(run_dir),
+        "intermediate_dir": str(intermediate_dir),
+        "prepared_skills": prepared,
+        "errored_skills": errors,
+        "pipeline_stage": "prepare",
+        "scan_workers": scan_workers,
+    }
+    (run_dir / "prepare_manifest.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Prepare complete: {run_id}")
+    print(f"Intermediate directory: {intermediate_dir}")
+    print(f"Prepared skills: {prepared}")
+    print(f"Errored skills: {errors}")
+    return 0
+
+
+def run_review_stage(args: argparse.Namespace) -> int:
+    intermediate_dir_arg = getattr(args, "intermediate_dir", None)
+    if not intermediate_dir_arg:
+        print("[error] --intermediate-dir is required for --pipeline-stage review", file=sys.stderr)
+        return 2
+    llm_workers_arg = getattr(args, "llm_workers", None)
+    llm_workers = llm_workers_arg if llm_workers_arg is not None else args.workers
+    if llm_workers < 1:
+        print("[error] --llm-workers must be >= 1", file=sys.stderr)
+        return 2
+
+    load_environment()
+    requested_formats = [value.strip() for value in args.format.split(",") if value.strip()]
+    matrix_definition = load_matrix_definition(Path(args.matrix_path))
+    matrix_by_id = {category.category_id: category for category in matrix_definition.categories}
+    provider_registry = _build_provider_registry()
+    failure_policy = "fail_closed" if args.llm_fail_closed else "fail_open"
+    intermediate_dir = Path(intermediate_dir_arg)
+    offline_results_path = _jsonl_path(intermediate_dir, "offline_results")
+    offline_errors_path = _jsonl_path(intermediate_dir, "offline_errors")
+    reviewed_results_path = _jsonl_path(intermediate_dir, "reviewed_results")
+    if not offline_results_path.is_file():
+        print(f"[error] offline results not found: {offline_results_path}", file=sys.stderr)
+        return 2
+    if not getattr(args, "resume", False):
+        reviewed_results_path.write_text("", encoding="utf-8")
+
+    offline_rows = sorted(_iter_jsonl_records(offline_results_path), key=lambda row: int(row["index"]))
+    reviewed_rows = {int(row["index"]): row for row in _iter_jsonl_records(reviewed_results_path)}
+    pending_rows = [row for row in offline_rows if int(row["index"]) not in reviewed_rows]
+    skill_errors = [
+        {key: str(value) for key, value in row.items() if key != "index"}
+        for row in _iter_jsonl_records(offline_errors_path)
+    ]
+
+    progress = None
+    if tqdm is not None:
+        progress = tqdm(
+            total=len(offline_rows),
+            initial=len(reviewed_rows),
+            desc="Reviewing skills",
+            unit="skill",
+        )
+
+    def review_row(row: dict[str, object]) -> tuple[int, AnalysisResult]:
+        return (
+            int(row["index"]),
+            review_intermediate_record(row, matrix_definition, matrix_by_id, args, provider_registry, failure_policy),
+        )
+
+    try:
+        with ThreadPoolExecutor(max_workers=llm_workers) as executor:
+            future_to_index: dict[Future, int] = {}
+            next_to_submit = 0
+            max_in_flight = max(llm_workers * 4, llm_workers)
+
+            def submit_until_full() -> None:
+                nonlocal next_to_submit
+                while next_to_submit < len(pending_rows) and len(future_to_index) < max_in_flight:
+                    row = pending_rows[next_to_submit]
+                    future_to_index[executor.submit(review_row, row)] = int(row["index"])
+                    next_to_submit += 1
+
+            submit_until_full()
+            while future_to_index:
+                done, _ = wait(future_to_index, return_when=FIRST_COMPLETED)
+                for future in done:
+                    index = future_to_index.pop(future)
+                    try:
+                        reviewed_index, result = future.result()
+                        row = {
+                            "schema_version": "skills-security-matrix-reviewed-result-v1",
+                            "index": reviewed_index,
+                            "analysis_result": dataclass_to_dict(result),
+                        }
+                        _append_jsonl_record(reviewed_results_path, row)
+                        reviewed_rows[reviewed_index] = row
+                    except Exception as exc:  # pragma: no cover - defensive batch isolation
+                        skill_errors.append(
+                            {
+                                "skill_id": str(index),
+                                "error_type": "review_error",
+                                "error": str(exc),
+                            }
+                        )
+                    if progress is not None:
+                        progress.update(1)
+                        progress.set_postfix_str(f"reviewed={len(reviewed_rows)} err={len(skill_errors)}")
+                submit_until_full()
+    finally:
+        if progress is not None:
+            progress.close()
+
+    run_id, run_dir = _create_run_dir(Path(args.output_dir))
+    writer = BatchResultWriter(
+        run_dir,
+        requested_formats,
+        emit_category_discrepancies=args.emit_category_discrepancies,
+        emit_risk_mappings=args.emit_risk_mappings,
+    )
+    written_results = 0
+    try:
+        for index in sorted(reviewed_rows):
+            result = _hydrate_analysis_result(reviewed_rows[index]["analysis_result"])
+            writer.write_result(result)
+            written_results += 1
+    finally:
+        writer.close()
+
+    summary = RunSummary(
+        run_id=run_id,
+        output_dir=str(run_dir),
+        analyzed_skills=written_results,
+        skipped_skills=len(skill_errors),
+        errored_skills=len(skill_errors),
+        config=RunConfig(
+            skills_dir=args.repos_root,
+            output_dir=args.output_dir,
+            requested_formats=requested_formats,
+            limit=args.limit,
+            case_study_skill=args.case_study_skill,
+            include_hidden=args.include_hidden,
+            fail_on_unknown_matrix=args.fail_on_unknown_matrix,
+            llm_review_mode=args.llm_review_mode,
+            llm_provider=args.llm_provider,
+            llm_model=args.llm_model,
+            llm_low_confidence_threshold=args.llm_low_confidence_threshold,
+            llm_high_risk_sparse_threshold=args.llm_high_risk_sparse_threshold,
+            llm_fallback_max_categories=args.llm_fallback_max_categories,
+            llm_timeout_seconds=args.llm_timeout_seconds,
+            skill_timeout_seconds=getattr(args, "skill_timeout_seconds", 600),
+            max_buffered_results=args.max_buffered_results,
+            llm_failure_policy=failure_policy,
+            emit_review_audit=args.emit_review_audit,
+            emit_category_discrepancies=args.emit_category_discrepancies,
+            emit_risk_mappings=args.emit_risk_mappings,
+            goldset_path=args.goldset_path,
+        ),
+        skill_errors=skill_errors,
+    )
+    manifest = dataclass_to_dict(summary)
+    manifest["pipeline_stage"] = "review"
+    manifest["intermediate_dir"] = str(intermediate_dir)
+    manifest["llm_workers"] = llm_workers
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(f"Review complete: {run_id}")
+    print(f"Output directory: {run_dir}")
+    print(f"Analyzed skills: {written_results}")
+    print(f"Errored skills: {len(skill_errors)}")
+    return 0
+
 def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> int:
+    pipeline_stage = getattr(args, "pipeline_stage", "full")
+    if pipeline_stage == "prepare":
+        return run_prepare_stage(args, records)
+    if pipeline_stage == "review":
+        return run_review_stage(args)
+
     if args.workers < 1:
         print("[error] --workers must be >= 1", file=sys.stderr)
         return 2

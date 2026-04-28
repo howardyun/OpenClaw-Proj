@@ -15,6 +15,7 @@ def review_skill_risk(
     model: str | None,
     timeout_seconds: int,
     fallback_skill_has_risk: str,
+    description: str | None = None,
 ) -> tuple[str, SkillRiskAdjudication]:
     if provider is None:
         return fallback_skill_has_risk, SkillRiskAdjudication(
@@ -29,7 +30,7 @@ def review_skill_risk(
 
     request = SkillRiskReviewRequest(
         skill_id=result.skill_id,
-        description=extract_skill_description(skill),
+        description=extract_skill_description(skill) if description is None else description,
         final_decisions=result.final_decisions,
     )
     response = provider.review_skill_risk(request, model=model, timeout_seconds=timeout_seconds)

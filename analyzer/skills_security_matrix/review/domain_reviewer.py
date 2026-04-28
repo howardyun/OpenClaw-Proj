@@ -18,9 +18,10 @@ def review_domain(
     *,
     model: str | None,
     timeout_seconds: int,
+    description: str | None = None,
 ) -> tuple[str, DomainAdjudication]:
     fallback_domain = build_fallback_skill_domain(result)
-    description = extract_skill_description(skill)
+    description = extract_skill_description(skill) if description is None else description
     if not description:
         return fallback_domain, DomainAdjudication(
             review_status="description_missing",
