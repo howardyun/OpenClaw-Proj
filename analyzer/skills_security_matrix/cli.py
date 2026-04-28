@@ -12,7 +12,8 @@ from .evidence.implementation import extract_implementation_evidence
 from .exporters.csv_exporter import export_csv_files
 from .exporters.json_exporter import export_json_files
 from .matrix_loader import load_matrix_definition
-from .models import AnalysisResult, RunConfig, RunSummary
+from .models import AnalysisResult, ReviewAuditRecord, RunConfig, RunSummary
+from .review.cascade import calculate_rule_skill_risk_confidence_score
 from .review.domain_reviewer import build_rule_based_domain_adjudication, review_domain
 from .review.llm_provider import ProviderRegistry
 from .review.llm_reviewer import review_candidates
@@ -30,6 +31,7 @@ from .rules.candidate_builder import (
     decisions_to_classifications,
     finalize_rule_candidates,
 )
+from .rules.catalog import bucket_confidence
 from .skill_discovery import discover_skills
 from .validation.goldset import load_goldset, validate_against_goldset
 
@@ -215,6 +217,7 @@ def analyze_skill_offline(skill, matrix_definition, matrix_by_id, args) -> Analy
     )
     result.risk_mappings = build_risk_mappings(result, matrix_by_id)
     result.skill_has_risk = determine_skill_has_risk(result, matrix_by_id)
+    _set_skill_has_risk_confidence(result, result.skill_has_risk)
     return result
 
 
@@ -280,8 +283,16 @@ def apply_llm_review(
     )
     result.risk_mappings = build_risk_mappings(result, matrix_by_id)
     fallback_skill_has_risk = determine_skill_has_risk(result, matrix_by_id)
-    if args.llm_review_mode != "off":
+    result.skill_has_risk = fallback_skill_has_risk
+    _set_skill_has_risk_confidence(result, fallback_skill_has_risk)
+    if args.llm_review_mode != "off" and _should_review_skill_risk(result, args.llm_low_confidence_threshold):
         provider = provider_registry.get(args.llm_provider)
+        default_skill_has_risk = fallback_skill_has_risk
+        rule_skill_has_risk_confidence_score = result.skill_has_risk_confidence_score
+        had_low_confidence_final_decision = _has_low_confidence_retained_decision(
+            result,
+            args.llm_low_confidence_threshold,
+        )
         result.skill_has_risk, result.skill_risk_adjudication = review_skill_risk(
             result,
             skill,
@@ -292,9 +303,68 @@ def apply_llm_review(
             fallback_skill_has_risk=fallback_skill_has_risk,
             description=skill_description,
         )
-    else:
-        result.skill_has_risk = fallback_skill_has_risk
+        if result.skill_risk_adjudication and result.skill_risk_adjudication.confidence_score is not None:
+            result.skill_has_risk_confidence = result.skill_risk_adjudication.confidence or "unknown"
+            result.skill_has_risk_confidence_score = result.skill_risk_adjudication.confidence_score
+        result.review_audit_records.append(
+            _skill_risk_review_audit_record(
+                result,
+                default_skill_has_risk=default_skill_has_risk,
+                rule_skill_has_risk_confidence_score=rule_skill_has_risk_confidence_score,
+                had_low_confidence_final_decision=had_low_confidence_final_decision,
+                threshold=args.llm_low_confidence_threshold,
+            )
+        )
     return result
+
+
+def _set_skill_has_risk_confidence(result: AnalysisResult, skill_has_risk: str) -> None:
+    score = calculate_rule_skill_risk_confidence_score(result, skill_has_risk)
+    result.skill_has_risk_confidence_score = score
+    result.skill_has_risk_confidence = bucket_confidence(score)
+
+
+def _should_review_skill_risk(result: AnalysisResult, low_confidence_threshold: float) -> bool:
+    return (
+        _has_low_confidence_retained_decision(result, low_confidence_threshold)
+        or result.skill_has_risk_confidence_score <= low_confidence_threshold
+    )
+
+
+def _has_low_confidence_retained_decision(result: AnalysisResult, low_confidence_threshold: float) -> bool:
+    retained_decisions = [
+        decision for decision in result.final_decisions if decision.decision_status != "rejected_by_llm"
+    ]
+    return any(decision.confidence_score <= low_confidence_threshold for decision in retained_decisions)
+
+
+def _skill_risk_review_audit_record(
+    result: AnalysisResult,
+    *,
+    default_skill_has_risk: str,
+    rule_skill_has_risk_confidence_score: float,
+    had_low_confidence_final_decision: bool,
+    threshold: float,
+) -> ReviewAuditRecord:
+    trigger_types: list[str] = []
+    if rule_skill_has_risk_confidence_score <= threshold:
+        trigger_types.append("low_confidence_skill_risk")
+    if had_low_confidence_final_decision:
+        trigger_types.append("low_confidence_final_risk")
+    adjudication = result.skill_risk_adjudication
+    return ReviewAuditRecord(
+        category_id="skill_has_risk",
+        layer="skill",
+        review_status=adjudication.review_status if adjudication else "not_reviewed",
+        provider=adjudication.provider if adjudication else None,
+        model=adjudication.model if adjudication else None,
+        reason=adjudication.reason if adjudication else None,
+        schema_version=adjudication.schema_version if adjudication else "skills-skill-risk-review-v1",
+        cascade_stage="skill_risk_review",
+        trigger_types=trigger_types,
+        default_decision_status=default_skill_has_risk,
+        final_decision_status=result.skill_has_risk,
+    )
 
 
 def skill_description_for_artifact(skill) -> str:

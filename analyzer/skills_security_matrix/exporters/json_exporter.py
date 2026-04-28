@@ -80,6 +80,8 @@ def skill_record(result: AnalysisResult) -> dict[str, object]:
         "structure_profile": dataclass_to_dict(result.structure_profile),
         "domain_adjudication": dataclass_to_dict(result.domain_adjudication),
         "skill_has_risk": result.skill_has_risk,
+        "skill_has_risk_confidence": result.skill_has_risk_confidence,
+        "skill_has_risk_confidence_score": result.skill_has_risk_confidence_score,
         "skill_risk_adjudication": dataclass_to_dict(result.skill_risk_adjudication),
         "errors": result.errors,
     }
@@ -91,6 +93,8 @@ def classification_record(result: AnalysisResult, *, emit_risk_mappings: bool = 
         "domain": result.domain,
         "domain_adjudication": dataclass_to_dict(result.domain_adjudication),
         "skill_has_risk": result.skill_has_risk,
+        "skill_has_risk_confidence": result.skill_has_risk_confidence,
+        "skill_has_risk_confidence_score": result.skill_has_risk_confidence_score,
         "permission_summary": build_permission_summary(result),
         "declaration_atomic_decisions": [dataclass_to_dict(item) for item in result.declaration_atomic_decisions],
         "implementation_atomic_decisions": [dataclass_to_dict(item) for item in result.implementation_atomic_decisions],
@@ -111,6 +115,8 @@ def candidate_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
         "skill_has_risk": result.skill_has_risk,
+        "skill_has_risk_confidence": result.skill_has_risk_confidence,
+        "skill_has_risk_confidence_score": result.skill_has_risk_confidence_score,
         "rule_candidates": [dataclass_to_dict(export_rule_candidate(item)) for item in result.rule_candidates],
         "skill_risk_adjudication": dataclass_to_dict(result.skill_risk_adjudication),
         "errors": result.errors,
@@ -121,6 +127,8 @@ def discrepancy_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
         "skill_has_risk": result.skill_has_risk,
+        "skill_has_risk_confidence": result.skill_has_risk_confidence,
+        "skill_has_risk_confidence_score": result.skill_has_risk_confidence_score,
         "skill_level_discrepancy": result.skill_level_discrepancy,
         "category_discrepancies": [dataclass_to_dict(export_discrepancy(item)) for item in result.category_discrepancies],
         "skill_risk_adjudication": dataclass_to_dict(result.skill_risk_adjudication),
@@ -132,6 +140,8 @@ def risk_mapping_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
         "skill_has_risk": result.skill_has_risk,
+        "skill_has_risk_confidence": result.skill_has_risk_confidence,
+        "skill_has_risk_confidence_score": result.skill_has_risk_confidence_score,
         "risk_mappings": [export_risk_mapping(item) for item in result.risk_mappings],
         "skill_risk_adjudication": dataclass_to_dict(result.skill_risk_adjudication),
         "errors": result.errors,
@@ -143,6 +153,8 @@ def review_audit_record(result: AnalysisResult) -> dict[str, object]:
     return {
         "skill_id": result.skill_id,
         "skill_has_risk": result.skill_has_risk,
+        "skill_has_risk_confidence": result.skill_has_risk_confidence,
+        "skill_has_risk_confidence_score": result.skill_has_risk_confidence_score,
         "review_audit_records": [
             {
                 **dataclass_to_dict(item),

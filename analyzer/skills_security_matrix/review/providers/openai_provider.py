@@ -408,6 +408,7 @@ def _build_skill_risk_payload(request: SkillRiskReviewRequest) -> str:
                 "allowed_statuses": ["yes", "no"],
                 "description_role": "Use the description together with retained declaration and implementation decisions to judge whether any apparent mismatch is reasonably implied, necessary, incidental, or materially broader in context.",
                 "focus": "Treat retained declaration and implementation decisions as structured signals for contextual least-privilege review, not as mechanically binding set-membership rules.",
+                "implementation_decisions_empty_rule": "If implementation_decisions is empty, return skill_has_risk=no because the implementation does not show any retained capability.",
                 "forbidden_actions": [
                     "changing category decisions",
                     "inventing categories",

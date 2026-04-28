@@ -189,6 +189,10 @@ class ReviewAuditRecord:
     model: str | None = None
     reason: str | None = None
     schema_version: str | None = None
+    cascade_stage: str | None = None
+    trigger_types: list[str] = field(default_factory=list)
+    default_decision_status: str | None = None
+    final_decision_status: str | None = None
 
 
 @dataclass(slots=True)
@@ -248,6 +252,8 @@ class AnalysisResult:
     declaration_classifications: list[CategoryClassification] = field(default_factory=list)
     implementation_classifications: list[CategoryClassification] = field(default_factory=list)
     skill_has_risk: str = "no"
+    skill_has_risk_confidence: str = "unknown"
+    skill_has_risk_confidence_score: float = 0.0
     skill_level_discrepancy: str = "insufficient_implementation_evidence"
     category_discrepancies: list[CategoryDiscrepancy] = field(default_factory=list)
     risk_mappings: list[dict[str, Any]] = field(default_factory=list)

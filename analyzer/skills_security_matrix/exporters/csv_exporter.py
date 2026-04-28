@@ -12,6 +12,9 @@ from ..tier_mapping import apply_tier_export, build_exported_category_lookup
 SKILLS_FIELDNAMES = [
     "skill_id",
     "domain",
+    "skill_has_risk",
+    "skill_has_risk_confidence",
+    "skill_has_risk_confidence_score",
     "root_path",
     "has_skill_md",
     "has_frontmatter",
@@ -88,6 +91,10 @@ REVIEW_AUDIT_FIELDNAMES = [
     "model",
     "reason",
     "schema_version",
+    "cascade_stage",
+    "trigger_types",
+    "default_decision_status",
+    "final_decision_status",
 ]
 
 
@@ -150,6 +157,9 @@ def skill_rows(result: AnalysisResult) -> list[dict[str, object]]:
         {
             "skill_id": result.skill_id,
             "domain": result.domain,
+            "skill_has_risk": result.skill_has_risk,
+            "skill_has_risk_confidence": result.skill_has_risk_confidence,
+            "skill_has_risk_confidence_score": result.skill_has_risk_confidence_score,
             "root_path": result.root_path,
             "has_skill_md": result.structure_profile.has_skill_md,
             "has_frontmatter": result.structure_profile.has_frontmatter,
@@ -309,6 +319,10 @@ def review_audit_rows_for_result(result: AnalysisResult) -> list[dict[str, objec
                 "model": record.model or "",
                 "reason": record.reason or "",
                 "schema_version": record.schema_version or "",
+                "cascade_stage": record.cascade_stage or "",
+                "trigger_types": ",".join(record.trigger_types),
+                "default_decision_status": record.default_decision_status or "",
+                "final_decision_status": record.final_decision_status or "",
             }
         )
     return rows

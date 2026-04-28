@@ -851,15 +851,17 @@ def _append_jsonl_record(path: Path, payload: dict[str, object]) -> None:
 
 
 def _iter_jsonl_records(path: Path) -> list[dict[str, object]]:
+    return list(_iter_jsonl_record_stream(path))
+
+
+def _iter_jsonl_record_stream(path: Path):
     if not path.is_file():
-        return []
-    records: list[dict[str, object]] = []
+        return
     with path.open("r", encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
             if line:
-                records.append(json.loads(line))
-    return records
+                yield json.loads(line)
 
 
 def _completed_indexes(path: Path) -> set[int]:
@@ -1537,71 +1539,12 @@ def run_review_stage(args: argparse.Namespace) -> int:
     if not getattr(args, "resume", False):
         reviewed_results_path.write_text("", encoding="utf-8")
 
-    offline_rows = sorted(_iter_jsonl_records(offline_results_path), key=lambda row: int(row["index"]))
-    reviewed_rows = {int(row["index"]): row for row in _iter_jsonl_records(reviewed_results_path)}
-    pending_rows = [row for row in offline_rows if int(row["index"]) not in reviewed_rows]
+    reviewed_rows = _completed_indexes(reviewed_results_path)
     skill_errors = [
         {key: str(value) for key, value in row.items() if key != "index"}
         for row in _iter_jsonl_records(offline_errors_path)
     ]
-
-    progress = None
-    if tqdm is not None:
-        progress = tqdm(
-            total=len(offline_rows),
-            initial=len(reviewed_rows),
-            desc="Reviewing skills",
-            unit="skill",
-        )
-
-    def review_row(row: dict[str, object]) -> tuple[int, AnalysisResult]:
-        return (
-            int(row["index"]),
-            review_intermediate_record(row, matrix_definition, matrix_by_id, args, provider_registry, failure_policy),
-        )
-
-    try:
-        with ThreadPoolExecutor(max_workers=llm_workers) as executor:
-            future_to_index: dict[Future, int] = {}
-            next_to_submit = 0
-            max_in_flight = max(llm_workers * 4, llm_workers)
-
-            def submit_until_full() -> None:
-                nonlocal next_to_submit
-                while next_to_submit < len(pending_rows) and len(future_to_index) < max_in_flight:
-                    row = pending_rows[next_to_submit]
-                    future_to_index[executor.submit(review_row, row)] = int(row["index"])
-                    next_to_submit += 1
-
-            submit_until_full()
-            while future_to_index:
-                done, _ = wait(future_to_index, return_when=FIRST_COMPLETED)
-                for future in done:
-                    index = future_to_index.pop(future)
-                    try:
-                        reviewed_index, result = future.result()
-                        row = {
-                            "schema_version": "skills-security-matrix-reviewed-result-v1",
-                            "index": reviewed_index,
-                            "analysis_result": dataclass_to_dict(result),
-                        }
-                        _append_jsonl_record(reviewed_results_path, row)
-                        reviewed_rows[reviewed_index] = row
-                    except Exception as exc:  # pragma: no cover - defensive batch isolation
-                        skill_errors.append(
-                            {
-                                "skill_id": str(index),
-                                "error_type": "review_error",
-                                "error": str(exc),
-                            }
-                        )
-                    if progress is not None:
-                        progress.update(1)
-                        progress.set_postfix_str(f"reviewed={len(reviewed_rows)} err={len(skill_errors)}")
-                submit_until_full()
-    finally:
-        if progress is not None:
-            progress.close()
+    total_offline_rows = sum(1 for _row in _iter_jsonl_record_stream(offline_results_path))
 
     run_id, run_dir = _create_run_dir(Path(args.output_dir))
     writer = BatchResultWriter(
@@ -1611,11 +1554,88 @@ def run_review_stage(args: argparse.Namespace) -> int:
         emit_risk_mappings=args.emit_risk_mappings,
     )
     written_results = 0
+
     try:
-        for index in sorted(reviewed_rows):
-            result = _hydrate_analysis_result(reviewed_rows[index]["analysis_result"])
+        for row in _iter_jsonl_record_stream(reviewed_results_path):
+            result = _hydrate_analysis_result(row["analysis_result"])
             writer.write_result(result)
             written_results += 1
+
+        progress = None
+        if tqdm is not None:
+            progress = tqdm(
+                total=total_offline_rows,
+                initial=written_results,
+                desc="Reviewing skills",
+                unit="skill",
+            )
+
+        def review_row(row: dict[str, object]) -> tuple[int, AnalysisResult]:
+            return (
+                int(row["index"]),
+                review_intermediate_record(
+                    row,
+                    matrix_definition,
+                    matrix_by_id,
+                    args,
+                    provider_registry,
+                    failure_policy,
+                ),
+            )
+
+        pending_rows = (
+            row
+            for row in _iter_jsonl_record_stream(offline_results_path)
+            if int(row["index"]) not in reviewed_rows
+        )
+
+        try:
+            with ThreadPoolExecutor(max_workers=llm_workers) as executor:
+                future_to_index: dict[Future, int] = {}
+                max_in_flight = max(llm_workers * 4, llm_workers)
+                pending_exhausted = False
+
+                def submit_until_full() -> None:
+                    nonlocal pending_exhausted
+                    while not pending_exhausted and len(future_to_index) < max_in_flight:
+                        try:
+                            row = next(pending_rows)
+                        except StopIteration:
+                            pending_exhausted = True
+                            return
+                        future_to_index[executor.submit(review_row, row)] = int(row["index"])
+
+                submit_until_full()
+                while future_to_index:
+                    done, _ = wait(future_to_index, return_when=FIRST_COMPLETED)
+                    for future in done:
+                        index = future_to_index.pop(future)
+                        try:
+                            reviewed_index, result = future.result()
+                            row = {
+                                "schema_version": "skills-security-matrix-reviewed-result-v1",
+                                "index": reviewed_index,
+                                "analysis_result": dataclass_to_dict(result),
+                            }
+                            _append_jsonl_record(reviewed_results_path, row)
+                            reviewed_rows.add(reviewed_index)
+                            writer.write_result(result)
+                            written_results += 1
+                        except Exception as exc:  # pragma: no cover - defensive batch isolation
+                            skill_errors.append(
+                                {
+                                    "skill_id": str(index),
+                                    "error_type": "review_error",
+                                    "error": str(exc),
+                                }
+                            )
+                        if progress is not None:
+                            progress.update(1)
+                            progress.set_postfix_str(f"reviewed={written_results} err={len(skill_errors)}")
+                    submit_until_full()
+        finally:
+            if progress is not None:
+                progress.close()
     finally:
         writer.close()
 
@@ -1703,8 +1723,6 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
 
     skill_errors: list[dict[str, str]] = []
     written_results = 0
-    pending_outcomes: dict[int, tuple[str, AnalysisResult | dict[str, str]]] = {}
-    next_index_to_write = 0
     next_item_to_submit = 0
     if args.db:
         analysis_records, pre_resolve_errors = pre_resolve_db_records(
@@ -1712,7 +1730,7 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
             repos_root,
             include_hidden=args.include_hidden,
         )
-        pending_outcomes.update(pre_resolve_errors)
+        skill_errors.extend(payload for _outcome_type, payload in pre_resolve_errors.values())
     else:
         analysis_records = {
             index: AnalysisRecord(record=record)
@@ -1722,8 +1740,8 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
     progress = None
     if tqdm is not None:
         progress = tqdm(total=len(records), desc="Analyzing skills", unit="skill")
-        if pending_outcomes:
-            progress.update(len(pending_outcomes))
+        if skill_errors:
+            progress.update(len(skill_errors))
 
     def submit_next(executor: ThreadPoolExecutor, in_flight: dict[Future, tuple[int, SkillRecord]]) -> None:
         nonlocal next_item_to_submit
@@ -1741,29 +1759,22 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
         in_flight[future] = (index, analysis_record.record)
         next_item_to_submit += 1
 
-    def write_ready_results() -> None:
-        nonlocal next_index_to_write, written_results
-        while next_index_to_write in pending_outcomes:
-            outcome_type, payload = pending_outcomes.pop(next_index_to_write)
-            if outcome_type == "result":
-                writer.write_result(payload)
-                written_results += 1
-            else:
-                skill_errors.append(payload)
-            next_index_to_write += 1
+    def handle_outcome(outcome: tuple[str, AnalysisResult | dict[str, str]]) -> None:
+        nonlocal written_results
+        outcome_type, payload = outcome
+        if outcome_type == "result":
+            writer.write_result(payload)
+            written_results += 1
+        else:
+            skill_errors.append(payload)
 
     try:
-        write_ready_results()
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
             in_flight: dict[Future, tuple[int, SkillRecord]] = {}
 
             while (
                 next_item_to_submit < len(analysis_indices)
                 and len(in_flight) < args.workers
-                and (
-                    len(in_flight) + len(pending_outcomes) < max_buffered_results
-                    or next_index_to_write not in pending_outcomes
-                )
             ):
                 submit_next(executor, in_flight)
 
@@ -1771,31 +1782,27 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
                 completed, _ = wait(in_flight, return_when=FIRST_COMPLETED)
 
                 for future in completed:
-                    index, record = in_flight.pop(future)
+                    _index, record = in_flight.pop(future)
                     try:
-                        pending_outcomes[index] = future.result()
+                        handle_outcome(future.result())
                     except Exception as exc:  # pragma: no cover - defensive batch isolation
-                        pending_outcomes[index] = (
-                            "error",
-                            {"skill_id": record.skill_id, "error_type": "analysis_error", "error": str(exc)},
+                        handle_outcome(
+                            (
+                                "error",
+                                {"skill_id": record.skill_id, "error_type": "analysis_error", "error": str(exc)},
+                            )
                         )
-
-                write_ready_results()
 
                 if progress is not None:
                     progress.update(len(completed))
                     progress.set_postfix_str(
                         f"ok={written_results} err={len(skill_errors)} "
-                        f"buffered={len(pending_outcomes)} inflight={len(in_flight)}"
+                        f"inflight={len(in_flight)}"
                     )
 
                 while (
                     next_item_to_submit < len(analysis_indices)
                     and len(in_flight) < args.workers
-                    and (
-                        len(in_flight) + len(pending_outcomes) < max_buffered_results
-                        or next_index_to_write not in pending_outcomes
-                    )
                 ):
                     submit_next(executor, in_flight)
     finally:

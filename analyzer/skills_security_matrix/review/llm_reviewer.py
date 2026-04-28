@@ -26,9 +26,10 @@ def review_candidates(
             continue
 
         response = provider.review_category(request, model=model, timeout_seconds=timeout_seconds)
-        final_decision = _merge_review_response(request, decisions_by_key[decision_key], response, failure_policy)
+        default_decision = decisions_by_key[decision_key]
+        final_decision = _merge_review_response(request, default_decision, response, failure_policy)
         decisions_by_key[decision_key] = final_decision
-        audit_records.append(_audit_from_response(response))
+        audit_records.append(_audit_from_response(request, response, default_decision, final_decision))
     return list(decisions_by_key.values()), audit_records
 
 
@@ -108,7 +109,12 @@ def _handle_provider_unavailable(
     return default_decision
 
 
-def _audit_from_response(response: ReviewResponse) -> ReviewAuditRecord:
+def _audit_from_response(
+    request: ReviewRequest,
+    response: ReviewResponse,
+    default_decision: FinalCategoryDecision,
+    final_decision: FinalCategoryDecision,
+) -> ReviewAuditRecord:
     return ReviewAuditRecord(
         category_id=response.category_id,
         layer=response.layer,
@@ -117,11 +123,18 @@ def _audit_from_response(response: ReviewResponse) -> ReviewAuditRecord:
         model=response.model,
         reason=response.error if response.error else None,
         schema_version=response.schema_version,
+        cascade_stage="category_review",
+        trigger_types=[trigger.trigger_type for trigger in request.triggers],
+        default_decision_status=default_decision.decision_status,
+        final_decision_status=final_decision.decision_status,
     )
 
 
 def _audit_for_unavailable_provider(request: ReviewRequest, failure_policy: str) -> ReviewAuditRecord:
     status = "fallback_adjudicated" if request.fallback_allowed else "provider_unavailable"
+    final_status = "fallback_adjudicated" if request.fallback_allowed else (
+        "rejected_by_llm" if failure_policy == "fail_closed" else "accepted"
+    )
     return ReviewAuditRecord(
         category_id=request.candidate.category_id,
         layer=request.candidate.layer,
@@ -130,4 +143,8 @@ def _audit_for_unavailable_provider(request: ReviewRequest, failure_policy: str)
         model=None,
         reason=f"provider unavailable with failure_policy={failure_policy}",
         schema_version="skills-security-matrix-review-v1",
+        cascade_stage="category_review",
+        trigger_types=[trigger.trigger_type for trigger in request.triggers],
+        default_decision_status="accepted" if request.candidate.supporting_evidence else "insufficient_evidence",
+        final_decision_status=final_status,
     )

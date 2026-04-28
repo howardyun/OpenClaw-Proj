@@ -47,6 +47,30 @@ class ReviewResponse:
 
 
 @dataclass(slots=True)
+class CascadePolicyConfig:
+    mode: str
+    low_confidence_threshold: float
+    high_risk_sparse_threshold: int
+    fallback_max_categories: int
+    failure_policy: str
+
+
+@dataclass(slots=True)
+class CascadeRoute:
+    skill_id: str
+    candidate: RuleCandidate
+    triggers: list[ReviewTrigger] = field(default_factory=list)
+    fallback_allowed: bool = False
+
+
+@dataclass(slots=True)
+class SkillRiskReviewRoute:
+    skill_id: str
+    fallback_skill_has_risk: str
+    triggers: list[ReviewTrigger] = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class SkillRiskReviewRequest:
     skill_id: str
     description: str = ""
