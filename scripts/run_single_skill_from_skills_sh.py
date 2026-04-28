@@ -73,6 +73,12 @@ class ResolvedSkill:
 
 
 @dataclass(frozen=True, slots=True)
+class AnalysisRecord:
+    record: SkillRecord
+    resolved: ResolvedSkill | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class RepoSkillIndex:
     repo_root: Path
     include_hidden: bool
@@ -286,7 +292,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--skill-timeout-seconds",
         type=int,
-        default=400,
+        default=180,
         help="Per-skill timeout used only in batch mode.",
     )
     parser.add_argument("--llm-fail-open", action="store_true")
@@ -588,6 +594,23 @@ def resolve_skill(
             source_url=record.source_url,
         )
 
+    return resolve_skill_in_repo(
+        record,
+        repo,
+        repo_root,
+        include_hidden=include_hidden,
+        repo_index_cache=repo_index_cache,
+    )
+
+
+def resolve_skill_in_repo(
+    record: SkillRecord,
+    repo: str,
+    repo_root: Path,
+    include_hidden: bool = False,
+    repo_index: RepoSkillIndex | None = None,
+    repo_index_cache: RepoSkillIndexCache | None = None,
+) -> ResolvedSkill:
     slug_variants = build_skill_slug_variants(record, repo)
     direct_candidate = find_direct_skill_candidate(repo_root, slug_variants, include_hidden=include_hidden)
     if direct_candidate is not None:
@@ -598,15 +621,20 @@ def resolve_skill(
             slug=slug_variants[0],
         )
 
-    repo_index = (
+    resolved_repo_index = repo_index or (
         repo_index_cache.get(repo_root, include_hidden=include_hidden)
         if repo_index_cache is not None
         else build_repo_skill_index(repo_root, include_hidden=include_hidden)
     )
-    candidates = find_skill_candidates(repo_index, slug_variants)
+    candidates = find_skill_candidates(resolved_repo_index, slug_variants)
     slug = slug_variants[0]
 
-    if not candidates and _repo_level_skill_matches(record, repo, repo_root, repo_has_skill_md=repo_index.repo_has_skill_md):
+    if not candidates and _repo_level_skill_matches(
+        record,
+        repo,
+        repo_root,
+        repo_has_skill_md=resolved_repo_index.repo_has_skill_md,
+    ):
         candidates = [repo_root]
 
     if not candidates:
@@ -845,6 +873,95 @@ def _repo_root_for_record(record: SkillRecord, repos_root: Path) -> Path | None:
     return _infer_local_repo_root(skill_dir, repos_root) if skill_dir.exists() else None
 
 
+def pre_resolve_db_records(
+    records: list[SkillRecord],
+    repos_root: Path,
+    include_hidden: bool = False,
+) -> tuple[dict[int, AnalysisRecord], dict[int, tuple[str, dict[str, str]]]]:
+    grouped_records: dict[tuple[str, Path], list[tuple[int, SkillRecord]]] = defaultdict(list)
+    resolved_records: dict[int, AnalysisRecord] = {}
+    errors: dict[int, tuple[str, dict[str, str]]] = {}
+
+    for index, record in enumerate(records):
+        repo = extract_github_repo(record.source, record.source_url)
+        if repo is None:
+            errors[index] = (
+                "error",
+                _error_payload(
+                    record,
+                    error_type="repo_unparseable",
+                    error=f"Unable to parse repo from source fields for {record.skill_id}",
+                    repo=None,
+                    repo_root=None,
+                ),
+            )
+            continue
+
+        repo_root = (repos_root / repo.replace("/", "__")).resolve()
+        if not repo_root.is_dir():
+            errors[index] = (
+                "error",
+                _error_payload(
+                    record,
+                    error_type="repo_not_found",
+                    error=f"Local repo directory not found: {repo_root}",
+                    repo=repo,
+                    repo_root=repo_root,
+                ),
+            )
+            continue
+
+        grouped_records[(repo, repo_root)].append((index, record))
+
+    for (repo, repo_root), grouped in grouped_records.items():
+        repo_index: RepoSkillIndex | None = None
+        for index, record in grouped:
+            try:
+                slug_variants = build_skill_slug_variants(record, repo)
+                direct_candidate = find_direct_skill_candidate(
+                    repo_root,
+                    slug_variants,
+                    include_hidden=include_hidden,
+                )
+                if direct_candidate is not None:
+                    resolved_records[index] = AnalysisRecord(
+                        record=record,
+                        resolved=ResolvedSkill(
+                            skill_dir=direct_candidate,
+                            repo=repo,
+                            repo_root=repo_root,
+                            slug=slug_variants[0],
+                        ),
+                    )
+                    continue
+
+                if repo_index is None:
+                    repo_index = build_repo_skill_index(repo_root, include_hidden=include_hidden)
+                resolved_records[index] = AnalysisRecord(
+                    record=record,
+                    resolved=resolve_skill_in_repo(
+                        record,
+                        repo,
+                        repo_root,
+                        include_hidden=include_hidden,
+                        repo_index=repo_index,
+                    ),
+                )
+            except ResolutionError as exc:
+                errors[index] = (
+                    "error",
+                    _error_payload(
+                        record,
+                        error_type=exc.error_type,
+                        error=str(exc),
+                        repo=exc.repo,
+                        repo_root=exc.repo_root,
+                    ),
+                )
+
+    return resolved_records, errors
+
+
 def _analyze_record_impl(
     record: SkillRecord,
     repos_root: Path,
@@ -853,15 +970,16 @@ def _analyze_record_impl(
     provider_registry,
     failure_policy: str,
     repo_index_cache: RepoSkillIndexCache,
+    resolved: ResolvedSkill | None = None,
 ):
-    if args.db:
+    if resolved is None and args.db:
         resolved = resolve_skill(
             record,
             repos_root,
             include_hidden=args.include_hidden,
             repo_index_cache=repo_index_cache,
         )
-    else:
+    elif resolved is None:
         resolved = resolve_local_skill(record, repos_root, include_hidden=args.include_hidden)
     artifact = discover_skills(resolved.skill_dir, include_hidden=args.include_hidden, limit=1)[0]
     artifact.skill_id = record.skill_id
@@ -876,6 +994,7 @@ def _analyze_record_child(
     matrix_by_id,
     args: argparse.Namespace,
     failure_policy: str,
+    resolved: ResolvedSkill | None = None,
 ) -> None:
     try:
         load_environment()
@@ -888,6 +1007,7 @@ def _analyze_record_child(
             provider_registry,
             failure_policy,
             RepoSkillIndexCache(),
+            resolved,
         )
         conn.send(("result", result))
     except ResolutionError as exc:
@@ -915,6 +1035,7 @@ def analyze_record(
     matrix_by_id,
     args: argparse.Namespace,
     failure_policy: str,
+    resolved: ResolvedSkill | None = None,
 ) -> tuple[str, AnalysisResult | dict[str, str]]:
     safe_args = _to_namespace(args)
     skill_timeout_seconds = getattr(args, "skill_timeout_seconds", 600)
@@ -930,6 +1051,7 @@ def analyze_record(
             matrix_by_id,
             safe_args,
             failure_policy,
+            resolved,
         ),
     )
     process.start()
@@ -1018,24 +1140,41 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
     written_results = 0
     pending_outcomes: dict[int, tuple[str, AnalysisResult | dict[str, str]]] = {}
     next_index_to_write = 0
-    next_index_to_submit = 0
+    next_item_to_submit = 0
+    if args.db:
+        analysis_records, pre_resolve_errors = pre_resolve_db_records(
+            records,
+            repos_root,
+            include_hidden=args.include_hidden,
+        )
+        pending_outcomes.update(pre_resolve_errors)
+    else:
+        analysis_records = {
+            index: AnalysisRecord(record=record)
+            for index, record in enumerate(records)
+        }
+    analysis_indices = sorted(analysis_records)
     progress = None
     if tqdm is not None:
         progress = tqdm(total=len(records), desc="Analyzing skills", unit="skill")
+        if pending_outcomes:
+            progress.update(len(pending_outcomes))
 
     def submit_next(executor: ThreadPoolExecutor, in_flight: dict[Future, tuple[int, SkillRecord]]) -> None:
-        nonlocal next_index_to_submit
-        record = records[next_index_to_submit]
+        nonlocal next_item_to_submit
+        index = analysis_indices[next_item_to_submit]
+        analysis_record = analysis_records[index]
         future = executor.submit(
             analyze_record,
-            record,
+            analysis_record.record,
             repos_root,
             matrix_by_id,
             args,
             failure_policy,
+            analysis_record.resolved,
         )
-        in_flight[future] = (next_index_to_submit, record)
-        next_index_to_submit += 1
+        in_flight[future] = (index, analysis_record.record)
+        next_item_to_submit += 1
 
     def write_ready_results() -> None:
         nonlocal next_index_to_write, written_results
@@ -1049,13 +1188,17 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
             next_index_to_write += 1
 
     try:
+        write_ready_results()
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
             in_flight: dict[Future, tuple[int, SkillRecord]] = {}
 
             while (
-                next_index_to_submit < len(records)
+                next_item_to_submit < len(analysis_indices)
                 and len(in_flight) < args.workers
-                and len(in_flight) + len(pending_outcomes) < max_buffered_results
+                and (
+                    len(in_flight) + len(pending_outcomes) < max_buffered_results
+                    or next_index_to_write not in pending_outcomes
+                )
             ):
                 submit_next(executor, in_flight)
 
@@ -1082,9 +1225,12 @@ def run_batch_analysis(args: argparse.Namespace, records: list[SkillRecord]) -> 
                     )
 
                 while (
-                    next_index_to_submit < len(records)
+                    next_item_to_submit < len(analysis_indices)
                     and len(in_flight) < args.workers
-                    and len(in_flight) + len(pending_outcomes) < max_buffered_results
+                    and (
+                        len(in_flight) + len(pending_outcomes) < max_buffered_results
+                        or next_index_to_write not in pending_outcomes
+                    )
                 ):
                     submit_next(executor, in_flight)
     finally:
