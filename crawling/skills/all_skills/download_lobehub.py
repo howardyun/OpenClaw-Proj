@@ -10,9 +10,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
 
-# ======================
+
 # 配置
-# ======================
+
 DB_PATH = "all_skills.db"
 OUTPUT_DIR = "skills_lobehub_output"
 FAILED_JSON = "failed_lobehub_repos.json"
@@ -24,9 +24,9 @@ lock = threading.Lock()
 progress = 0
 
 
-# ======================
-# repo 提取（增强版）
-# ======================
+
+# repo 提取
+
 def extract_repo_from_url(url: str) -> str | None:
     if not url:
         return None
@@ -41,9 +41,9 @@ def extract_repo_from_url(url: str) -> str | None:
     return f"{owner}/{repo}"
 
 
-# ======================
+
 # 读取 repo（lobehub）
-# ======================
+
 def load_repos(db_path: Path) -> Set[str]:
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -64,9 +64,9 @@ def load_repos(db_path: Path) -> Set[str]:
     return repos
 
 
-# ======================
+
 # repo -> skill 映射
-# ======================
+
 def load_skill_names(db_path: Path) -> Dict[str, Set[str]]:
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -88,9 +88,9 @@ def load_skill_names(db_path: Path) -> Dict[str, Set[str]]:
     return repo_skills
 
 
-# ======================
+
 # failed
-# ======================
+
 def load_failed() -> Dict[str, str]:
     if not Path(FAILED_JSON).exists():
         return {}
@@ -111,9 +111,9 @@ def save_failed_atomic(failed_dict: Dict[str, str]):
     os.replace(tmp, FAILED_JSON)
 
 
-# ======================
+
 # 已完成 repo
-# ======================
+
 def load_done_repos(output_dir: Path) -> Set[str]:
     done = set()
 
@@ -127,9 +127,9 @@ def load_done_repos(output_dir: Path) -> Set[str]:
     return done
 
 
-# ======================
-# git clone（完整 clone）
-# ======================
+
+# git clone
+
 def clone_repo(repo: str, tmp_dir: Path) -> Path:
     target = tmp_dir / repo.replace("/", "__")
 
@@ -160,18 +160,18 @@ def clone_repo(repo: str, tmp_dir: Path) -> Path:
     return target
 
 
-# ======================
+
 # 找 SKILL.md
-# ======================
+
 def find_skill_folders(repo_dir: Path):
     for root, _, files in os.walk(repo_dir):
         if "SKILL.md" in files:
             yield Path(root)
 
 
-# ======================
+
 # 提取 skill
-# ======================
+
 def extract_skills(repo_dir: Path, out_dir: Path, repo: str):
     skill_dirs = list(find_skill_folders(repo_dir))
     if not skill_dirs:
@@ -192,9 +192,9 @@ def extract_skills(repo_dir: Path, out_dir: Path, repo: str):
     return True
 
 
-# ======================
+
 # 清理无效 skill
-# ======================
+
 def cleanup_skills(repo: str, out_dir: Path, repo_skill_map: Dict[str, Set[str]]):
     repo_out = out_dir / repo.replace("/", "__")
 
@@ -214,9 +214,9 @@ def cleanup_skills(repo: str, out_dir: Path, repo_skill_map: Dict[str, Set[str]]
             shutil.rmtree(d, ignore_errors=True)
 
 
-# ======================
+
 # 单 repo
-# ======================
+
 def process_repo(repo: str, out_dir: Path, total: int,
                  failed_dict: Dict[str, str],
                  repo_skill_map: Dict[str, Set[str]]):
@@ -262,9 +262,9 @@ def process_repo(repo: str, out_dir: Path, total: int,
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
-# ======================
+
 # main
-# ======================
+
 def main():
     db_repos = load_repos(Path(DB_PATH))
     failed_dict = load_failed()
