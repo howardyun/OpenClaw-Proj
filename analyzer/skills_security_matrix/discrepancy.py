@@ -14,6 +14,13 @@ WRITE_OR_BATCH_ATOMICS = {
 SCOPE_DRIFT_ATOMICS = {"O3", "G5", "I2", "I3", "I7", "C4", "C5"}
 AUTONOMY_DRIFT_ATOMICS = {"A3", "A4", "A5", "A6", "A7", "O5", "C2", "C4", "C5", "K4"}
 MANUAL_GUARD_ATOMICS = {"A2", "G2", "O1"}
+RISK_REDUNDANT_ATOMICS_BY_TIER = {
+    "T1": {"R1", "R2", "Q1"},
+    "T2": {"W1", "W2"},
+    "T3": {"G1", "G2"},
+    "T4": {"A1", "A2"},
+}
+RISK_REDUNDANT_ATOMICS = set().union(*RISK_REDUNDANT_ATOMICS_BY_TIER.values())
 
 
 def compute_discrepancies(
@@ -139,9 +146,11 @@ def _collect_mismatch_ids(
     mismatch_ids: list[str] = []
     declared = set(declaration_atomic_ids)
     implemented = set(implementation_atomic_ids)
-    if not declared and implemented:
+    risk_effective_implemented = implemented - RISK_REDUNDANT_ATOMICS
+    risk_effective_gap = (implemented - declared) - RISK_REDUNDANT_ATOMICS
+    if not declared and risk_effective_implemented:
         mismatch_ids.append("M1")
-    if implemented - declared:
+    if risk_effective_gap:
         mismatch_ids.append("M2")
     if declared - implemented:
         mismatch_ids.append("M3")
@@ -151,7 +160,7 @@ def _collect_mismatch_ids(
         mismatch_ids.append("M5")
     if any(item in implemented for item in AUTONOMY_DRIFT_ATOMICS) and (declared & MANUAL_GUARD_ATOMICS or "C3" in declaration_controls):
         mismatch_ids.append("M6")
-    if implemented and not declared and not any(item in implemented for item in WRITE_OR_BATCH_ATOMICS):
+    if risk_effective_implemented and not declared and not any(item in risk_effective_implemented for item in WRITE_OR_BATCH_ATOMICS):
         mismatch_ids.append("M7")
     return sorted(set(mismatch_ids))
 
@@ -194,7 +203,11 @@ def _skill_level_status(
     if not result.declaration_atomic_decisions and not result.implementation_atomic_decisions:
         return "insufficient_declaration_evidence"
     if not result.declaration_atomic_decisions:
-        if any(_has_high_risk(matrix_by_id[category_id]) for category_id in implementation_by_category):
+        if any(
+            implementation_by_category[category_id] - RISK_REDUNDANT_ATOMICS
+            and _has_high_risk(matrix_by_id[category_id])
+            for category_id in implementation_by_category
+        ):
             return "implementation_only_high_risk"
         return "insufficient_declaration_evidence"
     if not implementation_by_category:
@@ -206,7 +219,7 @@ def _skill_level_status(
         high_risk_gap = any(
             _has_high_risk(matrix_by_id[category_id])
             for category_id, implemented in implementation_by_category.items()
-            if implemented - declaration_by_category.get(category_id, set())
+            if (implemented - declaration_by_category.get(category_id, set())) - RISK_REDUNDANT_ATOMICS
         )
         return "implementation_only_high_risk" if high_risk_gap else "declared_less_than_implemented"
     if "M3" in mismatch_set:

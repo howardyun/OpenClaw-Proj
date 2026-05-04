@@ -31,8 +31,10 @@ DOMAIN_DEFINITIONS: tuple[DomainDefinition, ...] = (
     DomainDefinition("Dom-13", "系统/开发工具类", "代码解释器、脚本执行、批量重命名、repo 改写", frozenset({"R1", "R5", "X1", "X2", "X6", "X8"})),
     DomainDefinition("Dom-14", "外部业务对象写入类", "改日历事件、写 CRM、更新工单、创建 SaaS 记录", frozenset({"R1", "R8", "Q3", "G2", "O2"})),
     DomainDefinition("Dom-15", "系统/设备管理类", "修改系统设置、安装/卸载应用、控制 WiFi/蓝牙、杀进程", frozenset({"R1", "K1", "K2", "K3", "K5"})),
-    DomainDefinition("Dom-16", "自动化流程类", "定时任务、事件触发、持续监控后自动处理", frozenset({"A3", "A4", "A5"})),
-    DomainDefinition("Dom-17", "跨系统身份代理类", "代表用户跨多系统联动、A 系统读 B 系统写", frozenset({"I2", "I3", "O2", "C3", "U2"})),
+    DomainDefinition("Dom-16", "自动化流程类", "定时任务、事件触发、持续监控后自动处理", frozenset({"R1", "G1", "A3", "A4", "A5"})),
+    DomainDefinition("Dom-17", "跨系统身份代理类", "代表用户跨多系统联动、A 系统读 B 系统写", frozenset({"R1", "R8", "Q3", "G2", "O2", "C3", "U2", "I2", "I3"})),
+    DomainDefinition("Dom-18", "主动安全测试类", "红队测试、渗透测试、SMTP 安全测试、端口探测、漏洞验证、授权扫描、攻击面验证", frozenset({"R1", "W1", "W2", "Q1", "G1", "X1", "X8"})),
+    DomainDefinition("Dom-19", "外部设备/物理设备控制类", "实验室机器人控制、摄像头云台控制、车牌识别设备、IoT 设备控制、机械臂操作、外部传感器读取、硬件开关控制", frozenset({"R1", "S1", "S6", "S7", "K2", "K5", "G1"})),
 )
 
 

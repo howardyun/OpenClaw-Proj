@@ -44,6 +44,7 @@ class LiteLLMReviewProvider(LLMReviewProvider):
                     {"role": "system", "content": build_review_system_prompt()},
                     {"role": "user", "content": prompt},
                 ],
+                temperature=0,
                 response_format={"type": "json_schema", "json_schema": schema},
                 timeout=timeout_seconds,
             )
@@ -95,6 +96,7 @@ class LiteLLMReviewProvider(LLMReviewProvider):
                     {"role": "system", "content": build_skill_risk_system_prompt()},
                     {"role": "user", "content": prompt},
                 ],
+                temperature=0,
                 response_format={"type": "json_schema", "json_schema": schema},
                 timeout=timeout_seconds,
             )
@@ -144,6 +146,7 @@ class LiteLLMReviewProvider(LLMReviewProvider):
                     {"role": "system", "content": build_domain_system_prompt()},
                     {"role": "user", "content": prompt},
                 ],
+                temperature=0,
                 response_format={"type": "json_schema", "json_schema": schema},
                 timeout=timeout_seconds,
             )
@@ -340,7 +343,7 @@ def _domain_schema(allowed_domains: list[str]) -> dict[str, object]:
         "schema": {
             "type": "object",
             "properties": {
-                "domain": {"type": "string", "enum": ["", *allowed_domains]},
+                "domain": {"type": "string", "enum": allowed_domains},
                 "reason": {"type": "string"},
                 "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
                 "confidence_score": {"type": "number"},
@@ -354,13 +357,13 @@ def _domain_schema(allowed_domains: list[str]) -> dict[str, object]:
 def _build_domain_prompt(request: DomainReviewRequest) -> str:
     return json.dumps(
         {
-            "task": "Classify this skill into exactly one allowed domain id or an empty string using only the description.",
+            "task": "Classify this skill into exactly one allowed domain id using only the description.",
             "skill_id": request.skill_id,
             "description": request.description,
             "allowed_domains": request.allowed_domains,
             "domain_definitions": request.domain_definitions,
             "decision_policy": {
-                "empty_string_rule": "Return an empty string when the description is too vague or does not clearly imply one domain.",
+                "selection_rule": "You must choose the single best matching allowed domain even when the description is vague or ambiguous.",
                 "forbidden_actions": [
                     "using evidence outside the supplied description",
                     "inventing a new domain id",
