@@ -1,4 +1,4 @@
-version: 4
+version: 5
 atom_family_max:
   R: 10
   Q: 4
@@ -213,7 +213,7 @@ domains:
   - 搜文章
   max_tier_whitelist: Tier 2 (通信)
   minimum_permission_set:
-    raw: R1，W1，W2，Q1，G1
+    raw: R1 ，W1，W2，Q1，G1
     atoms:
     - G1
     - Q1
@@ -221,7 +221,7 @@ domains:
     - W1
     - W2
   minimum_permission_combinations:
-    raw: R1 + (W1 或 W2) + Q1 + G1
+    raw: R1 + (W1 或 W2) + Q1 + G1<br/>
     all_of:
     - G1
     - Q1
@@ -307,7 +307,7 @@ domains:
   - 拉 API 数据
   max_tier_whitelist: Tier 2 (通信)
   minimum_permission_set:
-    raw: R1，W2，W3，Q1
+    raw: R1 ，W2，W3，Q1
     atoms:
     - Q1
     - R1
@@ -389,7 +389,7 @@ domains:
   - 读连接器内容后总结
   max_tier_whitelist: Tier 1 (资源感知)
   minimum_permission_set:
-    raw: R1，R4，R7，R8，Q1，G1
+    raw: R1，R4， R7，R8，Q1，G1
     atoms:
     - G1
     - Q1
@@ -728,7 +728,7 @@ domains:
   - 纪要整理
   max_tier_whitelist: Tier 1 + Tier 2
   minimum_permission_set:
-    raw: R1，R4，R7，R8，Q3，G2，O1
+    raw: R1，R4，R7，R8，Q3，G2 ，O1
     atoms:
     - G2
     - O1
@@ -990,7 +990,7 @@ domains:
   - repo 改写
   max_tier_whitelist: Tier 1 + Tier 3
   minimum_permission_set:
-    raw: R1，R5，X1，X2，X8，X6
+    raw: R1 + R5 + (X1 或 X2 或 X8) + X6
     atoms:
     - R1
     - R5
@@ -1140,7 +1140,7 @@ domains:
   - 杀进程
   max_tier_whitelist: Tier 3 (环境管控)
   minimum_permission_set:
-    raw: R1，K1，K2，K3，K5
+    raw: R1，K1，K2、K3，K5
     atoms:
     - K1
     - K2
@@ -1295,3 +1295,212 @@ domains:
     - A7
     - I4
     - I6
+- id: Dom-18
+  name: 主动安全测试类
+  examples:
+  - 红队测试
+  - 渗透测试
+  - SMTP 安全测试
+  - 端口探测
+  - 漏洞验证
+  - 授权扫描
+  - 攻击面验证
+  max_tier_whitelist: Tier 2 + Tier 3
+  minimum_permission_set:
+    raw: R1，W1，W2，Q1，G1，X1，X8
+    atoms:
+    - G1
+    - Q1
+    - R1
+    - W1
+    - W2
+    - X1
+    - X8
+  minimum_permission_combinations:
+    raw: R1 + (W1 或 W2) + Q1 + G1；若需要本地测试工具，则加 (X1 或 X8)
+    all_of:
+    - G1
+    - Q1
+    - R1
+    one_of:
+    - - W1
+      - W2
+  forbidden_atoms:
+    raw: R3-R10, S1-S7, U1-U4, C1-C5, G3-G5, O1-O5, K1-K6, A3-A7, I1-I7, X5, X7
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C1
+    - C2
+    - C3
+    - C4
+    - C5
+    - G3
+    - G4
+    - G5
+    - I1
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K2
+    - K3
+    - K4
+    - K5
+    - K6
+    - O1
+    - O2
+    - O3
+    - O4
+    - O5
+    - R3
+    - R4
+    - R5
+    - R6
+    - R7
+    - R8
+    - R9
+    - R10
+    - S1
+    - S2
+    - S3
+    - S4
+    - S5
+    - S6
+    - S7
+    - U1
+    - U2
+    - U3
+    - U4
+    - X5
+    - X7
+  out_of_scope_atoms:
+    raw: W3（下载攻击载荷/外部工具）、X2/X3/X4（执行代码/容器/安装依赖）、X5（联网执行环境）、X7（读取密钥）、O2-O5（修改外部对象/自动外发）、A3-A7（无人值守扫描/自动攻击）、I2-I7（跨系统身份/凭证代理）
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - O2
+    - O3
+    - O4
+    - O5
+    - W3
+    - X2
+    - X3
+    - X4
+    - X5
+    - X7
+- id: Dom-19
+  name: 外部设备/物理设备控制类
+  examples:
+  - 实验室机器人控制
+  - 摄像头云台控制
+  - 车牌识别设备
+  - IoT 设备控制
+  - 机械臂操作
+  - 外部传感器读取
+  - 硬件开关控制
+  max_tier_whitelist: Tier 1 + Tier 3；涉及远程设备时可到 Tier 4
+  minimum_permission_set:
+    raw: R1，S1，S6，S7，K2，K5，G1
+    atoms:
+    - G1
+    - K2
+    - K5
+    - R1
+    - S1
+    - S6
+    - S7
+  minimum_permission_combinations:
+    raw: R1 + (S1 或 S6 或 S7) + G1；若需要控制设备，则加 (K2 或 K5)
+    all_of:
+    - G1
+    - R1
+    one_of:
+    - - S1
+      - S6
+      - S7
+  forbidden_atoms:
+    raw: R3-R10, W1-W4, U1-U4, C2-C5, X1-X8, G3-G5, O1-O5, K1, K3, K4, K6, A3-A7,
+      I2-I7
+    atoms:
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - C2
+    - C3
+    - C4
+    - C5
+    - G3
+    - G4
+    - G5
+    - I2
+    - I3
+    - I4
+    - I5
+    - I6
+    - I7
+    - K1
+    - K3
+    - K4
+    - K6
+    - O1
+    - O2
+    - O3
+    - O4
+    - O5
+    - R3
+    - R4
+    - R5
+    - R6
+    - R7
+    - R8
+    - R9
+    - R10
+    - U1
+    - U2
+    - U3
+    - U4
+    - W1
+    - W2
+    - W3
+    - W4
+    - X1
+    - X2
+    - X3
+    - X4
+    - X5
+    - X6
+    - X7
+    - X8
+  out_of_scope_atoms:
+    raw: C4/C5（实时上传设备数据流/建立长连接）、A3/A5/A6（长期无人值守控制）、I7（跨设备协同代理）、W2/W3（远程 API 控制或下载控制程序）、K1/K3/K6（修改系统级配置/安装应用/改全局环境）、O4（破坏性动作）
+    atoms:
+    - A3
+    - A5
+    - A6
+    - C4
+    - C5
+    - I7
+    - K1
+    - K3
+    - K6
+    - O4
+    - W2
+    - W3

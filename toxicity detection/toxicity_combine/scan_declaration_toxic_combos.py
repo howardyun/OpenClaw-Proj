@@ -43,7 +43,7 @@ CONFIG = {
     "skill_id_column": "name",
 
     # 额外保留到结果里的原始列
-    "keep_columns": ["name", "domain"],
+    "keep_columns": ["name", "domain","source_plat"],
 
     # 是否输出接近命中的组合
     "include_near": False,
