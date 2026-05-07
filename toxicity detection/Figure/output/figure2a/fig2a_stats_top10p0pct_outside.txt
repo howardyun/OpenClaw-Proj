@@ -1,0 +1,21 @@
+Input file: pdei_scores_full_v4_download_proxy.csv
+Number of skills: 380
+Positive PDEI skills: 369
+Zero-PDEI skills: 11
+
+Power-law tail fit:
+  alpha = 2.4013
+  xmin = 917.9236
+  tail_n = 137
+  tail_fraction = 0.3713
+  KS_D = 0.0521
+  KS_p_approx = 0.8312
+
+Concentration with configurable top percentage:
+  top_pct = 10.0000%
+  top_count = 38
+  top_PDEI_share = 45.6958%
+  top_downstream_exposure_share_among_top_PDEI_skills = 54.2184%
+  top_downstream_exposure_share_if_ranked_by_exposure = 65.7883%
+  Gini_PDEI = 0.6156
+  Gini_downstream_exposure = 0.8034
