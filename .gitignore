@@ -42,3 +42,11 @@ web/workspaces
 .playwright-cli/
 .pytest_cache/
 
+/toxicity detection/Data/ProcessData/classifications_deduped.csv
+/toxicity detection/Data/RawData/all_skills.db
+/toxicity detection/Data/RawData/classifications.csv
+/toxicity detection/Metric/output/pdei_final_outputs_neff4/pdei_domain_pdei_summary.csv
+/toxicity detection/Metric/output/pdei_final_outputs_neff4/pdei_path_trigger_stats.json
+/toxicity detection/Metric/output/pdei_final_outputs_neff4/pdei_reach_calibration.json
+/toxicity detection/Metric/output/pdei_final_outputs_neff4/pdei_scores_full_v4_download_proxy.csv
+/toxicity detection/Metric/output/pdei_final_outputs_neff4/pdei_top100_v4_download_proxy.csv
