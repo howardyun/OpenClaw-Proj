@@ -1,19 +1,19 @@
 Input file: pdei_scores_full_v4_download_proxy.csv
-Number of skills: 380
-Number of developers after filtering: 52
+Number of skills: 353717
+Number of developers after filtering: 42123
 Minimum skills per developer: 1
 
 Developer reputation correlation:
-  Spearman_rho = 0.1883
-  Spearman_p = 0.1814
+  Spearman_rho = 0.1565
+  Spearman_p = 0.0000
 
 Developer-level PDEI summary:
-  avg_PDEI_mean = 1308.7871
-  avg_PDEI_median = 726.1950
-  avg_PDEI_max = 6862.6800
-  Gini_avg_PDEI = 0.6035
+  avg_PDEI_mean = 202.7674
+  avg_PDEI_median = 73.9000
+  avg_PDEI_max = 10498.4500
+  Gini_avg_PDEI = 0.6958
 
 Developer type counts:
 developer_is_org
-Individual      27
-Organization    25
+Individual      34963
+Organization     7160
