@@ -64,6 +64,26 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Fig4 L1: raw AI Skills collected across platforms (pre-filter corpus size).",
     )
+    p.add_argument("--fig2a-skip-bootstrap", action="store_true", help="跳过 Fig2A 幂律 bootstrap 拟合优度检验")
+    p.add_argument("--fig2a-skip-vuong", action="store_true", help="跳过 Fig2A 幂律 Vuong 模型比较")
+    p.add_argument(
+        "--fig2a-bootstrap-n",
+        type=int,
+        default=FIG2A_BOOTSTRAP_N,
+        help=f"Fig2A bootstrap 重复次数（默认 {FIG2A_BOOTSTRAP_N}）",
+    )
+    p.add_argument(
+        "--fig2a-bootstrap-seed",
+        type=int,
+        default=FIG2A_BOOTSTRAP_SEED,
+        help=f"Fig2A bootstrap 随机种子（默认 {FIG2A_BOOTSTRAP_SEED}）",
+    )
+    p.add_argument(
+        "--fig2a-bootstrap-size",
+        choices=("tail", "full"),
+        default=FIG2A_BOOTSTRAP_SIZE,
+        help="Fig2A bootstrap 合成样本量：tail=与尾部同规模(默认,较快); full=全部正PDEI(慢,更接近CSN原文)",
+    )
     return p.parse_args()
 
 
@@ -659,6 +679,11 @@ STAR_COL = "developer_github_stars"
 FIG2A_TOP_PERCENT = 1.0
 FIG2A_MIN_TAIL_N = 30
 FIG2A_MAX_QUANTILE_FOR_XMIN = 0.90
+FIG2A_XMIN_QUANTILE_POINTS = 181
+FIG2A_BOOTSTRAP_N = 100
+FIG2A_BOOTSTRAP_SEED = 42
+FIG2A_BOOTSTRAP_SIZE = "tail"
+FIG2A_BOOTSTRAP_XMIN_QUANTILE_POINTS = 61
 
 STAR_BINS: Sequence[Tuple[str, float, float]] = (
     ("0", 0, 1),
@@ -749,43 +774,269 @@ def _fig2_top_share(values: pd.Series, top_pct: float) -> Tuple[int, float, pd.I
     return k, share, top_idx
 
 
+def _fig2_xmin_candidates(x: np.ndarray, max_quantile: float, *, n_points: int) -> np.ndarray:
+    return np.unique(np.quantile(x, np.linspace(0, max_quantile, n_points)))
+
+
+def _pareto_tail_ks_D(tail: np.ndarray, xmin: float, alpha: float) -> float:
+    tail = np.sort(np.asarray(tail, dtype=float))
+    n = len(tail)
+    if n == 0 or alpha <= 1.0:
+        return float("inf")
+    ecdf = np.arange(1, n + 1, dtype=float) / n
+    theoretical = 1.0 - np.power(tail / xmin, 1.0 - alpha)
+    return float(np.max(np.abs(ecdf - theoretical)))
+
+
+def _sample_pareto_tail(n: int, xmin: float, alpha: float, rng: np.random.Generator) -> np.ndarray:
+    if n <= 0:
+        return np.empty(0, dtype=float)
+    if alpha <= 1.0:
+        raise ValueError(f"Pareto alpha must be > 1 for bootstrap sampling, got {alpha}.")
+    u = rng.random(n)
+    return xmin * np.power(1.0 - u, 1.0 / (1.0 - alpha))
+
+
 def _fig2_fit_powerlaw_tail(
     values: pd.Series | np.ndarray,
     *,
     min_tail_n: int = FIG2A_MIN_TAIL_N,
     max_quantile: float = FIG2A_MAX_QUANTILE_FOR_XMIN,
+    n_xmin_candidates: int = FIG2A_XMIN_QUANTILE_POINTS,
 ) -> Dict[str, float]:
-    x = np.asarray(values, dtype=float)
+    x = np.sort(np.asarray(values, dtype=float))
     x = x[np.isfinite(x) & (x > 0)]
-    if len(x) < min_tail_n:
-        raise ValueError(f"Not enough positive observations for tail fitting: {len(x)} < {min_tail_n}.")
-    candidates = np.unique(np.quantile(x, np.linspace(0, max_quantile, 181)))
-    best = None
+    n = len(x)
+    if n < min_tail_n:
+        raise ValueError(f"Not enough positive observations for tail fitting: {n} < {min_tail_n}.")
+
+    candidates = _fig2_xmin_candidates(x, max_quantile, n_points=n_xmin_candidates)
+    best: Dict[str, float] | None = None
     for xmin in candidates:
-        tail = x[x >= xmin]
+        start = int(np.searchsorted(x, xmin, side="left"))
+        tail = x[start:]
         n_tail = len(tail)
         if n_tail < min_tail_n:
             continue
-        denom = np.sum(np.log(tail / xmin))
+        denom = float(np.sum(np.log(tail / xmin)))
         if denom <= 0:
             continue
         alpha = 1.0 + n_tail / denom
-        ks_d, ks_p = sp_stats.kstest(tail, "pareto", args=(alpha - 1.0, 0, xmin))
+        if alpha <= 1.0:
+            continue
+        ks_d = _pareto_tail_ks_D(tail, xmin, alpha)
         if best is None or ks_d < best["ks_D"]:
             best = {
                 "xmin": float(xmin),
                 "alpha": float(alpha),
                 "n_tail": int(n_tail),
-                "tail_fraction": float(n_tail / len(x)),
+                "tail_fraction": float(n_tail / n),
                 "ks_D": float(ks_d),
-                "ks_p_approx": float(ks_p),
             }
+
     if best is None:
         raise ValueError("No valid tail fit found for Fig2A power-law tail.")
+
+    tail = x[x >= best["xmin"]]
+    _, ks_p = sp_stats.kstest(tail, "pareto", args=(best["alpha"] - 1.0, 0, best["xmin"]))
+    best["ks_p_approx"] = float(ks_p)
     return best
 
 
-def build_fig2a(pdei_csv: Path, out_dir: Path, *, pdf: bool = False, stats_box: str = "outside") -> None:
+def _fig2_powerlaw_bootstrap_gof(
+    values: pd.Series | np.ndarray,
+    fit: Dict[str, float],
+    *,
+    n_bootstrap: int = FIG2A_BOOTSTRAP_N,
+    seed: int = FIG2A_BOOTSTRAP_SEED,
+    synthetic_size: str = FIG2A_BOOTSTRAP_SIZE,
+    min_tail_n: int = FIG2A_MIN_TAIL_N,
+    max_quantile: float = FIG2A_MAX_QUANTILE_FOR_XMIN,
+) -> Dict[str, float | int | str]:
+    x = np.asarray(values, dtype=float)
+    x = x[np.isfinite(x) & (x > 0)]
+    if n_bootstrap <= 0:
+        raise ValueError("n_bootstrap must be positive.")
+    if synthetic_size == "full":
+        n_syn = len(x)
+    elif synthetic_size == "tail":
+        n_syn = int(fit["n_tail"])
+    else:
+        raise ValueError(f"Unknown synthetic_size {synthetic_size!r}; expected 'tail' or 'full'.")
+
+    rng = np.random.default_rng(seed)
+    d_obs = float(fit["ks_D"])
+    d_sims: list[float] = []
+    for _ in range(n_bootstrap):
+        synthetic = _sample_pareto_tail(n_syn, fit["xmin"], fit["alpha"], rng)
+        try:
+            syn_fit = _fig2_fit_powerlaw_tail(
+                synthetic,
+                min_tail_n=min_tail_n,
+                max_quantile=max_quantile,
+                n_xmin_candidates=FIG2A_BOOTSTRAP_XMIN_QUANTILE_POINTS,
+            )
+        except ValueError:
+            continue
+        d_sims.append(float(syn_fit["ks_D"]))
+
+    d_sims_arr = np.asarray(d_sims, dtype=float)
+    if len(d_sims_arr) == 0:
+        bootstrap_p = float("nan")
+    else:
+        bootstrap_p = float(np.mean(d_sims_arr >= d_obs))
+
+    return {
+        "bootstrap_p": bootstrap_p,
+        "bootstrap_n_requested": int(n_bootstrap),
+        "bootstrap_n_success": int(len(d_sims_arr)),
+        "bootstrap_d_obs": d_obs,
+        "bootstrap_d_sim_mean": float(np.mean(d_sims_arr)) if len(d_sims_arr) else float("nan"),
+        "bootstrap_d_sim_median": float(np.median(d_sims_arr)) if len(d_sims_arr) else float("nan"),
+        "bootstrap_synthetic_size_mode": synthetic_size,
+        "bootstrap_synthetic_n": int(n_syn),
+        "bootstrap_seed": int(seed),
+    }
+
+
+def _fig2_fit_lognormal_tail(tail: np.ndarray) -> Tuple[float, float]:
+    logx = np.log(np.asarray(tail, dtype=float))
+    mu = float(np.mean(logx))
+    sigma = float(np.sqrt(np.mean((logx - mu) ** 2)))
+    if sigma <= 0:
+        sigma = float(np.finfo(float).tiny)
+    return mu, sigma
+
+
+def _fig2_fit_exponential_tail(tail: np.ndarray, xmin: float) -> float:
+    shifted = np.asarray(tail, dtype=float) - xmin
+    mean_shift = float(np.mean(shifted))
+    if mean_shift <= 0:
+        raise ValueError("Exponential tail fit requires positive mean(x - xmin).")
+    return 1.0 / mean_shift
+
+
+def _fig2_vuong_test(pointwise_ll_num: np.ndarray, pointwise_ll_den: np.ndarray) -> Dict[str, float]:
+    m = np.asarray(pointwise_ll_num, dtype=float) - np.asarray(pointwise_ll_den, dtype=float)
+    n = len(m)
+    if n < 2:
+        return {"vuong_z": float("nan"), "vuong_p": float("nan"), "mean_ll_ratio": float("nan")}
+    mu = float(np.mean(m))
+    sd = float(np.std(m, ddof=1))
+    if sd <= 0:
+        return {"vuong_z": float("nan"), "vuong_p": float("nan"), "mean_ll_ratio": mu}
+    z = math.sqrt(n) * mu / sd
+    p = float(2.0 * sp_stats.norm.sf(abs(z)))
+    return {"vuong_z": z, "vuong_p": p, "mean_ll_ratio": mu}
+
+
+def _fig2_powerlaw_vuong_comparisons(
+    values: pd.Series | np.ndarray,
+    fit: Dict[str, float],
+) -> Dict[str, Dict[str, float]]:
+    x = np.asarray(values, dtype=float)
+    x = x[np.isfinite(x) & (x > 0)]
+    tail = x[x >= fit["xmin"]]
+    xmin = float(fit["xmin"])
+    alpha = float(fit["alpha"])
+
+    ll_pl = np.log(alpha - 1.0) - np.log(xmin) - alpha * np.log(tail / xmin)
+
+    mu, sigma = _fig2_fit_lognormal_tail(tail)
+    log_tail = np.log(tail)
+    ll_ln = (
+        -log_tail
+        - np.log(sigma)
+        - 0.5 * np.log(2.0 * np.pi)
+        - (log_tail - mu) ** 2 / (2.0 * sigma**2)
+    )
+
+    lam = _fig2_fit_exponential_tail(tail, xmin)
+    ll_exp = np.log(lam) - lam * (tail - xmin)
+
+    vuong_ln = _fig2_vuong_test(ll_pl, ll_ln)
+    vuong_exp = _fig2_vuong_test(ll_pl, ll_exp)
+    return {
+        "powerlaw": {
+            "total_ll": float(np.sum(ll_pl)),
+            "alpha": alpha,
+            "xmin": xmin,
+        },
+        "lognormal": {
+            **vuong_ln,
+            "total_ll": float(np.sum(ll_ln)),
+            "mu": mu,
+            "sigma": sigma,
+        },
+        "exponential": {
+            **vuong_exp,
+            "total_ll": float(np.sum(ll_exp)),
+            "lambda": lam,
+        },
+    }
+
+
+def _fig2_vuong_winner_label(vuong_z: float, vuong_p: float, *, powerlaw_name: str, alt_name: str) -> str:
+    if not np.isfinite(vuong_z) or not np.isfinite(vuong_p):
+        return "undetermined"
+    if vuong_p >= 0.05:
+        return "no significant difference"
+    if vuong_z > 0:
+        return f"{powerlaw_name} preferred"
+    if vuong_z < 0:
+        return f"{alt_name} preferred"
+    return "no significant difference"
+
+
+def _fig2_format_bootstrap_stats(bootstrap: Dict[str, float | int | str]) -> str:
+    return f"""Bootstrap goodness-of-fit (CSN-style parametric bootstrap):
+  synthetic_size_mode = {bootstrap['bootstrap_synthetic_size_mode']}
+  synthetic_n = {bootstrap['bootstrap_synthetic_n']}
+  n_requested = {bootstrap['bootstrap_n_requested']}
+  n_success = {bootstrap['bootstrap_n_success']}
+  seed = {bootstrap['bootstrap_seed']}
+  D_obs = {bootstrap['bootstrap_d_obs']:.4f}
+  D_sim_mean = {bootstrap['bootstrap_d_sim_mean']:.4f}
+  D_sim_median = {bootstrap['bootstrap_d_sim_median']:.4f}
+  bootstrap_p = {bootstrap['bootstrap_p']:.4f}
+  interpretation: p >= 0.05 -> tail consistent with fitted power law; p < 0.05 -> reject power-law tail"""
+
+
+def _fig2_format_vuong_stats(vuong: Dict[str, Dict[str, float]]) -> str:
+    ln = vuong["lognormal"]
+    exp = vuong["exponential"]
+    ln_winner = _fig2_vuong_winner_label(ln["vuong_z"], ln["vuong_p"], powerlaw_name="power law", alt_name="lognormal")
+    exp_winner = _fig2_vuong_winner_label(exp["vuong_z"], exp["vuong_p"], powerlaw_name="power law", alt_name="exponential")
+    return f"""Vuong tests on tail x >= xmin (pointwise log-likelihood ratios):
+  powerlaw total log-likelihood = {vuong['powerlaw']['total_ll']:.2f}
+
+  vs lognormal:
+    mu = {ln['mu']:.4f}; sigma = {ln['sigma']:.4f}
+    total log-likelihood = {ln['total_ll']:.2f}
+    vuong_z = {ln['vuong_z']:.4f}; vuong_p = {ln['vuong_p']:.4f}
+    result = {ln_winner}
+
+  vs exponential:
+    lambda = {exp['lambda']:.6f}
+    total log-likelihood = {exp['total_ll']:.2f}
+    vuong_z = {exp['vuong_z']:.4f}; vuong_p = {exp['vuong_p']:.4f}
+    result = {exp_winner}
+
+  interpretation: positive vuong_z favors power law; p < 0.05 indicates a significant preference"""
+
+
+def build_fig2a(
+    pdei_csv: Path,
+    out_dir: Path,
+    *,
+    pdf: bool = False,
+    stats_box: str = "outside",
+    run_bootstrap: bool = True,
+    run_vuong: bool = True,
+    bootstrap_n: int = FIG2A_BOOTSTRAP_N,
+    bootstrap_seed: int = FIG2A_BOOTSTRAP_SEED,
+    bootstrap_size: str = FIG2A_BOOTSTRAP_SIZE,
+) -> None:
     df = pd.read_csv(pdei_csv.resolve(), encoding="utf-8-sig")
     for col in [PDEI_COL, DOWNLOAD_COL]:
         if col not in df.columns:
@@ -796,6 +1047,33 @@ def build_fig2a(pdei_csv: Path, out_dir: Path, *, pdf: bool = False, stats_box: 
 
     positive_pdei = df.loc[df[PDEI_COL] > 0, PDEI_COL]
     fit = _fig2_fit_powerlaw_tail(positive_pdei)
+
+    bootstrap: Dict[str, float | int | str] | None = None
+    if run_bootstrap:
+        print(
+            f"Fig2A bootstrap: n={bootstrap_n}, size={bootstrap_size}, seed={bootstrap_seed} "
+            "(this may take a few minutes on large corpora)...",
+            flush=True,
+        )
+        bootstrap = _fig2_powerlaw_bootstrap_gof(
+            positive_pdei,
+            fit,
+            n_bootstrap=bootstrap_n,
+            seed=bootstrap_seed,
+            synthetic_size=bootstrap_size,
+        )
+        print(f"Fig2A bootstrap done: p={bootstrap['bootstrap_p']:.4f}", flush=True)
+
+    vuong: Dict[str, Dict[str, float]] | None = None
+    if run_vuong:
+        vuong = _fig2_powerlaw_vuong_comparisons(positive_pdei, fit)
+        print(
+            "Fig2A Vuong: "
+            f"vs lognormal z={vuong['lognormal']['vuong_z']:.3f}, p={vuong['lognormal']['vuong_p']:.4f}; "
+            f"vs exponential z={vuong['exponential']['vuong_z']:.3f}, p={vuong['exponential']['vuong_p']:.4f}",
+            flush=True,
+        )
+
     k_top, top_pdei_share, top_pdei_idx = _fig2_top_share(df[PDEI_COL], FIG2A_TOP_PERCENT)
     total_exposure = float(df["downstream_exposure"].sum())
     top_exposure_share = (
@@ -827,7 +1105,6 @@ def build_fig2a(pdei_csv: Path, out_dir: Path, *, pdf: bool = False, stats_box: 
         annotation = (
             f"n = {len(df):,}; positive = {len(positive_pdei):,}\n"
             f"alpha = {fit['alpha']:.2f}; xmin = {fit['xmin']:.1f}\n"
-            f"KS D = {fit['ks_D']:.3f}; p ~ {fit['ks_p_approx']:.3f}\n"
             f"Top {FIG2A_TOP_PERCENT:g}%: k = {k_top:,}\n"
             f"PDEI share = {top_pdei_share:.1%}\n"
             f"Exposure share = {top_exposure_share:.1%}"
@@ -843,31 +1120,42 @@ def build_fig2a(pdei_csv: Path, out_dir: Path, *, pdf: bool = False, stats_box: 
     save_fig(fig, png_path, pdf_path, pad_inches=0.10, use_tight_layout=False)
 
     stats_path = out_dir / f"fig2a_stats_{box_tag}.txt"
-    stats_path.write_text(
-        f"""Input file: {pdei_csv}
-Number of skills: {len(df)}
-Positive PDEI skills: {len(positive_pdei)}
-Zero-PDEI skills: {int((df[PDEI_COL] == 0).sum())}
-
-Power-law tail fit:
-  alpha = {fit['alpha']:.4f}
-  xmin = {fit['xmin']:.4f}
-  tail_n = {fit['n_tail']}
-  tail_fraction = {fit['tail_fraction']:.4f}
-  KS_D = {fit['ks_D']:.4f}
-  KS_p_approx = {fit['ks_p_approx']:.4f}
-
-Concentration (top 1%):
-  top_pct = {FIG2A_TOP_PERCENT:.4f}%
-  top_count = {k_top}
-  top_PDEI_share = {top_pdei_share:.4%}
-  top_downstream_exposure_share_among_top_PDEI_skills = {top_exposure_share:.4%}
-  top_downstream_exposure_share_if_ranked_by_exposure = {top_exposure_share_by_exposure:.4%}
-  Gini_PDEI = {gini(df[PDEI_COL]):.4f}
-  Gini_downstream_exposure = {gini(df['downstream_exposure']):.4f}
-""".strip(),
-        encoding="utf-8",
+    stats_lines = [
+        f"Input file: {pdei_csv}",
+        f"Number of skills: {len(df)}",
+        f"Positive PDEI skills: {len(positive_pdei)}",
+        f"Zero-PDEI skills: {int((df[PDEI_COL] == 0).sum())}",
+        "",
+        "Power-law tail fit:",
+        f"  alpha = {fit['alpha']:.4f}",
+        f"  xmin = {fit['xmin']:.4f}",
+        f"  tail_n = {fit['n_tail']}",
+        f"  tail_fraction = {fit['tail_fraction']:.4f}",
+        f"  KS_D = {fit['ks_D']:.4f}",
+        f"  KS_p_approx = {fit['ks_p_approx']:.4f}",
+    ]
+    if bootstrap is not None:
+        stats_lines.extend(["", _fig2_format_bootstrap_stats(bootstrap)])
+    else:
+        stats_lines.extend(["", "Bootstrap goodness-of-fit: skipped"])
+    if vuong is not None:
+        stats_lines.extend(["", _fig2_format_vuong_stats(vuong)])
+    else:
+        stats_lines.extend(["", "Vuong model comparisons: skipped"])
+    stats_lines.extend(
+        [
+            "",
+            "Concentration (top 1%):",
+            f"  top_pct = {FIG2A_TOP_PERCENT:.4f}%",
+            f"  top_count = {k_top}",
+            f"  top_PDEI_share = {top_pdei_share:.4%}",
+            f"  top_downstream_exposure_share_among_top_PDEI_skills = {top_exposure_share:.4%}",
+            f"  top_downstream_exposure_share_if_ranked_by_exposure = {top_exposure_share_by_exposure:.4%}",
+            f"  Gini_PDEI = {gini(df[PDEI_COL]):.4f}",
+            f"  Gini_downstream_exposure = {gini(df['downstream_exposure']):.4f}",
+        ]
     )
+    stats_path.write_text("\n".join(stats_lines).strip(), encoding="utf-8")
     save_figure_caption(out_dir, f"fig2a_pdei_powerlaw_ccdf_{box_tag}", FIGURE_CAPTIONS["fig2a"])
     print(f"Saved: {png_path}")
 
@@ -1182,9 +1470,28 @@ def build_fig2b_scatter_opt(
     print(f"Saved: {png_path}")
 
 
-def run_fig2_suite(pdei_csv: Path, out_dir: Path, *, pdf: bool = False) -> None:
+def run_fig2_suite(
+    pdei_csv: Path,
+    out_dir: Path,
+    *,
+    pdf: bool = False,
+    run_bootstrap: bool = True,
+    run_vuong: bool = True,
+    bootstrap_n: int = FIG2A_BOOTSTRAP_N,
+    bootstrap_seed: int = FIG2A_BOOTSTRAP_SEED,
+    bootstrap_size: str = FIG2A_BOOTSTRAP_SIZE,
+) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    build_fig2a(pdei_csv, out_dir, pdf=pdf)
+    build_fig2a(
+        pdei_csv,
+        out_dir,
+        pdf=pdf,
+        run_bootstrap=run_bootstrap,
+        run_vuong=run_vuong,
+        bootstrap_n=bootstrap_n,
+        bootstrap_seed=bootstrap_seed,
+        bootstrap_size=bootstrap_size,
+    )
     build_fig2b(pdei_csv, out_dir, pdf=pdf)
     build_fig2b_bins(pdei_csv, out_dir, pdf=pdf, split_org=True)
     build_fig2b_scatter_opt(pdei_csv, out_dir, pdf=pdf)
@@ -1338,7 +1645,16 @@ def main() -> None:
     if args.fig2_only:
         if pdei_csv is None:
             raise ValueError("--fig2-only 需要 --pdei-csv 或 --v4-csv")
-        run_fig2_suite(pdei_csv.resolve(), out_dir, pdf=args.pdf)
+        run_fig2_suite(
+            pdei_csv.resolve(),
+            out_dir,
+            pdf=args.pdf,
+            run_bootstrap=not args.fig2a_skip_bootstrap,
+            run_vuong=not args.fig2a_skip_vuong,
+            bootstrap_n=args.fig2a_bootstrap_n,
+            bootstrap_seed=args.fig2a_bootstrap_seed,
+            bootstrap_size=args.fig2a_bootstrap_size,
+        )
         print("DONE (Fig2 only):", out_dir)
         return
 
@@ -1348,7 +1664,16 @@ def main() -> None:
     if not args.skip_fig2:
         if pdei_csv is None:
             pdei_csv = args.v4_csv
-        run_fig2_suite(pdei_csv.resolve(), out_dir, pdf=args.pdf)
+        run_fig2_suite(
+            pdei_csv.resolve(),
+            out_dir,
+            pdf=args.pdf,
+            run_bootstrap=not args.fig2a_skip_bootstrap,
+            run_vuong=not args.fig2a_skip_vuong,
+            bootstrap_n=args.fig2a_bootstrap_n,
+            bootstrap_seed=args.fig2a_bootstrap_seed,
+            bootstrap_size=args.fig2a_bootstrap_size,
+        )
 
     v4 = pd.read_csv(args.v4_csv.resolve(), encoding="utf-8-sig")
     required = {
