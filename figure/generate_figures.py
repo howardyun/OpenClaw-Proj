@@ -199,7 +199,7 @@ _PDEI_TIER_ATOMS: dict[str, set[str]] = {
 }
 TIER_BY_ATOM: dict[str, str] = {a: t for t, atoms in _PDEI_TIER_ATOMS.items() for a in atoms}
 
-# PDEI v3 毒性路径：两条 Tier 同时冗余（Γ 因子）；Fig3 按 Tier 交叉子矩阵标注
+# PDEI v3 毒性路径：两条 Tier 同时冗余（Γ 因子）；Fig3a 按 Tier 交叉子矩阵标注
 PATH_TIER_RULES: dict[str, tuple[str, str]] = {
     "A": ("T1", "T2"),
     "B": ("T1", "T3"),
@@ -208,6 +208,9 @@ PATH_TIER_RULES: dict[str, tuple[str, str]] = {
     "E": ("T4", "T3"),
 }
 PATH_EDGE_COLOR = "#d62728"
+PATH_COLS = ["path_A", "path_B", "path_C", "path_D", "path_E"]
+PATH_RATE_COLS = [f"{p}_rate" for p in PATH_COLS]
+FIG3B_BAR_COLOR = "#4a9fd4"
 
 
 def _path_letter_for_tiers(ta: str, tb: str) -> str | None:
@@ -271,9 +274,26 @@ FIGURE_CAPTIONS: dict[str, str] = {
         "Relationship between developer GitHub stars and average PDEI per developer."
     ),
     "fig3": (
-        "Fig. 3 | Toxic-combo co-occurrence matrix. "
+        "Fig. 3 | Toxic-combo structure and domain-level permission risk. "
+        "a, Pairwise co-occurrence counts among top toxic atomic-permission combinations; "
+        "red boxes mark Path A–E tier-crossing pairs. "
+        "b, Average PDEI by skill domain (domains sorted by mean PDEI). "
+        "c, Toxic-path density rates by skill domain (fraction of skills with each path active)."
+    ),
+    "fig3a": (
+        "Fig. 3a | Toxic-combo co-occurrence matrix. "
         "Pairwise co-occurrence counts among top toxic atomic-permission combinations; "
         "red boxes mark Path A–E tier-crossing pairs."
+    ),
+    "fig3b": (
+        "Fig. 3b | Average PDEI by skill domain. "
+        "Mean PDEI score per functional domain across the analytical corpus; "
+        "domains ordered by descending average PDEI."
+    ),
+    "fig3c": (
+        "Fig. 3c | Toxic-path density by skill domain. "
+        "Fraction of skills in each domain with Path A–E active; "
+        "domains ordered by descending average PDEI (same order as panel b)."
     ),
     "fig4": (
         "Fig. 4 | Impact funnel and regulatory conflict. "
@@ -395,7 +415,28 @@ def build_fig1(v4: pd.DataFrame, out_dir: Path, top_k: int, pdf: bool) -> None:
     save_figure_caption(out_dir, "fig1_heatmap", FIGURE_CAPTIONS["fig1"])
 
 
-def build_fig3(v4: pd.DataFrame, top_pairs: set[tuple[str, str]], out_dir: Path, pdf: bool) -> None:
+def _positive_rate(series: pd.Series) -> float:
+    return float((series > 0).mean())
+
+
+def compute_domain_path_summary(v4: pd.DataFrame) -> pd.DataFrame:
+    """按 domain 汇总平均 PDEI 与各 path 激活率；按 avg_pdei 降序排列。"""
+    d = v4.dropna(subset=["domain"]).copy()
+    d["domain"] = d["domain"].astype(str).str.strip()
+    d = d[d["domain"] != ""]
+    for col in [*PATH_COLS, "pdei_score"]:
+        d[col] = pd.to_numeric(d[col], errors="coerce").fillna(0.0)
+    agg_spec: dict = {
+        "skill_count": ("pdei_score", "size"),
+        "avg_pdei": ("pdei_score", "mean"),
+    }
+    for path_col in PATH_COLS:
+        agg_spec[f"{path_col}_rate"] = (path_col, _positive_rate)
+    summary = d.groupby("domain", as_index=False).agg(**agg_spec)
+    return summary.sort_values("avg_pdei", ascending=False).reset_index(drop=True)
+
+
+def build_fig3a(v4: pd.DataFrame, top_pairs: set[tuple[str, str]], out_dir: Path, pdf: bool) -> None:
     """Top10 组合原子共现矩阵；Path A–E 按 PDEI Tier 交叉逐格红框（共现>0）。"""
     atoms = sorted({a for p in top_pairs for a in p})
     if not atoms:
@@ -472,8 +513,8 @@ def build_fig3(v4: pd.DataFrame, top_pairs: set[tuple[str, str]], out_dir: Path,
         )
         ann.set_path_effects(stroke)
 
-    save_fig(fig, out_dir / "fig3_cooccurrence.png", out_dir / "fig3_cooccurrence.pdf" if pdf else None)
-    save_figure_caption(out_dir, "fig3_cooccurrence", FIGURE_CAPTIONS["fig3"])
+    save_fig(fig, out_dir / "fig3a_cooccurrence.png", out_dir / "fig3a_cooccurrence.pdf" if pdf else None)
+    save_figure_caption(out_dir, "fig3a_cooccurrence", FIGURE_CAPTIONS["fig3a"])
 
     by_path: dict[str, int] = defaultdict(int)
     for letter in pair_letter.values():
@@ -485,9 +526,81 @@ def build_fig3(v4: pd.DataFrame, top_pairs: set[tuple[str, str]], out_dir: Path,
         "path_pair_counts": dict(by_path),
         "path_tier_rules": {k: list(v) for k, v in PATH_TIER_RULES.items()},
     }
-    (out_dir / "fig3_cooccurrence_meta.json").write_text(
+    (out_dir / "fig3a_cooccurrence_meta.json").write_text(
         json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+
+
+def build_fig3b(domain_summary: pd.DataFrame, out_dir: Path, pdf: bool) -> None:
+    """各 domain 平均 PDEI 柱状图（按 avg_pdei 降序）。"""
+    if domain_summary.empty:
+        raise ValueError("domain 汇总为空，无法生成 Fig3b。")
+
+    sns.set_theme(style="white")
+    fig, ax = plt.subplots(figsize=(12.0, 5.0))
+    x = np.arange(len(domain_summary))
+    ax.bar(x, domain_summary["avg_pdei"], width=0.72, color=FIG3B_BAR_COLOR, edgecolor="none")
+    ax.set_xticks(x)
+    ax.set_xticklabels(domain_summary["domain"], rotation=0, fontsize=9)
+    ax.set_xlabel("Domain")
+    ax.set_ylabel("Average PDEI")
+    ax.yaxis.grid(True, linestyle="-", linewidth=0.6, color="#e0e0e0", alpha=0.95)
+    ax.set_axisbelow(True)
+    sns.despine(ax=ax)
+
+    save_fig(fig, out_dir / "fig3b_avg_pdei_by_domain.png", out_dir / "fig3b_avg_pdei_by_domain.pdf" if pdf else None)
+    save_figure_caption(out_dir, "fig3b_avg_pdei_by_domain", FIGURE_CAPTIONS["fig3b"])
+
+    stats_lines = [
+        "Fig3b domain summary (sorted by avg_pdei descending):",
+        domain_summary.to_string(index=False, float_format=lambda v: f"{v:.4f}"),
+    ]
+    (out_dir / "fig3b_avg_pdei_by_domain_stats.txt").write_text("\n".join(stats_lines), encoding="utf-8")
+    domain_summary.round(4).to_csv(out_dir / "fig3b_domain_summary.csv", index=False, encoding="utf-8-sig")
+
+
+def build_fig3c(domain_summary: pd.DataFrame, out_dir: Path, pdf: bool) -> None:
+    """各 domain 的 path 激活率热图（Y 轴与 Fig3b 同序）。"""
+    if domain_summary.empty:
+        raise ValueError("domain 汇总为空，无法生成 Fig3c。")
+
+    m = domain_summary[PATH_RATE_COLS].to_numpy(dtype=float)
+    domains = domain_summary["domain"].tolist()
+    vmax = max(0.7, float(np.nanmax(m)) if m.size else 0.7)
+
+    sns.set_theme(style="white")
+    fig, ax = plt.subplots(figsize=(7.8, 9.0))
+    annot = np.array([[f"{v:.2f}" for v in row] for row in m], dtype=object)
+    sns.heatmap(
+        m,
+        ax=ax,
+        cmap="Blues",
+        vmin=0.0,
+        vmax=vmax,
+        annot=annot,
+        fmt="",
+        linewidths=0.5,
+        linecolor="white",
+        cbar_kws={"label": "Path density"},
+        xticklabels=PATH_RATE_COLS,
+        yticklabels=domains,
+        annot_kws={"fontsize": 8},
+    )
+    ax.set_xlabel("Path type")
+    ax.set_ylabel("Domain")
+    ax.tick_params(axis="x", rotation=0, labelsize=9)
+    ax.tick_params(axis="y", rotation=0, labelsize=9)
+
+    save_fig(fig, out_dir / "fig3c_path_density_by_domain.png", out_dir / "fig3c_path_density_by_domain.pdf" if pdf else None)
+    save_figure_caption(out_dir, "fig3c_path_density_by_domain", FIGURE_CAPTIONS["fig3c"])
+
+
+def build_fig3_suite(v4: pd.DataFrame, top_pairs: set[tuple[str, str]], out_dir: Path, pdf: bool) -> None:
+    build_fig3a(v4, top_pairs, out_dir, pdf)
+    domain_summary = compute_domain_path_summary(v4)
+    build_fig3b(domain_summary, out_dir, pdf)
+    build_fig3c(domain_summary, out_dir, pdf)
+    save_figure_caption(out_dir, "fig3_combined", FIGURE_CAPTIONS["fig3"])
 
 
 def compute_funnel_skill_levels(v4: pd.DataFrame, *, raw_total: int) -> dict[str, int | float]:
@@ -1917,6 +2030,7 @@ def main() -> None:
     required = {
         "domain",
         "declaration_atomic_ids",
+        "pdei_score",
         "delta_t1",
         "delta_t2",
         "delta_t3",
@@ -1935,7 +2049,7 @@ def main() -> None:
     funnel_l1 = resolve_funnel_l1(funnel_l1=args.funnel_l1, combo_stats_csv=args.combo_stats_csv, v4_rows=len(v4))
 
     build_fig1(v4, out_dir, args.top_k, args.pdf)
-    build_fig3(v4, top_pairs, out_dir, args.pdf)
+    build_fig3_suite(v4, top_pairs, out_dir, args.pdf)
     build_fig4a(v4, out_dir, args.pdf, raw_total=funnel_l1)
     build_fig4a_download(v4, out_dir, args.pdf)
 

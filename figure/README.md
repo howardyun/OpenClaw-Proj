@@ -31,7 +31,7 @@ pip install -r requirements.txt
 
 ### v4.csv 必需列
 
-**Fig1 / Fig3 / Fig4A（skill 漏斗）：** `domain`, `declaration_atomic_ids`, `delta_t1`–`delta_t4`, `path_A`–`path_E`
+**Fig1 / Fig3 / Fig4A（skill 漏斗）：** `domain`, `declaration_atomic_ids`, `pdei_score`, `delta_t1`–`delta_t4`, `path_A`–`path_E`
 
 **Fig4A（download 漏斗）额外：** `estimated_download_count`, `pdei_score`（与 Fig2 相同列）
 
@@ -77,17 +77,35 @@ python generate_figures.py `
 | Fig1 | `fig1_heatmap.png` |
 | Fig2A | `fig2a_pdei_powerlaw_ccdf_outside.png` |
 | Fig2B | `fig2b_developer_stars_vs_avg_pdei_*.png` 等变体 |
-| Fig3 | `fig3_cooccurrence.png` |
+| Fig3A | `fig3a_cooccurrence.png` |
+| Fig3B | `fig3b_avg_pdei_by_domain.png` |
+| Fig3C | `fig3c_path_density_by_domain.png` |
 | Fig4A | `fig4a_funnel.png`（skill 数量漏斗） |
 | Fig4A | `fig4a_download_funnel.png`（下载量漏斗） |
 | Fig4B | `fig4b_reg_conflict.png` |
 
 每张图还附带：
 
-- `*_caption.txt` — 论文图注草稿（复制到稿件）
-- `*_stats.txt` / `*_meta.json` — 统计与元数据（Fig2 / Fig3 / Fig4；下载量漏斗见 `fig4a_download_funnel_stats.txt`）
+- `*_caption.txt` — 论文图注草稿（复制到稿件）；Fig3 另有 `fig3_combined_caption.txt`
+- `*_stats.txt` / `*_meta.json` — 统计与元数据（Fig2 / Fig3 / Fig4；Fig3b 见 `fig3b_domain_summary.csv`；下载量漏斗见 `fig4a_download_funnel_stats.txt`）
 
 Fig2 会生成多个 2B 变体（散点、分箱、优化散点），投稿时保留实际使用的那一张即可。
+
+## Fig3 三 panel
+
+一键生成时会输出 Fig3 的三个独立 panel（图内无标题；合并图注见 `fig3_combined_caption.txt`）：
+
+| 输出文件 | 含义 |
+|----------|------|
+| `fig3a_cooccurrence.png` | Top10 毒性原子组合共现矩阵；红框标注 Path A–E |
+| `fig3b_avg_pdei_by_domain.png` | 各 skill domain 平均 PDEI（按均值降序） |
+| `fig3c_path_density_by_domain.png` | 各 domain 的 path_A–path_E 激活率热图（Y 轴顺序与 3b 一致） |
+
+附带文件：`fig3a_cooccurrence_meta.json`、`fig3b_avg_pdei_by_domain_stats.txt`、`fig3b_domain_summary.csv`。
+
+Fig3b/3c 由全量 v4 按 `domain` 聚合；path 密度定义为该 domain 内 `path_X > 0` 的 skill 占比。
+
+若只需快速重出 Fig3（跳过耗时的 Fig2 bootstrap），可加 `--skip-fig2 --skip-fig4b`。
 
 ## Fig4A 漏斗图
 
