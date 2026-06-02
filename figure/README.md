@@ -24,14 +24,16 @@ pip install -r requirements.txt
 
 | 用途 | 参数 | 说明 |
 |------|------|------|
-| 主数据 | `--v4-csv` | Fig1 / Fig3 / Fig4A；Fig2 默认同文件 |
+| 主数据 | `--v4-csv` | Fig1 / Fig3 / Fig4A（含下载量漏斗）；Fig2 默认同文件 |
 | Top10 毒性组合 | `--combo-stats-csv` | 推荐；自动统计 top10 原子组合 |
 | Top10（预聚合） | `--top10-csv` | 与上表二选一 |
 | Fig4B 自定义矩阵 | `--reg-conflict-csv` | 可选；覆盖内置默认矩阵 |
 
 ### v4.csv 必需列
 
-**Fig1 / Fig3 / Fig4：** `domain`, `declaration_atomic_ids`, `delta_t1`–`delta_t4`, `path_A`–`path_E`
+**Fig1 / Fig3 / Fig4A（skill 漏斗）：** `domain`, `declaration_atomic_ids`, `delta_t1`–`delta_t4`, `path_A`–`path_E`
+
+**Fig4A（download 漏斗）额外：** `estimated_download_count`, `pdei_score`（与 Fig2 相同列）
 
 **Fig2 额外：** `pdei_score`, `estimated_download_count`, `developer`, `developer_is_org`, `developer_github_stars`
 
@@ -76,15 +78,31 @@ python generate_figures.py `
 | Fig2A | `fig2a_pdei_powerlaw_ccdf_outside.png` |
 | Fig2B | `fig2b_developer_stars_vs_avg_pdei_*.png` 等变体 |
 | Fig3 | `fig3_cooccurrence.png` |
-| Fig4A | `fig4a_funnel.png` |
+| Fig4A | `fig4a_funnel.png`（skill 数量漏斗） |
+| Fig4A | `fig4a_download_funnel.png`（下载量漏斗） |
 | Fig4B | `fig4b_reg_conflict.png` |
 
 每张图还附带：
 
 - `*_caption.txt` — 论文图注草稿（复制到稿件）
-- `*_stats.txt` / `*_meta.json` — 统计与元数据（Fig2 / Fig3 / Fig4）
+- `*_stats.txt` / `*_meta.json` — 统计与元数据（Fig2 / Fig3 / Fig4；下载量漏斗见 `fig4a_download_funnel_stats.txt`）
 
 Fig2 会生成多个 2B 变体（散点、分箱、优化散点），投稿时保留实际使用的那一张即可。
+
+## Fig4A 漏斗图
+
+一键生成时会同时输出两张 Fig4A，布局与配色相同，仅聚合指标不同：
+
+| 输出文件 | 含义 | L1 → L4 |
+|----------|------|---------|
+| `fig4a_funnel.png` | Skill 数量漏斗 | Raw corpus → Valid dataset → Over-privileged → Toxic / high-risk |
+| `fig4a_download_funnel.png` | 下载量漏斗 | Total downloads → Over-privileged → Toxic-combo → Top 1% PDEI（toxic-combo 内） |
+
+下载量漏斗按 `estimated_download_count` 加权；L4 取 toxic-combo 技能中 PDEI 最高的 top 1%（脚本常量 `FIG4A_DOWNLOAD_TOP_PCT = 1.0`）。
+
+**L4 可读性：** 下载量漏斗的 L4 数值相对 L1 很小，若按真实比例绘制条带过窄，中心白字会落在白色画布上。脚本对 L4 条带设置了最小半宽（`FIG4A_DOWNLOAD_MIN_LAST_HALF_W = 0.105`），在可读性与比例感之间折中；如需更细/更宽，可在 `generate_figures.py` 中调整该常量。
+
+两张漏斗均附带 `*_caption.txt`、`*_meta.json`；下载量变体另有 `fig4a_download_funnel_stats.txt`。
 
 ## Fig4B 内置矩阵
 
