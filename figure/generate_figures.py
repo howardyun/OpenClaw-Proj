@@ -7,7 +7,7 @@ import math
 from collections import Counter, defaultdict
 from itertools import combinations
 from pathlib import Path
-from typing import Dict, List, Sequence, Tuple
+from typing import Callable, Dict, List, Sequence, Tuple
 
 import matplotlib
 
@@ -172,13 +172,13 @@ def resolve_top_pairs(*, top10_csv: Path | None, combo_stats_csv: Path | None, t
     raise ValueError("请提供 --combo-stats-csv 或 --top10-csv 之一。")
 
 
+FIG4A_L1_DEFAULT = 516_370
+
+
 def resolve_funnel_l1(*, funnel_l1: int | None, combo_stats_csv: Path | None, v4_rows: int) -> int:
     if funnel_l1 is not None:
         return int(funnel_l1)
-    if combo_stats_csv is not None:
-        n = sum(len(c) for c in pd.read_csv(combo_stats_csv.resolve(), encoding="utf-8-sig", usecols=["name"], chunksize=100_000))
-        return max(n, v4_rows)
-    return 516_370
+    return FIG4A_L1_DEFAULT
 
 
 # PDEI v3：原子 → Tier（见 PDEI(1).md 第六节 TIER_MAP）
@@ -218,6 +218,18 @@ def _path_letter_for_tiers(ta: str, tb: str) -> str | None:
     return None
 
 
+def _savefig_safe(fig: plt.Figure, path: Path, **kwargs) -> Path:
+    """Save figure; if path is locked, write to *_new.* sibling and return actual path."""
+    try:
+        fig.savefig(path, **kwargs)
+        return path
+    except PermissionError:
+        alt = path.with_name(f"{path.stem}_new{path.suffix}")
+        fig.savefig(alt, **kwargs)
+        print(f"Warning: {path.name} is locked; saved to {alt.name}", flush=True)
+        return alt
+
+
 def save_fig(
     fig: plt.Figure,
     out_png: Path,
@@ -235,7 +247,7 @@ def save_fig(
             fig.tight_layout()
     fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=pad_inches)
     if out_pdf:
-        fig.savefig(out_pdf, bbox_inches="tight", pad_inches=pad_inches)
+        _savefig_safe(fig, out_pdf, bbox_inches="tight", pad_inches=pad_inches)
     plt.close(fig)
 
 
@@ -272,6 +284,11 @@ FIGURE_CAPTIONS: dict[str, str] = {
         "Fig. 4a | Impact funnel from raw corpus to high-risk skills. "
         "Sequential filtering from raw corpus through valid dataset, over-privileged skills, "
         "to toxic or high-risk skills."
+    ),
+    "fig4a_download": (
+        "Fig. 4a (downloads) | Download-volume impact funnel. "
+        "Estimated download counts aggregated from total corpus through over-privileged skills, "
+        "toxic-combo skills, to the top 1% highest-PDEI toxic-combo skills."
     ),
     "fig4b": (
         "Fig. 4b | Regulatory conflict matrix. "
@@ -516,10 +533,13 @@ def _fig4a_layer_colors(base: str) -> tuple[str, str]:
     return mcolors.to_hex(top), base
 
 
-def _fig4a_half_widths(levels: list[float]) -> list[float]:
+def _fig4a_half_widths(levels: list[float], *, min_last: float | None = None) -> list[float]:
     """各层半宽与 Skill 数量成正比，形成漏斗收窄。"""
     max_v = max(levels) if levels else 1.0
-    return [FIG4A_HW_BASE * (v / max_v) for v in levels]
+    widths = [FIG4A_HW_BASE * (v / max_v) for v in levels]
+    if widths and min_last is not None:
+        widths[-1] = max(widths[-1], min_last)
+    return widths
 
 
 def _fig4a_hw_at_mid(i: int, half_w: list[float], n: int) -> float:
@@ -528,25 +548,19 @@ def _fig4a_hw_at_mid(i: int, half_w: list[float], n: int) -> float:
     return half_w[-1]
 
 
-def build_fig4a(v4: pd.DataFrame, out_dir: Path, pdf: bool, *, raw_total: int = 516_370) -> None:
-    """Fig4A：1:1 复刻参考图样式（固定布局/配色，仅数据随 CSV 变化）。"""
-    stats = compute_funnel_skill_levels(v4, raw_total=raw_total)
-    l1, l2, l3, l4 = stats["level1"], stats["level2"], stats["level3"], stats["level4"]
-    filtered = stats["filtered_from_l1"]
-
-    levels = [float(l1), float(l2), float(l3), float(l4)]
-    stages = [
-        ("L1", "Raw corpus", FIG4A_STAGE_COLORS[0]),
-        ("L2", "Valid dataset", FIG4A_STAGE_COLORS[1]),
-        ("L3", "Over-privileged", FIG4A_STAGE_COLORS[2]),
-        ("L4", "Toxic / high-risk", FIG4A_STAGE_COLORS[3]),
-    ]
-    half_w = _fig4a_half_widths(levels)
-
-    fig, ax = plt.subplots(figsize=FIG4A_FIGSIZE)
-    fig.patch.set_facecolor(FIG4A_BG)
-    ax.set_facecolor(FIG4A_BG)
-
+def _render_fig4_funnel(
+    ax,
+    *,
+    levels: list[float],
+    stages: list[tuple[str, str, str]],
+    stage_note: Callable[[int], str],
+    center_extra_line: Callable[[int, float], str | None],
+    side_titles: list[str] | None = None,
+    center_text_colors: dict[int, str] | None = None,
+    min_last_half_w: float | None = None,
+) -> None:
+    """Shared trapezoid funnel renderer for skill-count and download-volume variants."""
+    half_w = _fig4a_half_widths(levels, min_last=min_last_half_w)
     cx = FIG4A_CX
     seg_h, neck, fold_h = 0.82, 0.08, 0.045
     n = len(levels)
@@ -596,6 +610,75 @@ def build_fig4a(v4: pd.DataFrame, out_dir: Path, pdf: bool, *, raw_total: int = 
         )
     )
 
+    if side_titles is None:
+        side_titles = [title for _, title, _ in stages]
+
+    for i, ((tag, title, color), val, _hw) in enumerate(zip(stages, levels, half_w)):
+        y_mid = y_top - i * seg_h - seg_h / 2 + (neck / 2 if i < n - 1 else neck * 0.32)
+        hw_mid = _fig4a_hw_at_mid(i, half_w, n)
+        center_color = (
+            center_text_colors[i]
+            if center_text_colors and i in center_text_colors
+            else ("#1a202c" if i < 2 else "#ffffff")
+        )
+        center_fontsize = 10.2 if i == 3 and center_text_colors and 3 in center_text_colors else (10.8 if i < 2 else 10.2)
+
+        ax.text(
+            FIG4A_LEFT_TAG_X, y_mid, tag, va="center", ha="left",
+            fontsize=13.5, fontweight="bold", color=color, zorder=30,
+            clip_on=False,
+        )
+
+        center_lines = [title, f"{int(round(val)):,}"]
+        extra = center_extra_line(i, val)
+        if extra:
+            center_lines.append(extra)
+        ax.text(
+            cx, y_mid, "\n".join(center_lines), va="center", ha="center",
+            fontsize=center_fontsize, fontweight="bold", color=center_color,
+            linespacing=1.18, zorder=22, clip_on=False,
+        )
+
+        line_x = FIG4A_ANNOT_X
+        line_start = min(cx + hw_mid + 0.012, line_x - 0.02)
+        ax.plot([line_start, line_x], [y_mid, y_mid], color="#cbd5e0", linewidth=1.0, solid_capstyle="round", zorder=18)
+        ax.plot(line_x, y_mid, "o", color="#94a3b8", markersize=3.8, zorder=19)
+        ax.text(
+            line_x + 0.02, y_mid + 0.11, side_titles[i], va="center", ha="left",
+            fontsize=10.5, fontweight="bold", color=color, zorder=30, clip_on=False,
+        )
+        ax.text(
+            line_x + 0.02, y_mid - 0.15, stage_note(i), va="center", ha="left",
+            fontsize=8.4, color="#4a5568", zorder=30, clip_on=False,
+        )
+
+    ax.set_xlim(0.02, 1.06)
+    ax.set_ylim(-0.05, y_top + 0.12)
+    ax.set_aspect("auto")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+
+
+def build_fig4a(v4: pd.DataFrame, out_dir: Path, pdf: bool, *, raw_total: int = FIG4A_L1_DEFAULT) -> None:
+    """Fig4A：1:1 复刻参考图样式（固定布局/配色，仅数据随 CSV 变化）。"""
+    stats = compute_funnel_skill_levels(v4, raw_total=raw_total)
+    l1, l2, l3, l4 = stats["level1"], stats["level2"], stats["level3"], stats["level4"]
+    filtered = stats["filtered_from_l1"]
+
+    levels = [float(l1), float(l2), float(l3), float(l4)]
+    stages = [
+        ("L1", "Raw corpus", FIG4A_STAGE_COLORS[0]),
+        ("L2", "Valid dataset", FIG4A_STAGE_COLORS[1]),
+        ("L3", "Over-privileged", FIG4A_STAGE_COLORS[2]),
+        ("L4", "Toxic / high-risk", FIG4A_STAGE_COLORS[3]),
+    ]
+
+    fig, ax = plt.subplots(figsize=FIG4A_FIGSIZE)
+    fig.patch.set_facecolor(FIG4A_BG)
+    ax.set_facecolor(FIG4A_BG)
+
     def _stage_note(i: int) -> str:
         if i == 0 and l1 > 0:
             return f"Retain {100.0 * l2 / l1:.1f}% after filtering ({filtered:,} removed)"
@@ -607,48 +690,15 @@ def build_fig4a(v4: pd.DataFrame, out_dir: Path, pdf: bool, *, raw_total: int = 
             return f"{100.0 * l4 / l2:.1f}% of valid set are toxic / high-risk"
         return ""
 
-    for i, ((tag, title, color), val, _hw) in enumerate(zip(stages, levels, half_w)):
-        y_mid = y_top - i * seg_h - seg_h / 2 + (neck / 2 if i < n - 1 else neck * 0.32)
-        hw_mid = _fig4a_hw_at_mid(i, half_w, n)
-        center_color = "#1a202c" if i < 2 else "#ffffff"
-
-        ax.text(
-            FIG4A_LEFT_TAG_X, y_mid, tag, va="center", ha="left",
-            fontsize=13.5, fontweight="bold", color=color, zorder=30,
-            clip_on=False,
-        )
-
-        center_lines = [title, f"{int(round(val)):,}"]
+    def _center_extra(i: int, val: float) -> str | None:
         if l2 and i >= 2:
-            center_lines.append(f"({100.0 * val / l2:.1f}% of L2)")
-        ax.text(
-            cx, y_mid, "\n".join(center_lines), va="center", ha="center",
-            fontsize=10.8 if i < 2 else 10.2, fontweight="bold", color=center_color,
-            linespacing=1.18, zorder=22, clip_on=False,
-        )
+            return f"({100.0 * val / l2:.1f}% of L2)"
+        return None
 
-        line_x = FIG4A_ANNOT_X
-        line_start = min(cx + hw_mid + 0.012, line_x - 0.02)
-        ax.plot([line_start, line_x], [y_mid, y_mid], color="#cbd5e0", linewidth=1.0, solid_capstyle="round", zorder=18)
-        ax.plot(line_x, y_mid, "o", color="#94a3b8", markersize=3.8, zorder=19)
-        ax.text(
-            line_x + 0.02, y_mid + 0.11, title, va="center", ha="left",
-            fontsize=10.5, fontweight="bold", color=color, zorder=30, clip_on=False,
-        )
-        ax.text(
-            line_x + 0.02, y_mid - 0.15, _stage_note(i), va="center", ha="left",
-            fontsize=8.4, color="#4a5568", zorder=30, clip_on=False,
-        )
-
-    ax.set_xlim(0.02, 1.06)
-    ax.set_ylim(-0.05, y_top + 0.12)
-    ax.set_aspect("auto")
+    _render_fig4_funnel(
+        ax, levels=levels, stages=stages, stage_note=_stage_note, center_extra_line=_center_extra,
+    )
     fig.subplots_adjust(left=0.10, right=0.98, top=0.98, bottom=0.04)
-    add_panel_label(ax, "a")
-    ax.set_xticks([])
-    ax.set_yticks([])
-    for sp in ax.spines.values():
-        sp.set_visible(False)
 
     png_path = out_dir / "fig4a_funnel.png"
     pdf_path = out_dir / "fig4a_funnel.pdf" if pdf else None
@@ -664,6 +714,153 @@ def build_fig4a(v4: pd.DataFrame, out_dir: Path, pdf: bool, *, raw_total: int = 
     }
     (out_dir / "fig4a_funnel_meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     save_figure_caption(out_dir, "fig4a_funnel", FIGURE_CAPTIONS["fig4a"])
+    print(f"Saved: {png_path}")
+
+
+FIG4A_DOWNLOAD_TOP_PCT = 1.0
+FIG4A_DOWNLOAD_L4_CENTER_TEXT = "#ffffff"
+FIG4A_DOWNLOAD_MIN_LAST_HALF_W = 0.105
+_DOWNLOAD_FUNNEL_COLS = (
+    "estimated_download_count", "pdei_score",
+    "delta_t1", "delta_t2", "delta_t3", "delta_t4",
+    "path_A", "path_B", "path_C", "path_D", "path_E",
+)
+
+
+def compute_funnel_download_levels(
+    v4: pd.DataFrame,
+    *,
+    top_pct: float = FIG4A_DOWNLOAD_TOP_PCT,
+) -> dict[str, int | float]:
+    """Download-volume funnel: total → over-privileged → toxic-combo → top PDEI within toxic."""
+    d = v4.copy()
+    for c in _DOWNLOAD_FUNNEL_COLS:
+        if c not in d.columns:
+            raise ValueError(f"Download funnel missing column {c!r}. Have: {list(d.columns)}")
+        d[c] = pd.to_numeric(d[c], errors="coerce").fillna(0.0)
+    d["_dl"] = d["estimated_download_count"].clip(lower=0)
+    d["n_redundant"] = d["delta_t1"] + d["delta_t2"] + d["delta_t3"] + d["delta_t4"]
+    d["over_priv"] = d["n_redundant"] >= 1
+    d["toxic_any"] = d[["path_A", "path_B", "path_C", "path_D", "path_E"]].sum(axis=1) > 0
+
+    l1 = int(d["_dl"].sum())
+    l2 = int(d.loc[d["over_priv"], "_dl"].sum())
+    l3 = int(d.loc[d["toxic_any"], "_dl"].sum())
+
+    toxic = d[d["toxic_any"]]
+    k = max(1, int(math.ceil(top_pct / 100.0 * len(toxic))))
+    top_idx = toxic.nlargest(k, "pdei_score").index
+    l4 = int(d.loc[top_idx, "_dl"].sum())
+
+    return {
+        "level1": l1,
+        "level2": l2,
+        "level3": l3,
+        "level4": l4,
+        "top_toxic_skill_count": k,
+        "toxic_skill_count": int(len(toxic)),
+        "l2_pct_of_l1": round(100.0 * l2 / l1, 2) if l1 else 0.0,
+        "l3_pct_of_l2": round(100.0 * l3 / l2, 2) if l2 else 0.0,
+        "l4_pct_of_l3": round(100.0 * l4 / l3, 2) if l3 else 0.0,
+        "l4_pct_of_l1": round(100.0 * l4 / l1, 2) if l1 else 0.0,
+    }
+
+
+def build_fig4a_download(
+    v4: pd.DataFrame,
+    out_dir: Path,
+    pdf: bool,
+    *,
+    top_pct: float = FIG4A_DOWNLOAD_TOP_PCT,
+) -> None:
+    """Fig4A download variant: funnel of estimated download counts (same layout as skill funnel)."""
+    stats = compute_funnel_download_levels(v4, top_pct=top_pct)
+    l1, l2, l3, l4 = stats["level1"], stats["level2"], stats["level3"], stats["level4"]
+    k_top = int(stats["top_toxic_skill_count"])
+
+    levels = [float(l1), float(l2), float(l3), float(l4)]
+    stages = [
+        ("L1", "Total downloads", FIG4A_STAGE_COLORS[0]),
+        ("L2", "Over-privileged", FIG4A_STAGE_COLORS[1]),
+        ("L3", "Toxic-combo", FIG4A_STAGE_COLORS[2]),
+        ("L4", f"Top {top_pct:g}% PDEI", FIG4A_STAGE_COLORS[3]),
+    ]
+    side_titles = [
+        "Level 1: Skill total downloads",
+        "Level 2: Users covered by over-privileged skills",
+        "Level 3: High-risk users covered by toxic-combo skills",
+        f"Level 4: User volume in Top {top_pct:g}% extreme PDEI skills (within toxic-combo)",
+    ]
+
+    fig, ax = plt.subplots(figsize=FIG4A_FIGSIZE)
+    fig.patch.set_facecolor(FIG4A_BG)
+    ax.set_facecolor(FIG4A_BG)
+
+    def _stage_note(i: int) -> str:
+        if i == 0 and l1 > 0:
+            return f"{100.0 * l2 / l1:.1f}% of download volume from over-privileged skills"
+        if i == 1 and l2 > 0:
+            return f"{100.0 * l3 / l2:.1f}% of over-privileged volume is toxic-combo"
+        if i == 2 and l3 > 0:
+            return f"{100.0 * l4 / l3:.1f}% of toxic-combo volume in top {top_pct:g}% PDEI tail"
+        if i == 3 and l1 > 0:
+            return f"{100.0 * l4 / l1:.1f}% of total download volume in extreme tail"
+        return ""
+
+    prev_levels = [l1, l2, l3]
+
+    def _center_extra(i: int, val: float) -> str | None:
+        if i == 0:
+            return None
+        denom = prev_levels[i - 1]
+        if denom > 0:
+            return f"({100.0 * val / denom:.1f}% of L{i})"
+        return None
+
+    _render_fig4_funnel(
+        ax,
+        levels=levels,
+        stages=stages,
+        stage_note=_stage_note,
+        center_extra_line=_center_extra,
+        side_titles=side_titles,
+        center_text_colors={3: FIG4A_DOWNLOAD_L4_CENTER_TEXT},
+        min_last_half_w=FIG4A_DOWNLOAD_MIN_LAST_HALF_W,
+    )
+    fig.subplots_adjust(left=0.10, right=0.98, top=0.98, bottom=0.04)
+
+    png_path = out_dir / "fig4a_download_funnel.png"
+    pdf_path = out_dir / "fig4a_download_funnel.pdf" if pdf else None
+    save_fig(fig, png_path, pdf_path, pad_inches=0.14, use_tight_layout=False)
+
+    meta = {
+        "level_values": {"level1": l1, "level2": l2, "level3": l3, "level4": l4},
+        "top_pct_within_toxic": top_pct,
+        "top_toxic_skill_count": k_top,
+        "toxic_skill_count": stats["toxic_skill_count"],
+        "stage_colors": FIG4A_STAGE_COLORS,
+        "style": "fig4a_download_v1",
+        "l2_pct_of_l1": stats["l2_pct_of_l1"],
+        "l3_pct_of_l2": stats["l3_pct_of_l2"],
+        "l4_pct_of_l3": stats["l4_pct_of_l3"],
+        "l4_pct_of_l1": stats["l4_pct_of_l1"],
+    }
+    (out_dir / "fig4a_download_funnel_meta.json").write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8",
+    )
+    stats_path = out_dir / "fig4a_download_funnel_stats.txt"
+    stats_path.write_text(
+        "\n".join([
+            "Download-volume impact funnel",
+            f"  L1 total downloads = {l1:,}",
+            f"  L2 over-privileged downloads = {l2:,} ({stats['l2_pct_of_l1']:.2f}% of L1)",
+            f"  L3 toxic-combo downloads = {l3:,} ({stats['l3_pct_of_l2']:.2f}% of L2)",
+            f"  L4 top {top_pct:g}% PDEI within toxic downloads = {l4:,} ({stats['l4_pct_of_l3']:.2f}% of L3)",
+            f"  toxic skills = {stats['toxic_skill_count']:,}; top slice k = {k_top:,}",
+        ]),
+        encoding="utf-8",
+    )
+    save_figure_caption(out_dir, "fig4a_download_funnel", FIGURE_CAPTIONS["fig4a_download"])
     print(f"Saved: {png_path}")
 
 
@@ -684,6 +881,41 @@ FIG2A_BOOTSTRAP_N = 100
 FIG2A_BOOTSTRAP_SEED = 42
 FIG2A_BOOTSTRAP_SIZE = "tail"
 FIG2A_BOOTSTRAP_XMIN_QUANTILE_POINTS = 61
+FIG2A_MAX_SCATTER_POINTS = 12_000
+
+
+def _fig2a_subsample_ccdf_for_display(
+    x: np.ndarray,
+    ccdf: np.ndarray,
+    max_points: int = FIG2A_MAX_SCATTER_POINTS,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Log-uniform downsampling for vector export; CCDF statistics still use full data."""
+    n = len(x)
+    if n <= max_points:
+        return x, ccdf
+    log_x = np.log10(np.maximum(x, np.finfo(float).tiny))
+    targets = np.linspace(log_x[0], log_x[-1], max_points)
+    idx = np.searchsorted(log_x, targets, side="left")
+    idx = np.clip(idx, 0, n - 1)
+    idx = np.unique(idx)
+    if idx[0] != 0:
+        idx = np.concatenate(([0], idx))
+    if idx[-1] != n - 1:
+        idx = np.concatenate((idx, [n - 1]))
+    return x[idx], ccdf[idx]
+
+
+def _fig2a_scatter_ccdf(ax, x: np.ndarray, ccdf: np.ndarray):
+    return ax.scatter(
+        x,
+        ccdf,
+        s=18,
+        alpha=0.62,
+        color="#4A9FD4",
+        edgecolors="none",
+        label="Empirical CCDF",
+        zorder=1,
+    )
 
 STAR_BINS: Sequence[Tuple[str, float, float]] = (
     ("0", 0, 1),
@@ -1087,7 +1319,12 @@ def build_fig2a(
     ccdf = np.arange(len(x), 0, -1) / len(x)
     fig, ax = plt.subplots(figsize=(6.8, 5.2))
 
-    ax.scatter(x, ccdf, s=18, alpha=0.62, color="#4A9FD4", edgecolors="none", label="Empirical CCDF")
+    x_plot, ccdf_plot = (
+        _fig2a_subsample_ccdf_for_display(x, ccdf)
+        if pdf
+        else (x, ccdf)
+    )
+    scatter = _fig2a_scatter_ccdf(ax, x_plot, ccdf_plot)
     x_fit = np.logspace(np.log10(fit["xmin"]), np.log10(x.max()), 200)
     y_fit = fit["tail_fraction"] * (x_fit / fit["xmin"]) ** (1.0 - fit["alpha"])
     ax.plot(x_fit, y_fit, linewidth=2.2, linestyle="--", label="Power-law fit")
@@ -1099,7 +1336,6 @@ def build_fig2a(
     ax.grid(True, which="both", linestyle=":", linewidth=0.7, alpha=0.45)
     ax.legend(loc="lower right", frameon=False, fontsize=8.5)
     fig.subplots_adjust(left=0.16, top=0.96)
-    add_panel_label(ax, "a")
 
     if stats_box in ("outside", "inside"):
         annotation = (
@@ -1117,7 +1353,14 @@ def build_fig2a(
     box_tag = stats_box
     png_path = out_dir / f"fig2a_pdei_powerlaw_ccdf_{box_tag}.png"
     pdf_path = out_dir / f"fig2a_pdei_powerlaw_ccdf_{box_tag}.pdf" if pdf else None
-    save_fig(fig, png_path, pdf_path, pad_inches=0.10, use_tight_layout=False)
+    pad_inches = 0.10
+    if pdf_path:
+        _savefig_safe(fig, pdf_path, bbox_inches="tight", pad_inches=pad_inches)
+        if len(x_plot) < len(x):
+            scatter.remove()
+            _fig2a_scatter_ccdf(ax, x, ccdf)
+    fig.savefig(png_path, dpi=300, bbox_inches="tight", pad_inches=pad_inches)
+    plt.close(fig)
 
     stats_path = out_dir / f"fig2a_stats_{box_tag}.txt"
     stats_lines = [
@@ -1212,7 +1455,6 @@ def build_fig2b(
     ax.set_ylabel("Average PDEI per developer, log10(PDEI + 1)")
     ax.grid(True, linestyle=":", linewidth=0.7, alpha=0.45)
     fig.subplots_adjust(left=0.14, top=0.96)
-    add_panel_label(ax, "b")
     if legend_pos == "inside":
         ax.legend(loc="upper left", bbox_to_anchor=(0.02, 0.98), frameon=False, fontsize=8.8)
     elif legend_pos == "outside":
@@ -1363,7 +1605,6 @@ def build_fig2b_bins(
     ax.set_xlabel("Developer GitHub stars (binned)")
     ax.grid(True, axis="y", linestyle=":", linewidth=0.7, alpha=0.45)
     fig.subplots_adjust(left=0.14, top=0.96)
-    add_panel_label(ax, "b")
 
     p_text = "p<0.001" if pval < 0.001 else f"p={pval:.3f}"
     annotation = f"Spearman rho={rho:.2f}, {p_text}\ndevelopers={len(agg):,}\nGini(avg PDEI)={gini(agg['avg_pdei']):.2f}"
@@ -1427,7 +1668,6 @@ def build_fig2b_scatter_opt(
         plot_df = plot_df.sample(n=display_subsample, random_state=seed)
 
     fig, ax = plt.subplots(figsize=(7.4, 4.9))
-    fig.subplots_adjust(right=0.74)
     for is_org, label, marker, color in [
         (False, "Individual developer", "o", "#4C72B0"),
         (True, "Organization", "s", "#DD8452"),
@@ -1448,9 +1688,8 @@ def build_fig2b_scatter_opt(
     ax.set_xlabel("Developer GitHub stars, log10(stars + 1)")
     ax.set_ylabel("Average PDEI per developer, log10(PDEI + 1)")
     ax.grid(True, linestyle=":", linewidth=0.7, alpha=0.45)
-    fig.subplots_adjust(left=0.14, top=0.96, right=0.74)
-    add_panel_label(ax, "b")
-    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1.00), frameon=False, fontsize=8.8)
+    fig.subplots_adjust(left=0.14, top=0.96)
+    ax.legend(loc="upper left", bbox_to_anchor=(0.02, 0.98), frameon=False, fontsize=8.8)
     p_text = "p<0.001" if pval < 0.001 else f"p={pval:.3f}"
     annotation = (
         f"Spearman rho={rho:.2f}, {p_text}\n"
@@ -1458,11 +1697,11 @@ def build_fig2b_scatter_opt(
         f"plotted n={len(plot_df):,}\n"
         f"Gini(avg PDEI)={gini(agg_full['avg_pdei']):.2f}"
     )
-    fig.text(
-        0.76, 0.22, annotation, fontsize=8.4, va="bottom", ha="left",
-        bbox=dict(boxstyle="round,pad=0.40", facecolor="white", alpha=0.92, linewidth=0.5),
+    ax.text(
+        0.98, 0.05, annotation, transform=ax.transAxes, fontsize=8.4, va="bottom", ha="right",
+        bbox=dict(boxstyle="round,pad=0.40", facecolor="white", alpha=0.92, linewidth=0.5), zorder=10,
     )
-    base = "fig2b_scatter_opt_starsgt0_thin_sub6000_outsidelegend_outsidestats"
+    base = "fig2b_scatter_opt_starsgt0_thin_sub6000_insidelegend_insidestats"
     png_path = out_dir / f"{base}.png"
     pdf_path = out_dir / f"{base}.pdf" if pdf else None
     save_fig(fig, png_path, pdf_path, pad_inches=0.10, use_tight_layout=False)
@@ -1601,7 +1840,6 @@ def build_fig4b(
     ax.tick_params(axis="x", rotation=0, labelsize=9)
     ax.tick_params(axis="y", rotation=0, labelsize=8.5)
     fig.subplots_adjust(left=0.38, right=0.92, top=0.98, bottom=0.08)
-    add_panel_label_above_ylabel(ax, "b")
 
     png_path = out_dir / "fig4b_reg_conflict.png"
     pdf_path = out_dir / "fig4b_reg_conflict.pdf" if pdf else None
@@ -1699,6 +1937,7 @@ def main() -> None:
     build_fig1(v4, out_dir, args.top_k, args.pdf)
     build_fig3(v4, top_pairs, out_dir, args.pdf)
     build_fig4a(v4, out_dir, args.pdf, raw_total=funnel_l1)
+    build_fig4a_download(v4, out_dir, args.pdf)
 
     if not args.skip_fig4b:
         build_fig4b(out_dir, args.reg_conflict_csv, pdf=args.pdf)
