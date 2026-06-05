@@ -24,14 +24,14 @@ pip install -r requirements.txt
 
 | 用途 | 参数 | 说明 |
 |------|------|------|
-| 主数据 | `--v4-csv` | Fig1 / Fig3 / Fig4A（含下载量漏斗）；Fig2 默认同文件 |
+| 主数据 | `--v4-csv` | Fig1 / Fig3 / Fig4A / Fig5（含下载量漏斗）；Fig2 默认同文件 |
 | Top10 毒性组合 | `--combo-stats-csv` | 推荐；自动统计 top10 原子组合 |
 | Top10（预聚合） | `--top10-csv` | 与上表二选一 |
 | Fig4B 自定义矩阵 | `--reg-conflict-csv` | 可选；覆盖内置默认矩阵 |
 
 ### v4.csv 必需列
 
-**Fig1 / Fig3 / Fig4A（skill 漏斗）：** `domain`, `declaration_atomic_ids`, `pdei_score`, `delta_t1`–`delta_t4`, `path_A`–`path_E`
+**Fig1 / Fig3 / Fig4A / Fig5（skill 漏斗）：** `domain`, `source_plat`, `declaration_atomic_ids`, `pdei_score`, `delta_t1`–`delta_t4`, `path_A`–`path_E`
 
 **Fig4A（download 漏斗）额外：** `estimated_download_count`, `pdei_score`（与 Fig2 相同列）
 
@@ -83,11 +83,12 @@ python generate_figures.py `
 | Fig4A | `fig4a_funnel.png`（skill 数量漏斗） |
 | Fig4A | `fig4a_download_funnel.png`（下载量漏斗） |
 | Fig4B | `fig4b_reg_conflict.png` |
+| Fig5 | `fig5_platform_overprivilege_rate.png` |
 
 每张图还附带：
 
 - `*_caption.txt` — 论文图注草稿（复制到稿件）；Fig3 另有 `fig3_combined_caption.txt`
-- `*_stats.txt` / `*_meta.json` — 统计与元数据（Fig2 / Fig3 / Fig4；Fig3b 见 `fig3b_domain_summary.csv`；下载量漏斗见 `fig4a_download_funnel_stats.txt`）
+- `*_stats.txt` / `*_meta.json` — 统计与元数据（Fig2 / Fig3 / Fig4 / Fig5；Fig3b 见 `fig3b_domain_summary.csv`；Fig5 见 `fig5_platform_overprivilege_rate.csv`；下载量漏斗见 `fig4a_download_funnel_stats.txt`）
 
 Fig2 会生成多个 2B 变体（散点、分箱、优化散点），投稿时保留实际使用的那一张即可。
 
@@ -106,6 +107,18 @@ Fig2 会生成多个 2B 变体（散点、分箱、优化散点），投稿时�
 Fig3b/3c 由全量 v4 按 `domain` 聚合；path 密度定义为该 domain 内 `path_X > 0` 的 skill 占比。
 
 若只需快速重出 Fig3（跳过耗时的 Fig2 bootstrap），可加 `--skip-fig2 --skip-fig4b`。
+
+## Fig5 平台过度授权（体量 + 比例）
+
+按 `source_plat` 统计五平台 skill 总量与 **过度授权**（Σδ_t ≥ 1，与 Fig4A L3 定义一致）：
+
+| 输出文件 | 含义 |
+|----------|------|
+| `fig5_platform_overprivilege_rate.png` | 堆叠柱状图：柱高 = skill 总数；蓝色 = 过度授权；浅灰 = 未过度授权 |
+| `fig5_platform_overprivilege_rate.csv` | 各平台 skill 数、过度授权数、占比 |
+| `fig5_platform_overprivilege_rate_stats.txt` | 汇总明细 |
+
+平台按 corpus 规模降序排列；柱顶标注 `xx.xx%` 与 `(n=…)`。
 
 ## Fig4A 漏斗图
 

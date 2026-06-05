@@ -211,6 +211,15 @@ PATH_EDGE_COLOR = "#d62728"
 PATH_COLS = ["path_A", "path_B", "path_C", "path_D", "path_E"]
 PATH_RATE_COLS = [f"{p}_rate" for p in PATH_COLS]
 FIG3B_BAR_COLOR = "#4a9fd4"
+FIG5_NOT_OVER_COLOR = "#e8ecef"
+DELTA_COLS = ["delta_t1", "delta_t2", "delta_t3", "delta_t4"]
+PLATFORM_LABELS: dict[str, str] = {
+    "lobehub": "LobeHub",
+    "skillsmp": "SkillsMP",
+    "skills_sh": "Skills.sh",
+    "skillsdirectory": "Skills Directory",
+    "clawhub": "ClawHub",
+}
 
 
 def _path_letter_for_tiers(ta: str, tb: str) -> str | None:
@@ -314,6 +323,11 @@ FIGURE_CAPTIONS: dict[str, str] = {
         "Fig. 4b | Regulatory conflict matrix. "
         "Normative conflict scores (0–1) between abuse categories and "
         "GDPR, EU AI Act, CCPA, and PIPL."
+    ),
+    "fig5": (
+        "Fig. 5 | Over-privilege rate and corpus size by source platform. "
+        "Stacked bars show total skills per platform (bar height) and the over-privileged "
+        "subset (Σδ_t ≥ 1; blue); percentages and counts are annotated above each bar."
     ),
 }
 
@@ -601,6 +615,80 @@ def build_fig3_suite(v4: pd.DataFrame, top_pairs: set[tuple[str, str]], out_dir:
     build_fig3b(domain_summary, out_dir, pdf)
     build_fig3c(domain_summary, out_dir, pdf)
     save_figure_caption(out_dir, "fig3_combined", FIGURE_CAPTIONS["fig3"])
+
+
+def compute_platform_overprivilege_summary(v4: pd.DataFrame) -> pd.DataFrame:
+    """按 source_plat 汇总过度授权率（Σδ_t ≥ 1）；按 skill 总数降序。"""
+    if "source_plat" not in v4.columns:
+        raise ValueError("v4.csv 缺少 source_plat 列，无法生成平台过度授权率图。")
+    d = v4.copy()
+    d["source_plat"] = d["source_plat"].astype(str).str.strip()
+    for col in DELTA_COLS:
+        d[col] = pd.to_numeric(d[col], errors="coerce").fillna(0.0)
+    d["over_privileged"] = d[DELTA_COLS].sum(axis=1) >= 1
+    summary = d.groupby("source_plat", as_index=False).agg(
+        skill_count=("over_privileged", "size"),
+        over_privileged_count=("over_privileged", "sum"),
+    )
+    summary["over_privilege_rate_pct"] = 100.0 * summary["over_privileged_count"] / summary["skill_count"]
+    summary["platform_label"] = summary["source_plat"].map(lambda k: PLATFORM_LABELS.get(k, k))
+    return summary.sort_values("skill_count", ascending=False).reset_index(drop=True)
+
+
+def build_fig5_platform_overprivilege(v4: pd.DataFrame, out_dir: Path, pdf: bool) -> None:
+    """五平台过度授权：堆叠柱高=skill 总数，蓝色=过度授权（Σδ_t ≥ 1）。"""
+    summary = compute_platform_overprivilege_summary(v4)
+    if summary.empty:
+        raise ValueError("平台汇总为空，无法生成 Fig5。")
+
+    sns.set_theme(style="white")
+    fig, ax = plt.subplots(figsize=(9.5, 5.5))
+    x = np.arange(len(summary))
+    over = summary["over_privileged_count"].to_numpy(dtype=float)
+    not_over = summary["skill_count"].to_numpy(dtype=float) - over
+    width = 0.68
+
+    ax.bar(x, over, width=width, color=FIG3B_BAR_COLOR, label="Over-privileged", edgecolor="none")
+    ax.bar(
+        x, not_over, width=width, bottom=over, color=FIG5_NOT_OVER_COLOR,
+        label="Not over-privileged", edgecolor="none",
+    )
+    ax.set_xticks(x)
+    ax.set_xticklabels(summary["platform_label"], rotation=0, fontsize=9)
+    ax.set_xlabel("Platform")
+    ax.set_ylabel("Number of skills")
+    max_count = float(summary["skill_count"].max())
+    ax.set_ylim(0, max_count * 1.14)
+    ax.yaxis.grid(True, linestyle="-", linewidth=0.6, color="#e0e0e0", alpha=0.95)
+    ax.set_axisbelow(True)
+    sns.despine(ax=ax)
+    ax.legend(frameon=False, loc="upper right", fontsize=8.5)
+
+    for j, row in summary.iterrows():
+        total = int(row["skill_count"])
+        rate = float(row["over_privilege_rate_pct"])
+        ax.text(
+            j, total + max_count * 0.012,
+            f"{rate:.2f}%\n(n={total:,})",
+            ha="center", va="bottom", fontsize=8.2, linespacing=1.15,
+        )
+
+    save_fig(
+        fig,
+        out_dir / "fig5_platform_overprivilege_rate.png",
+        out_dir / "fig5_platform_overprivilege_rate.pdf" if pdf else None,
+    )
+    save_figure_caption(out_dir, "fig5_platform_overprivilege_rate", FIGURE_CAPTIONS["fig5"])
+
+    stats_lines = [
+        "Fig5 platform over-privilege summary (over-privileged = sum(delta_t1..t4) >= 1):",
+        summary.to_string(index=False, float_format=lambda v: f"{v:.4f}"),
+        f"\nTotal skills: {int(summary['skill_count'].sum()):,}",
+    ]
+    (out_dir / "fig5_platform_overprivilege_rate_stats.txt").write_text(
+        "\n".join(stats_lines), encoding="utf-8"
+    )
+    summary.round(4).to_csv(out_dir / "fig5_platform_overprivilege_rate.csv", index=False, encoding="utf-8-sig")
 
 
 def compute_funnel_skill_levels(v4: pd.DataFrame, *, raw_total: int) -> dict[str, int | float]:
@@ -2029,6 +2117,7 @@ def main() -> None:
     v4 = pd.read_csv(args.v4_csv.resolve(), encoding="utf-8-sig")
     required = {
         "domain",
+        "source_plat",
         "declaration_atomic_ids",
         "pdei_score",
         "delta_t1",
@@ -2050,6 +2139,7 @@ def main() -> None:
 
     build_fig1(v4, out_dir, args.top_k, args.pdf)
     build_fig3_suite(v4, top_pairs, out_dir, args.pdf)
+    build_fig5_platform_overprivilege(v4, out_dir, args.pdf)
     build_fig4a(v4, out_dir, args.pdf, raw_total=funnel_l1)
     build_fig4a_download(v4, out_dir, args.pdf)
 
