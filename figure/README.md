@@ -25,6 +25,7 @@ pip install -r requirements.txt
 | 用途 | 参数 | 说明 |
 |------|------|------|
 | 主数据 | `--v4-csv` | Fig1 / Fig3 / Fig4A / Fig5（含下载量漏斗）；Fig2 默认同文件 |
+| PDEI 全量（可选） | `--pdei-csv` | 仅 Fig2；未指定时使用 `--v4-csv` |
 | Top10 毒性组合 | `--combo-stats-csv` | 推荐；自动统计 top10 原子组合 |
 | Top10（预聚合） | `--top10-csv` | 与上表二选一 |
 | Fig4B 自定义矩阵 | `--reg-conflict-csv` | 可选；覆盖内置默认矩阵 |
@@ -33,9 +34,17 @@ pip install -r requirements.txt
 
 **Fig1 / Fig3 / Fig4A / Fig5（skill 漏斗）：** `domain`, `source_plat`, `declaration_atomic_ids`, `pdei_score`, `delta_t1`–`delta_t4`, `path_A`–`path_E`
 
-**Fig4A（download 漏斗）额外：** `estimated_download_count`, `pdei_score`（与 Fig2 相同列）
+**Fig4A（download 漏斗）额外：** `estimated_download_count`, `pdei_score`
 
-**Fig2 额外：** `pdei_score`, `estimated_download_count`, `developer`, `developer_is_org`, `developer_github_stars`
+**Fig2 额外：**
+
+| 列名 | 用途 |
+|------|------|
+| `pdei_score` | PDEI 分数 |
+| `n_eff`, `phi`, `gamma` | 下游暴露 \(E = n_\mathrm{eff} \times \phi \times \gamma\)（与 Methods M6 一致） |
+| `developer`, `developer_is_org`, `developer_github_stars` | Fig2B 开发者声誉散点 |
+
+> Fig2A **不再**用 `estimated_download_count` 计算 exposure share；该列仍供 Fig4A 下载量漏斗使用。
 
 ## 运行
 
@@ -57,6 +66,15 @@ python generate_figures.py `
   --out-dir "./output" --pdf
 ```
 
+仅重出 Fig2（PDEI 与 v4 为同一文件时可只传一个 CSV）：
+
+```powershell
+python generate_figures.py `
+  --fig2-only `
+  --pdei-csv "C:\path\to\pdei_scores_full_v4.csv" `
+  --out-dir "./output" --pdf
+```
+
 ### 常用选项
 
 | 命令 | 作用 |
@@ -66,17 +84,20 @@ python generate_figures.py `
 | `--skip-fig2` | 跳过 Fig2 |
 | `--skip-fig4b` | 跳过 Fig4B |
 | `--funnel-l1 N` | 手动指定 Fig4A 漏斗 L1 总量 |
-| `--pdf` | 同时输出 PDF |
+| `--pdf` | 同时输出 PDF（投稿 LaTeX 建议开启） |
+| `--fig2a-run-bootstrap` | 在 `fig2a_stats_*.txt` 中追加**探索性**幂律 bootstrap（默认关闭，主图不含幂律拟合） |
+| `--fig2a-run-vuong` | 同上，追加 Vuong 模型比较（默认关闭） |
+| `--fig2a-bootstrap-n` / `--fig2a-bootstrap-seed` / `--fig2a-bootstrap-size` | 探索性 bootstrap 参数 |
 
 未指定 `--funnel-l1` 时，L1 取 combo stats 行数与 v4 行数的较大值。
 
 ## 输出
 
-| 图 | 主要 PNG |
-|----|----------|
+| 图 | 主要 PNG / PDF |
+|----|----------------|
 | Fig1 | `fig1_heatmap.png` |
-| Fig2A | `fig2a_pdei_powerlaw_ccdf_outside.png` |
-| Fig2B | `fig2b_developer_stars_vs_avg_pdei_*.png` 等变体 |
+| Fig2A | `fig2a_pdei_ccdf_outside.png`（及 `.pdf`） |
+| Fig2B | 见下文「Fig2」 |
 | Fig3A | `fig3a_cooccurrence.png` |
 | Fig3B | `fig3b_avg_pdei_by_domain.png` |
 | Fig3C | `fig3c_path_density_by_domain.png` |
@@ -87,10 +108,38 @@ python generate_figures.py `
 
 每张图还附带：
 
-- `*_caption.txt` — 论文图注草稿（复制到稿件）；Fig3 另有 `fig3_combined_caption.txt`
+- `*_caption.txt` — 论文图注草稿（复制到稿件）；Fig2 / Fig3 另有 `fig2_combined_caption.txt`、`fig3_combined_caption.txt`
 - `*_stats.txt` / `*_meta.json` — 统计与元数据（Fig2 / Fig3 / Fig4 / Fig5；Fig3b 见 `fig3b_domain_summary.csv`；Fig5 见 `fig5_platform_overprivilege_rate.csv`；下载量漏斗见 `fig4a_download_funnel_stats.txt`）
 
-Fig2 会生成多个 2B 变体（散点、分箱、优化散点），投稿时保留实际使用的那一张即可。
+## Fig2（PDEI 分布 + 开发者声誉）
+
+### Fig2A：经验 CCDF + 集中度（对齐 Methods M6）
+
+主图**不含**幂律拟合曲线，仅绘制 PDEI>0 子集上的经验 CCDF（log-log）。图内 stats box 与 `fig2a_stats_outside.txt` 报告：
+
+| 指标 | 说明 |
+|------|------|
+| CCDF | 分母为 \(n_+\)（PDEI>0）；全语料 \(N\) 见 stats 行首 |
+| Gini(PDEI), Gini(E) | 全 \(N\) 计算（含 PDEI=0）；\(E = n_\mathrm{eff} \times \phi \times \gamma\) |
+| Gini 敏感性 | 仅 PDEI>0 子集（`fig2a_stats_*.txt` 单独一节） |
+| Top 1% | 按 PDEI 排序，\(k=\lceil 0.01N\rceil\)；报告 PDEI share 与 **同一 PDEI 排序**下的 exposure share |
+| E-ranked Top 1% | 仅写入 stats 作对照（按 \(E\) 单独排序时的 exposure share），**不出现在主图** |
+
+默认输出 `fig2a_pdei_ccdf_outside.*`（stats box 在图内左下）。`build_fig2a(..., stats_box="inside")` 可生成 inside 变体，但 `run_fig2_suite` 默认只跑 outside。
+
+**LaTeX 更新：** 将 `output/fig2a_pdei_ccdf_outside.pdf` 复制到稿件 `fig/ysx/`，并在 `R3.tex` 中把 `\includegraphics` 路径改为 `fig/ysx/fig2a_pdei_ccdf_outside.pdf`（旧文件名 `fig2a_pdei_powerlaw_ccdf_outside.pdf` 已废弃）。
+
+### Fig2B：多个变体
+
+`run_fig2_suite` 会生成：
+
+| 文件 | 说明 |
+|------|------|
+| `fig2b_developer_stars_vs_avg_pdei_min1skills_insidelegend_insidestats.*` | 全量散点 + stats |
+| `fig2b_star_bins_*` | 按 star 分箱的小提琴/箱线图 |
+| `fig2b_scatter_opt_starsgt0_thin_sub6000_insidelegend_insidestats.*` | **论文常用**：stars>0、分层抽样作图；Spearman 等统计仍基于全量 developer 聚合 |
+
+Fig2B 附带 `fig2b_stats_min1skills_insidelegend_insidestats.txt`（Spearman、developer 数、Gini(avg PDEI) 等）。`scatter_opt` 变体图内标注与上述 stats 应对齐；投稿时保留实际使用的那一张即可。
 
 ## Fig3 三 panel
 
@@ -106,7 +155,7 @@ Fig2 会生成多个 2B 变体（散点、分箱、优化散点），投稿时�
 
 Fig3b/3c 由全量 v4 按 `domain` 聚合；path 密度定义为该 domain 内 `path_X > 0` 的 skill 占比。
 
-若只需快速重出 Fig3（跳过耗时的 Fig2 bootstrap），可加 `--skip-fig2 --skip-fig4b`。
+若只需快速重出 Fig3（跳过 Fig2），可加 `--skip-fig2 --skip-fig4b`。
 
 ## Fig5 平台过度授权（体量 + 比例）
 

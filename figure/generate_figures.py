@@ -64,8 +64,16 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Fig4 L1: raw AI Skills collected across platforms (pre-filter corpus size).",
     )
-    p.add_argument("--fig2a-skip-bootstrap", action="store_true", help="跳过 Fig2A 幂律 bootstrap 拟合优度检验")
-    p.add_argument("--fig2a-skip-vuong", action="store_true", help="跳过 Fig2A 幂律 Vuong 模型比较")
+    p.add_argument(
+        "--fig2a-run-bootstrap",
+        action="store_true",
+        help="在 fig2a_stats 中追加探索性幂律 bootstrap（默认不写入主图）",
+    )
+    p.add_argument(
+        "--fig2a-run-vuong",
+        action="store_true",
+        help="在 fig2a_stats 中追加探索性 Vuong 模型比较（默认不写入主图）",
+    )
     p.add_argument(
         "--fig2a-bootstrap-n",
         type=int,
@@ -276,7 +284,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     ),
     "fig2a": (
         "Fig. 2a | Heavy-tailed distribution of permission abuse. "
-        "Complementary cumulative distribution function (CCDF) of PDEI scores with a power-law tail fit."
+        "Empirical complementary cumulative distribution function (CCDF) of PDEI scores."
     ),
     "fig2b": (
         "Fig. 2b | Developer reputation does not guarantee permission safety. "
@@ -1070,6 +1078,9 @@ def build_fig4a_download(
 # ---------------------------------------------------------------------------
 
 PDEI_COL = "pdei_score"
+N_EFF_COL = "n_eff"
+PHI_COL = "phi"
+GAMMA_COL = "gamma"
 DOWNLOAD_COL = "estimated_download_count"
 DEVELOPER_COL = "developer"
 IS_ORG_COL = "developer_is_org"
@@ -1083,6 +1094,17 @@ FIG2A_BOOTSTRAP_SEED = 42
 FIG2A_BOOTSTRAP_SIZE = "tail"
 FIG2A_BOOTSTRAP_XMIN_QUANTILE_POINTS = 61
 FIG2A_MAX_SCATTER_POINTS = 12_000
+
+
+def _fig2_compute_downstream_exposure(df: pd.DataFrame) -> pd.Series:
+    """E = N_eff × Φ × Γ (Methods §4.6 / M4); linear reach weight without double-counting Reach in PDEI."""
+    for col in [N_EFF_COL, PHI_COL, GAMMA_COL]:
+        if col not in df.columns:
+            raise ValueError(f"Fig2A missing column {col!r} for downstream exposure. Have: {list(df.columns)}")
+    n_eff = pd.to_numeric(df[N_EFF_COL], errors="coerce").fillna(0).clip(lower=0)
+    phi = pd.to_numeric(df[PHI_COL], errors="coerce").fillna(0).clip(lower=0)
+    gamma = pd.to_numeric(df[GAMMA_COL], errors="coerce").fillna(0).clip(lower=0)
+    return n_eff * phi * gamma
 
 
 def _fig2a_subsample_ccdf_for_display(
@@ -1464,48 +1486,24 @@ def build_fig2a(
     *,
     pdf: bool = False,
     stats_box: str = "outside",
-    run_bootstrap: bool = True,
-    run_vuong: bool = True,
+    run_bootstrap: bool = False,
+    run_vuong: bool = False,
     bootstrap_n: int = FIG2A_BOOTSTRAP_N,
     bootstrap_seed: int = FIG2A_BOOTSTRAP_SEED,
     bootstrap_size: str = FIG2A_BOOTSTRAP_SIZE,
 ) -> None:
     df = pd.read_csv(pdei_csv.resolve(), encoding="utf-8-sig")
-    for col in [PDEI_COL, DOWNLOAD_COL]:
-        if col not in df.columns:
-            raise ValueError(f"Fig2A missing column {col!r}. Have: {list(df.columns)}")
+    if PDEI_COL not in df.columns:
+        raise ValueError(f"Fig2A missing column {PDEI_COL!r}. Have: {list(df.columns)}")
     df[PDEI_COL] = pd.to_numeric(df[PDEI_COL], errors="coerce").fillna(0).clip(lower=0)
-    df[DOWNLOAD_COL] = pd.to_numeric(df[DOWNLOAD_COL], errors="coerce").fillna(0).clip(lower=0)
-    df["downstream_exposure"] = df[PDEI_COL] * df[DOWNLOAD_COL]
+    df["downstream_exposure"] = _fig2_compute_downstream_exposure(df)
 
-    positive_pdei = df.loc[df[PDEI_COL] > 0, PDEI_COL]
-    fit = _fig2_fit_powerlaw_tail(positive_pdei)
-
-    bootstrap: Dict[str, float | int | str] | None = None
-    if run_bootstrap:
-        print(
-            f"Fig2A bootstrap: n={bootstrap_n}, size={bootstrap_size}, seed={bootstrap_seed} "
-            "(this may take a few minutes on large corpora)...",
-            flush=True,
-        )
-        bootstrap = _fig2_powerlaw_bootstrap_gof(
-            positive_pdei,
-            fit,
-            n_bootstrap=bootstrap_n,
-            seed=bootstrap_seed,
-            synthetic_size=bootstrap_size,
-        )
-        print(f"Fig2A bootstrap done: p={bootstrap['bootstrap_p']:.4f}", flush=True)
-
-    vuong: Dict[str, Dict[str, float]] | None = None
-    if run_vuong:
-        vuong = _fig2_powerlaw_vuong_comparisons(positive_pdei, fit)
-        print(
-            "Fig2A Vuong: "
-            f"vs lognormal z={vuong['lognormal']['vuong_z']:.3f}, p={vuong['lognormal']['vuong_p']:.4f}; "
-            f"vs exponential z={vuong['exponential']['vuong_z']:.3f}, p={vuong['exponential']['vuong_p']:.4f}",
-            flush=True,
-        )
+    positive_mask = df[PDEI_COL] > 0
+    positive_pdei = df.loc[positive_mask, PDEI_COL]
+    gini_pdei = gini(df[PDEI_COL])
+    gini_exposure = gini(df["downstream_exposure"])
+    gini_pdei_positive = gini(positive_pdei)
+    gini_exposure_positive = gini(df.loc[positive_mask, "downstream_exposure"])
 
     k_top, top_pdei_share, top_pdei_idx = _fig2_top_share(df[PDEI_COL], FIG2A_TOP_PERCENT)
     total_exposure = float(df["downstream_exposure"].sum())
@@ -1526,22 +1524,17 @@ def build_fig2a(
         else (x, ccdf)
     )
     scatter = _fig2a_scatter_ccdf(ax, x_plot, ccdf_plot)
-    x_fit = np.logspace(np.log10(fit["xmin"]), np.log10(x.max()), 200)
-    y_fit = fit["tail_fraction"] * (x_fit / fit["xmin"]) ** (1.0 - fit["alpha"])
-    ax.plot(x_fit, y_fit, linewidth=2.2, linestyle="--", label="Power-law fit")
-    ax.axvline(fit["xmin"], linewidth=1.2, linestyle=":", label=f"xmin={fit['xmin']:.1f}")
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel("PDEI score")
     ax.set_ylabel("Pr(PDEI >= x)")
     ax.grid(True, which="both", linestyle=":", linewidth=0.7, alpha=0.45)
-    ax.legend(loc="lower right", frameon=False, fontsize=8.5)
     fig.subplots_adjust(left=0.16, top=0.96)
 
     if stats_box in ("outside", "inside"):
         annotation = (
             f"n = {len(df):,}; positive = {len(positive_pdei):,}\n"
-            f"alpha = {fit['alpha']:.2f}; xmin = {fit['xmin']:.1f}\n"
+            f"Gini(PDEI) = {gini_pdei:.2f}; Gini(E) = {gini_exposure:.2f}\n"
             f"Top {FIG2A_TOP_PERCENT:g}%: k = {k_top:,}\n"
             f"PDEI share = {top_pdei_share:.1%}\n"
             f"Exposure share = {top_exposure_share:.1%}"
@@ -1552,8 +1545,8 @@ def build_fig2a(
         )
 
     box_tag = stats_box
-    png_path = out_dir / f"fig2a_pdei_powerlaw_ccdf_{box_tag}.png"
-    pdf_path = out_dir / f"fig2a_pdei_powerlaw_ccdf_{box_tag}.pdf" if pdf else None
+    png_path = out_dir / f"fig2a_pdei_ccdf_{box_tag}.png"
+    pdf_path = out_dir / f"fig2a_pdei_ccdf_{box_tag}.pdf" if pdf else None
     pad_inches = 0.10
     if pdf_path:
         _savefig_safe(fig, pdf_path, bbox_inches="tight", pad_inches=pad_inches)
@@ -1570,37 +1563,55 @@ def build_fig2a(
         f"Positive PDEI skills: {len(positive_pdei)}",
         f"Zero-PDEI skills: {int((df[PDEI_COL] == 0).sum())}",
         "",
-        "Power-law tail fit:",
-        f"  alpha = {fit['alpha']:.4f}",
-        f"  xmin = {fit['xmin']:.4f}",
-        f"  tail_n = {fit['n_tail']}",
-        f"  tail_fraction = {fit['tail_fraction']:.4f}",
-        f"  KS_D = {fit['ks_D']:.4f}",
-        f"  KS_p_approx = {fit['ks_p_approx']:.4f}",
+        "Downstream exposure definition: E = n_eff * phi * gamma (Methods M4/M6)",
+        "",
     ]
-    if bootstrap is not None:
-        stats_lines.extend(["", _fig2_format_bootstrap_stats(bootstrap)])
-    else:
-        stats_lines.extend(["", "Bootstrap goodness-of-fit: skipped"])
-    if vuong is not None:
-        stats_lines.extend(["", _fig2_format_vuong_stats(vuong)])
-    else:
-        stats_lines.extend(["", "Vuong model comparisons: skipped"])
+    if run_bootstrap or run_vuong:
+        fit = _fig2_fit_powerlaw_tail(positive_pdei)
+        stats_lines.extend(
+            [
+                "Exploratory power-law tail fit (not used in main figure):",
+                f"  alpha = {fit['alpha']:.4f}",
+                f"  xmin = {fit['xmin']:.4f}",
+                f"  tail_n = {fit['n_tail']}",
+                f"  tail_fraction = {fit['tail_fraction']:.4f}",
+                f"  KS_D = {fit['ks_D']:.4f}",
+                f"  KS_p_approx = {fit['ks_p_approx']:.4f}",
+            ]
+        )
+        if run_bootstrap:
+            bootstrap = _fig2_powerlaw_bootstrap_gof(
+                positive_pdei,
+                fit,
+                n_bootstrap=bootstrap_n,
+                seed=bootstrap_seed,
+                synthetic_size=bootstrap_size,
+            )
+            stats_lines.extend(["", _fig2_format_bootstrap_stats(bootstrap)])
+        if run_vuong:
+            vuong = _fig2_powerlaw_vuong_comparisons(positive_pdei, fit)
+            stats_lines.extend(["", _fig2_format_vuong_stats(vuong)])
     stats_lines.extend(
         [
             "",
-            "Concentration (top 1%):",
+            "Gini coefficients (corpus-level, all N; includes zero-PDEI skills):",
+            f"  Gini_PDEI = {gini_pdei:.4f}",
+            f"  Gini_downstream_exposure = {gini_exposure:.4f}",
+            "",
+            "Gini sensitivity (PDEI > 0 only, n+):",
+            f"  Gini_PDEI = {gini_pdei_positive:.4f}",
+            f"  Gini_downstream_exposure = {gini_exposure_positive:.4f}",
+            "",
+            "Concentration (top 1% by PDEI rank):",
             f"  top_pct = {FIG2A_TOP_PERCENT:.4f}%",
             f"  top_count = {k_top}",
             f"  top_PDEI_share = {top_pdei_share:.4%}",
             f"  top_downstream_exposure_share_among_top_PDEI_skills = {top_exposure_share:.4%}",
             f"  top_downstream_exposure_share_if_ranked_by_exposure = {top_exposure_share_by_exposure:.4%}",
-            f"  Gini_PDEI = {gini(df[PDEI_COL]):.4f}",
-            f"  Gini_downstream_exposure = {gini(df['downstream_exposure']):.4f}",
         ]
     )
     stats_path.write_text("\n".join(stats_lines).strip(), encoding="utf-8")
-    save_figure_caption(out_dir, f"fig2a_pdei_powerlaw_ccdf_{box_tag}", FIGURE_CAPTIONS["fig2a"])
+    save_figure_caption(out_dir, f"fig2a_pdei_ccdf_{box_tag}", FIGURE_CAPTIONS["fig2a"])
     print(f"Saved: {png_path}")
 
 
@@ -1915,8 +1926,8 @@ def run_fig2_suite(
     out_dir: Path,
     *,
     pdf: bool = False,
-    run_bootstrap: bool = True,
-    run_vuong: bool = True,
+    run_bootstrap: bool = False,
+    run_vuong: bool = False,
     bootstrap_n: int = FIG2A_BOOTSTRAP_N,
     bootstrap_seed: int = FIG2A_BOOTSTRAP_SEED,
     bootstrap_size: str = FIG2A_BOOTSTRAP_SIZE,
@@ -2088,8 +2099,8 @@ def main() -> None:
             pdei_csv.resolve(),
             out_dir,
             pdf=args.pdf,
-            run_bootstrap=not args.fig2a_skip_bootstrap,
-            run_vuong=not args.fig2a_skip_vuong,
+            run_bootstrap=args.fig2a_run_bootstrap,
+            run_vuong=args.fig2a_run_vuong,
             bootstrap_n=args.fig2a_bootstrap_n,
             bootstrap_seed=args.fig2a_bootstrap_seed,
             bootstrap_size=args.fig2a_bootstrap_size,
@@ -2107,8 +2118,8 @@ def main() -> None:
             pdei_csv.resolve(),
             out_dir,
             pdf=args.pdf,
-            run_bootstrap=not args.fig2a_skip_bootstrap,
-            run_vuong=not args.fig2a_skip_vuong,
+            run_bootstrap=args.fig2a_run_bootstrap,
+            run_vuong=args.fig2a_run_vuong,
             bootstrap_n=args.fig2a_bootstrap_n,
             bootstrap_seed=args.fig2a_bootstrap_seed,
             bootstrap_size=args.fig2a_bootstrap_size,
